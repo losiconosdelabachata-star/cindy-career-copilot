@@ -87,6 +87,14 @@ async function init(){
   session = data?.session || null;
   if (session) {
     await loadProfile();
+    if (!profile) {
+      // Session exists but the account behind it is gone (or has no profile row yet
+      // and couldn't be created) — don't render a broken app, start fresh instead.
+      await sb.auth.signOut().catch(()=>{});
+      session = null;
+      renderAuth('Your previous sign-in is no longer valid — please continue below.');
+      return;
+    }
     renderApp();
   } else {
     renderAuth();
