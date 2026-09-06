@@ -1,7 +1,20 @@
 # Cindy Career Copilot
 
-AI-assisted resume tailoring and job pipeline tracker for Cindy — resume/profile intake, per-job resume + cover letter tailoring, and a notifications feed for anything that needs her personal attention.
+Fully standalone version — AI-assisted resume tailoring and job pipeline tracker. No Claude branding anywhere.
 
-Live app (hosted, no setup needed): https://claude.ai/code/artifact/100840c1-14a9-4a48-a1b2-c7ceede60ec6
+- Frontend: `index.html` (static, served by GitHub Pages)
+- Backend: Supabase project `cindy-career-copilot` (Postgres + Auth, real per-user private data via Row Level Security)
+- Secure AI calls: `supabase/functions/ai` (Edge Function; calls Anthropic's API server-side so the API key is never exposed to the browser)
+- Email alerts: a scheduled job checks the `notifications` table and emails users when something needs their attention.
 
-This repo holds a static snapshot of the app's code (`index.html`) for reference/version history. The live, working version — with the shared database, AI tailoring, and scheduled email alerts — runs at the link above, not from GitHub Pages.
+## Live site
+https://losiconosdelabachata-star.github.io/cindy-career-copilot/
+
+## Deploying the AI Edge Function
+```
+supabase login
+supabase link --project-ref ebtmnbqvjbgrktqcnroj
+supabase functions deploy ai
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+```
+Until the function is deployed and the secret is set, resume tailoring/building will show an error but the rest of the app (accounts, resume storage, job tracking, notifications) works fully.
