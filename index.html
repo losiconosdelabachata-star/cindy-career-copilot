@@ -75,7 +75,7 @@ a{color:var(--accent-deep);}
 .iconbtn:hover{border-color:var(--accent); color:var(--accent-deep);}
 
 /* ---- flight strip ---- */
-.strip{display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:22px;}
+.strip{display:grid; grid-template-columns:repeat(6,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:22px;}
 .cell{background:var(--panel); padding:11px 12px 12px; display:flex; flex-direction:column; gap:3px;}
 .cell .n{font-family:var(--mono); font-size:22px; font-weight:500; line-height:1;}
 .cell .k{font-family:var(--serif); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);}
@@ -83,10 +83,11 @@ a{color:var(--accent-deep);}
 .cell.on-tailored .n{color:var(--accent);}
 .cell.on-applied .n{color:var(--green);}
 .cell.on-interview .n{color:var(--violet);}
+.cell.on-denied .n{color:var(--danger);}
 .cell.on-closed .n{color:var(--faint);}
 @media (max-width:560px){
   .strip{grid-template-columns:repeat(3,1fr);}
-  .cell:nth-child(4),.cell:nth-child(5){border-top:1px solid var(--border);}
+  .cell:nth-child(4),.cell:nth-child(5),.cell:nth-child(6){border-top:1px solid var(--border);}
 }
 
 /* ---- tabs ---- */
@@ -134,6 +135,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
 .job.s-tailored{border-left-color:var(--accent);}
 .job.s-applied{border-left-color:var(--green);}
 .job.s-interview{border-left-color:var(--violet);}
+.job.s-denied{border-left-color:var(--danger); opacity:.85;}
 .job.s-closed{border-left-color:var(--border); opacity:.72;}
 .job-head{display:flex; justify-content:space-between; gap:12px; align-items:flex-start;}
 .job-head h3{font-family:var(--serif); font-size:16px;}
@@ -144,6 +146,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
 .stat.s-tailored{background:var(--accent-ghost); color:var(--accent-deep);}
 .stat.s-applied{background:var(--green-ghost); color:var(--green);}
 .stat.s-interview{background:var(--violet-ghost); color:var(--violet);}
+.stat.s-denied{background:var(--danger-ghost); color:var(--danger);}
 .stat.s-closed{background:var(--inset); color:var(--faint);}
 .age{font-family:var(--mono); font-size:11px; color:var(--faint);}
 .job details{margin-top:11px;}
@@ -207,7 +210,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     en: {
       brandTag: "saved on this device", theme: "◐ theme", logout: "⎋ log out",
       tabToday: "Today", tabCindy: "Cindy", tabPipeline: "Pipeline", tabProfile: "Profile", tabActivity: "Activity",
-      stageSaved: "Saved", stageTailored: "Tailored", stageApplied: "Applied", stageInterview: "Interview", stageClosed: "Closed",
+      stageSaved: "Saved", stageTailored: "Tailored", stageApplied: "Applied", stageInterview: "Interview", stageDenied: "Denied", stageClosed: "Closed",
       footer: "saved in this browser only — use Back up in the Profile tab",
 
       authTagline: "private pipeline · one account per person",
@@ -233,7 +236,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       addToPipeline: "Add to pipeline", noRolesYet: "No roles tracked yet. Add one above.",
       remove: "Remove", tailorBtn: "Tailor résumé + cover letter", retailorBtn: "Re-tailor",
       statusAria: "Status", jobDescSummary: "Job description",
-      addedAgo: "added ", appliedAgo: "· applied ",
+      addedAgo: "added ", appliedAgo: "· applied ", deniedAgo: "· denied ",
       tailoredResumeH: "Tailored résumé", coverLetterH: "Cover letter", copyBtn: "Copy", downloadTxtBtn: "Download .txt",
 
       contactTargetsH: "Contact & targets", nameLabel: "Name", locationLabel: "Location",
@@ -248,6 +251,11 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       saveResumeBtn: "Save résumé",
       coverLetterCardH: "Cover letter", coverLetterCardLede: "A master cover letter template — Cindy and the tailoring step start from this instead of a blank page.",
       saveCoverLetterBtn: "Save cover letter",
+      workLogH: "Unemployment work-search log", workLogLede: "If you're claiming unemployment benefits, keep a downloadable record of every job you've applied to — most states ask you to show this if your claim is reviewed.",
+      claimingUiLabel: "I'm claiming unemployment benefits — track my applications for reporting",
+      uiAgencyLabel: "State / agency name (optional)", uiAgencyPlaceholder: "e.g. Florida DEO",
+      uiFromLabel: "From (optional)", uiToLabel: "To (optional)",
+      downloadLogPdfBtn: "Download log (PDF)", downloadLogCsvBtn: "Download log (CSV)",
       backupH: "Back up & restore", backupLede: "Everything lives in this browser. Download a backup file to keep it safe or move it to another device.",
       downloadBackupBtn: "Download backup", restoreBtn: "Restore from file",
 
@@ -266,7 +274,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     es: {
       brandTag: "guardado en este dispositivo", theme: "◐ tema", logout: "⎋ cerrar sesión",
       tabToday: "Hoy", tabCindy: "Cindy", tabPipeline: "Postulaciones", tabProfile: "Perfil", tabActivity: "Actividad",
-      stageSaved: "Guardado", stageTailored: "Adaptado", stageApplied: "Enviado", stageInterview: "Entrevista", stageClosed: "Cerrado",
+      stageSaved: "Guardado", stageTailored: "Adaptado", stageApplied: "Enviado", stageInterview: "Entrevista", stageDenied: "Rechazado", stageClosed: "Cerrado",
       footer: "guardado solo en este navegador — usa Respaldar en la pestaña Perfil",
 
       authTagline: "postulaciones privadas · una cuenta por persona",
@@ -292,7 +300,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       addToPipeline: "Agregar a postulaciones", noRolesYet: "Aún no hay puestos registrados. Agrega uno arriba.",
       remove: "Eliminar", tailorBtn: "Adaptar currículum + carta", retailorBtn: "Volver a adaptar",
       statusAria: "Estado", jobDescSummary: "Descripción del puesto",
-      addedAgo: "agregado hace ", appliedAgo: "· enviado hace ",
+      addedAgo: "agregado hace ", appliedAgo: "· enviado hace ", deniedAgo: "· rechazado hace ",
       tailoredResumeH: "Currículum adaptado", coverLetterH: "Carta de presentación", copyBtn: "Copiar", downloadTxtBtn: "Descargar .txt",
 
       contactTargetsH: "Contacto y objetivos", nameLabel: "Nombre", locationLabel: "Ubicación",
@@ -307,6 +315,11 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       saveResumeBtn: "Guardar currículum",
       coverLetterCardH: "Carta de presentación", coverLetterCardLede: "Una plantilla maestra de carta de presentación — Cindy y el ajuste con IA parten de aquí en vez de una página en blanco.",
       saveCoverLetterBtn: "Guardar carta",
+      workLogH: "Registro de búsqueda de empleo (desempleo)", workLogLede: "Si estás reclamando beneficios de desempleo, lleva un registro descargable de cada empleo al que has aplicado — la mayoría de los estados lo piden si revisan tu reclamo.",
+      claimingUiLabel: "Estoy reclamando beneficios de desempleo — registrar mis postulaciones",
+      uiAgencyLabel: "Estado / agencia (opcional)", uiAgencyPlaceholder: "ej. Florida DEO",
+      uiFromLabel: "Desde (opcional)", uiToLabel: "Hasta (opcional)",
+      downloadLogPdfBtn: "Descargar registro (PDF)", downloadLogCsvBtn: "Descargar registro (CSV)",
       backupH: "Respaldar y restaurar", backupLede: "Todo vive en este navegador. Descarga un respaldo para guardarlo a salvo o moverlo a otro dispositivo.",
       downloadBackupBtn: "Descargar respaldo", restoreBtn: "Restaurar desde archivo",
 
@@ -385,6 +398,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     { key:"tailored",  tkey:"stageTailored" },
     { key:"applied",   tkey:"stageApplied" },
     { key:"interview", tkey:"stageInterview" },
+    { key:"denied",    tkey:"stageDenied" },
     { key:"closed",    tkey:"stageClosed" }
   ];
   var STAGE_TKEY = {}; STAGES.forEach(function(s){ STAGE_TKEY[s.key] = s.tkey; });
@@ -559,12 +573,12 @@ button:disabled{opacity:.45; cursor:not-allowed;}
 
   // ---------- derived ----------
   function counts(){
-    var c = { saved:0, tailored:0, applied:0, interview:0, closed:0 };
+    var c = { saved:0, tailored:0, applied:0, interview:0, denied:0, closed:0 };
     state.jobs.forEach(function(j){ if (c[j.status]!=null) c[j.status]++; });
     return c;
   }
   function sortedJobs(){
-    var order = { interview:0, tailored:1, saved:2, applied:3, closed:4 };
+    var order = { interview:0, tailored:1, saved:2, applied:3, denied:4, closed:5 };
     return state.jobs.slice().sort(function(a,b){
       var oa = order[a.status]!=null?order[a.status]:9, ob = order[b.status]!=null?order[b.status]:9;
       if (oa!==ob) return oa-ob;
@@ -1299,6 +1313,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
         '<span class="stat s-'+s+'">'+esc(stageLabel(s))+'</span>' +
         (j.createdAt ? '<span class="age">'+esc(t("addedAgo"))+esc(agoLabel(j.createdAt))+'</span>' : "") +
         (j.appliedAt ? '<span class="age">'+esc(t("appliedAgo"))+esc(agoLabel(j.appliedAt))+'</span>' : "") +
+        (j.deniedAt ? '<span class="age">'+esc(t("deniedAgo"))+esc(agoLabel(j.deniedAt))+'</span>' : "") +
       '</div>' +
       (j.description ? '<details><summary>'+esc(t("jobDescSummary"))+'</summary><div class="desc">'+esc(j.description)+'</div></details>' : "") +
       '<div class="job-actions">' +
@@ -1375,6 +1390,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     j.status = status;
     j.updatedAt = now();
     if (status==="applied" && !j.appliedAt) j.appliedAt = now();
+    if (status==="denied" && !j.deniedAt) j.deniedAt = now();
     await persistJob(j);
     await pushActivity("Moved " + j.title + " → " + stageLabel(status) + ".", id);
     render();
@@ -1472,6 +1488,108 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     return text;
   }
 
+  // ---------- unemployment work-search log (PDF via jsPDF, CSV built-in) ----------
+  var JSPDF_VERSION = "4.2.1";
+  var jsPdfLoadPromise = null;
+  function loadJsPdf(){
+    if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+    if (jsPdfLoadPromise) return jsPdfLoadPromise;
+    jsPdfLoadPromise = new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/" + JSPDF_VERSION + "/jspdf.umd.min.js";
+      s.onload = function(){
+        try { resolve(window.jspdf.jsPDF); } catch(e){ reject(e); }
+      };
+      s.onerror = function(){ reject(new Error("Couldn’t load the PDF writer — check your connection and try again.")); };
+      document.head.appendChild(s);
+    });
+    return jsPdfLoadPromise;
+  }
+
+  function workSearchRows(fromDate, toDate){
+    var from = fromDate ? new Date(fromDate + "T00:00:00").getTime() : null;
+    var to = toDate ? new Date(toDate + "T23:59:59").getTime() : null;
+    return state.jobs
+      .filter(function(j){ return !!j.appliedAt; })
+      .filter(function(j){ return (from==null || j.appliedAt >= from) && (to==null || j.appliedAt <= to); })
+      .sort(function(a,b){ return a.appliedAt - b.appliedAt; })
+      .map(function(j){
+        return {
+          date: new Date(j.appliedAt).toLocaleDateString(),
+          employer: j.company || "",
+          position: j.title || "",
+          method: "Online",
+          contact: j.url || "",
+          result: stageLabel(j.status)
+        };
+      });
+  }
+
+  async function downloadWorkSearchPdf(fromDate, toDate){
+    var rows = workSearchRows(fromDate, toDate);
+    var jsPDF = await loadJsPdf();
+    var doc = new jsPDF({ unit: "pt", format: "letter" });
+    var name = state.profile.name || currentUserDisplay || "";
+    var marginX = 40, y = 50;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(16);
+    doc.text("Job Search / Work Search Log", marginX, y); y += 22;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+    if (name) { doc.text("Name: " + name, marginX, y); y += 14; }
+    doc.text("Generated: " + new Date().toLocaleDateString(), marginX, y); y += 14;
+    if (fromDate || toDate) { doc.text("Range: " + (fromDate||"…") + " to " + (toDate||"…"), marginX, y); y += 14; }
+    y += 8;
+
+    var cols = [
+      { key:"date", label:"Date Applied", w:70 },
+      { key:"employer", label:"Employer", w:120 },
+      { key:"position", label:"Position", w:120 },
+      { key:"method", label:"Method", w:55 },
+      { key:"result", label:"Result", w:65 },
+      { key:"contact", label:"Posting URL", w:110 }
+    ];
+    function drawHeader(){
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+      var x = marginX;
+      cols.forEach(function(c){ doc.text(c.label, x, y); x += c.w; });
+      y += 6;
+      doc.setDrawColor(180); doc.line(marginX, y, marginX + cols.reduce(function(s,c){return s+c.w;},0), y);
+      y += 12;
+      doc.setFont("helvetica", "normal");
+    }
+    drawHeader();
+    if (!rows.length){
+      doc.setFontSize(10);
+      doc.text("No applications recorded yet for this range.", marginX, y);
+      y += 16;
+    }
+    rows.forEach(function(r){
+      if (y > 740){ doc.addPage(); y = 50; drawHeader(); }
+      var x = marginX;
+      cols.forEach(function(c){
+        var val = String(r[c.key] || "");
+        var maxChars = Math.floor(c.w / 4.3);
+        if (val.length > maxChars) val = val.slice(0, maxChars - 1) + "…";
+        doc.text(val, x, y);
+        x += c.w;
+      });
+      y += 15;
+    });
+
+    var stamp = new Date().toISOString().slice(0,10);
+    doc.save("work-search-log-" + stamp + ".pdf");
+  }
+
+  function downloadWorkSearchCsv(fromDate, toDate){
+    var rows = workSearchRows(fromDate, toDate);
+    var header = ["Date Applied","Employer","Position","Method","Result","Posting URL"];
+    var csvEsc = function(v){ v = String(v==null?"":v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
+    var lines = [header.join(",")].concat(rows.map(function(r){
+      return [r.date, r.employer, r.position, r.method, r.result, r.contact].map(csvEsc).join(",");
+    }));
+    var stamp = new Date().toISOString().slice(0,10);
+    saveFile("work-search-log-" + stamp + ".csv", lines.join("\n"));
+  }
+
   async function copyText(text){
     try { await navigator.clipboard.writeText(text||""); toast("Copied."); }
     catch(e){ toast("Copy failed — select the text manually."); }
@@ -1558,6 +1676,28 @@ button:disabled{opacity:.45; cursor:not-allowed;}
         '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-cl">'+esc(t("saveCoverLetterBtn"))+'</button><span class="saveflash" id="cl-flash"></span></div>' +
       '</div>' +
       '<div class="card">' +
+        '<h3>'+esc(t("workLogH"))+'</h3>' +
+        '<div class="lede">'+esc(t("workLogLede"))+'</div>' +
+        '<div class="stack">' +
+          '<label style="display:flex; align-items:center; gap:8px; text-transform:none; font-weight:400; cursor:pointer;">' +
+            '<input type="checkbox" id="p-uic" style="width:auto;"'+(p.claimingUnemployment?" checked":"")+'> '+esc(t("claimingUiLabel")) +
+          '</label>' +
+          (p.claimingUnemployment ? (
+            '<div><label for="p-uiagency">'+esc(t("uiAgencyLabel"))+'</label><input id="p-uiagency" value="'+esc(p.uiAgencyName||"")+'" placeholder="'+esc(t("uiAgencyPlaceholder"))+'"></div>' +
+            '<div class="grid2">' +
+              '<div><label for="p-uifrom">'+esc(t("uiFromLabel"))+'</label><input id="p-uifrom" type="date" value="'+esc(p.uiFrom||"")+'"></div>' +
+              '<div><label for="p-uito">'+esc(t("uiToLabel"))+'</label><input id="p-uito" type="date" value="'+esc(p.uiTo||"")+'"></div>' +
+            '</div>' +
+            '<div class="btn-row">' +
+              '<button class="btn-primary" id="p-uic-save">'+esc(t("saveBtn"))+'</button>' +
+              '<button class="btn-ghost" id="p-uic-pdf">'+esc(t("downloadLogPdfBtn"))+'</button>' +
+              '<button class="btn-ghost" id="p-uic-csv">'+esc(t("downloadLogCsvBtn"))+'</button>' +
+              '<span class="saveflash" id="ui-flash"></span>' +
+            '</div>'
+          ) : "") +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
         '<h3>'+esc(t("backupH"))+'</h3>' +
         '<div class="lede">'+esc(t("backupLede"))+'</div>' +
         '<div class="btn-row">' +
@@ -1617,6 +1757,29 @@ button:disabled{opacity:.45; cursor:not-allowed;}
         toast("Loaded — press Save cover letter to keep it.");
       } catch(err){ toast((err && err.message) || "Couldn’t read that file."); }
       e.target.value = "";
+    };
+    $("#p-uic").onchange = async function(){
+      state.profile.claimingUnemployment = $("#p-uic").checked;
+      await persistMain();
+      render();
+    };
+    var uicSave = $("#p-uic-save");
+    if (uicSave) uicSave.onclick = async function(){
+      state.profile.uiAgencyName = $("#p-uiagency").value.trim();
+      state.profile.uiFrom = $("#p-uifrom").value;
+      state.profile.uiTo = $("#p-uito").value;
+      await persistMain();
+      flash("#ui-flash");
+    };
+    var uicPdf = $("#p-uic-pdf");
+    if (uicPdf) uicPdf.onclick = function(){
+      downloadWorkSearchPdf($("#p-uifrom").value, $("#p-uito").value).catch(function(err){
+        toast((err && err.message) || "Couldn’t build the PDF.");
+      });
+    };
+    var uicCsv = $("#p-uic-csv");
+    if (uicCsv) uicCsv.onclick = function(){
+      downloadWorkSearchCsv($("#p-uifrom").value, $("#p-uito").value);
     };
     $("#p-backup").onclick = function(){
       var stamp = new Date().toISOString().slice(0,10);

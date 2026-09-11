@@ -26,7 +26,12 @@ to the Cloudflare Pages URL regardless of which one you're on (CORS is open for 
   you what's stalled and what to do next, and has a stock of career tips and pep talks.
   Free-text chat runs on a real AI backend (see "AI backend" below).
 - **Pipeline** — track roles (title, company, posting URL, description) through
-  Saved → Tailored → Applied → Interview → Closed
+  Saved → Tailored → Applied → Interview → Denied → Closed
+- **Unemployment work-search log** — in Profile, a toggle for people claiming unemployment
+  benefits: keeps a downloadable record (PDF or CSV) of every job with an "applied" date —
+  date, employer, position, method, result, posting URL — for the work-search documentation
+  most states require if a claim is reviewed. Self-reported from your own pipeline data;
+  not legal advice.
 - **Profile** — contact info (including date of birth — stored locally only, for
   applications that require confirming a minimum age; never included in the résumé/cover
   letter output), target roles, platform links, your master résumé, and a master cover
