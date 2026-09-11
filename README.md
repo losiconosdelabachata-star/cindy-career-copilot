@@ -14,13 +14,24 @@ https://losiconosdelabachata-star.github.io/cindy-career-copilot/
   so this is data separation + a password gate (everything still lives in this browser's
   localStorage) rather than server-verified security — good enough for keeping housemates'
   job searches apart, not for anything sensitive.
+- **Cindy** — a résumé and career-search guide, in a chat-style tab. She walks you through
+  building a résumé from scratch (contact → summary → experience → education → skills →
+  save to Profile), reads your pipeline to tell you what's stalled and what to do next,
+  and has a stock of career tips and pep talks. She runs on built-in guidance today (no
+  server needed); free-text chat is wired to switch to a real AI backend automatically
+  once one's connected (see "What's intentionally off here").
 - **Pipeline** — track roles (title, company, posting URL, description) through
   Saved → Tailored → Applied → Interview → Closed
-- **Profile** — contact info, target roles, platform links, and your master résumé
+- **Profile** — contact info, target roles, platform links, your master résumé, and a
+  master cover letter template
 - **Needs attention** — auto-flags stalled items (saved with no materials, tailored but
   not applied after 2 days, applied with no follow-up after 7 days)
 - **Back up & restore** — since there's no server, everything lives in the visitor's own
   browser (localStorage); Profile → Download backup exports it as JSON, Restore reloads it
+
+Marino's account comes pre-seeded with his résumé and cover letter the first time the
+username `marino` is registered on a given browser (see `SEED_PROFILES` in `index.html`) —
+so it isn't a blank profile no matter which device he signs in from.
 
 ## What's intentionally off here
 

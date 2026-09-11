@@ -162,6 +162,18 @@ button:disabled{opacity:.45; cursor:not-allowed;}
 .empty{color:var(--muted); font-size:13.5px; font-family:var(--body);}
 .note{background:var(--accent-ghost); border:1px solid var(--accent); color:var(--accent-deep); border-radius:var(--radius); padding:11px 13px; font-size:13px; margin-bottom:14px;}
 
+/* ---- cindy ---- */
+.cindy-wrap{display:flex; flex-direction:column; gap:10px; max-height:440px; overflow-y:auto; padding-right:4px; margin-bottom:14px;}
+.cindy-row{display:flex;}
+.cindy-row.from-user{justify-content:flex-end;}
+.cindy-bubble{max-width:82%; padding:10px 14px; border-radius:12px; font-size:14px; line-height:1.55; white-space:pre-wrap;}
+.cindy-bubble.cindy{background:var(--accent-ghost); color:var(--ink); border:1px solid var(--accent); border-bottom-left-radius:3px;}
+.cindy-bubble.user{background:var(--panel-2); color:var(--ink); border:1px solid var(--border); border-bottom-right-radius:3px;}
+.cindy-quick{display:flex; flex-wrap:wrap; gap:8px;}
+.chip{font-family:var(--serif); font-weight:600; font-size:12.5px; text-transform:none; letter-spacing:0; background:var(--panel); border:1px solid var(--accent); color:var(--accent-deep); border-radius:999px; padding:7px 14px; cursor:pointer;}
+.chip:hover{background:var(--accent-ghost);}
+.cindy-form{background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius); padding:14px;}
+
 /* ---- toast ---- */
 #toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(8px);
   background:var(--ink); color:var(--ground); font-size:13px; font-family:var(--body);
@@ -243,8 +255,18 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   ];
   var STAGE_LABEL = {}; STAGES.forEach(function(s){ STAGE_LABEL[s.key] = s.label; });
 
+  // ---------- cindy (guide + résumé/career builder) ----------
+  function cindyDefault(){
+    return {
+      history: [],
+      step: "idle",
+      tipIdx: 0,
+      draft: { contact:{name:"",email:"",phone:"",location:"",links:""}, summary:"", experience:[], education:[], skills:"" }
+    };
+  }
+
   // ---------- state ----------
-  var state = { profile:{ links:{} }, activity:[], jobs:[] };
+  var state = { profile:{ links:{} }, activity:[], jobs:[], cindy: cindyDefault() };
   var activeTab = "today";
   var storeReady = false;
   var planCache = { text:"", running:false, ctl:null };
@@ -252,6 +274,62 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   // ---------- accounts (separate, password-gated data per person — all still
   // local to this browser; there's no server, so this is data separation +
   // a password gate, not bank-grade security) ----------
+  // Seed data for known accounts on this device — applied once, the first time
+  // that username is ever registered, so the person doesn't start from a blank
+  // profile. Keyed by lowercased username.
+  var SEED_PROFILES = {
+    marino: {
+      name: "Marino Santos",
+      location: "Remote",
+      email: "losiconosdelabachata@gmail.com",
+      phone: "(786) 838-7137",
+      targetRoles: "AI Engineer — E-Commerce Systems",
+      links: {
+        linkedin: "https://www.linkedin.com/in/marino-santos-450b97282/",
+        indeed: "",
+        portfolio: "https://github.com/losiconosdelabachata-star",
+        other: ""
+      },
+      resumeText:
+        "Marino Santos\n" +
+        "AI ENGINEER — E-COMMERCE SYSTEMS\n" +
+        "losiconosdelabachata@gmail.com · (786) 838-7137 · Remote · linkedin.com/in/marino-santos-450b97282 · github.com/losiconosdelabachata-star\n\n" +
+        "SUMMARY\n" +
+        "Self-directed AI engineer who ships autonomous, production Claude-based agents that run e-commerce operations end to end — order automation, print-on-demand fulfillment, customer messaging, and marketing content generation. Owns the full path from tool-use architecture to Docker deployment and process supervision, with idempotent job design so nothing double-ships or double-charges across redeploys. Builds systems that run unattended in production, not demos.\n\n" +
+        "SKILLS\n" +
+        "AI & Agents: Anthropic Claude API (Python + Node SDKs), agentic tool-use design, prompt engineering, modular skill/plugin architecture, automated content-generation pipelines\n" +
+        "E-Commerce: Shopify Admin API (OAuth), Printify print-on-demand fulfillment, affiliate/referral sales attribution, idempotent job design, WhatsApp (Baileys), Gmail SMTP, Google Ads API\n" +
+        "Engineering: Python 3.10+, JavaScript/TypeScript, Node.js, Express, REST API design, JWT/bcrypt auth, SQLite (better-sqlite3), Next.js 16, React 19\n" +
+        "Security & Infra: Helmet/CSP, rate limiting, input validation, credential hashing; Docker, Render, custom process supervision, secrets management, monitoring dashboards\n\n" +
+        "EXPERIENCE & PROJECTS\n\n" +
+        "Marino 007 — AI Command Center · Independent, Remote · 2024 — Present\n" +
+        "Autonomous AI operations hub for a live e-commerce brand\n" +
+        "- Built the core commerce automation loop: polls Shopify hourly for new orders, forwards them to Printify for print-on-demand fulfillment, and pushes real-time alerts over a self-hosted WhatsApp bridge (Node.js + Baileys) — order to fulfillment to customer messaging, unattended.\n" +
+        "- Architected the autonomous agent on Claude Sonnet 5 (Anthropic Python SDK) with a tool-use loop spanning 87 modular skill domains, and designed explicit state-tracking files for correctness under redeploy — zero duplicate fulfillments, zero duplicate sends.\n" +
+        "- Automated the marketing content pipeline: pulls the oldest unblogged Google Photos image, cross-references Drive by date, runs live web research, then has Claude write and publish an 800–1,200 word post to the customer list — daily, no manual step.\n" +
+        "- Built a Next.js 16 / React 19 / TypeScript dashboard (Recharts analytics, JWT + bcrypt) over 7 live subsystems and affiliate sales attribution; shipped as one Docker container on Render with a custom Node.js supervisor that restarts failed subsystems and fails loud.\n\n" +
+        "KC Food Market — Claude-Powered Commerce Backend · Freelance · 2024\n" +
+        "- Built an Express.js backend with an Anthropic SDK–powered assistant, a pickup-ordering system, and transactional email (Nodemailer).\n" +
+        "- Hardened the customer-facing app with Helmet CSP (no unsafe-inline escape hatch), rate limiting, and server-side input validation.\n\n" +
+        "Cindy Career Copilot — Job-Tracking Platform · Independent · 2025\n" +
+        "- Designed a zero-backend, no-build static app (vanilla JS) with client-side multi-account auth — salted/hashed credentials, per-account data isolation — and an integration point for a Cloudflare Workers AI backend.\n\n" +
+        "Independent Storefront & Brand Operations · Freelance · 2022 — Present\n" +
+        "- Shipped 10+ small-business e-commerce and storefront sites (Wix) for independent clients.\n" +
+        "- Runs brand and marketing ops for a music-merch e-commerce brand — content calendars, campaign copy across 6 platforms, affiliate program.\n\n" +
+        "BACKGROUND\n" +
+        "Self-directed and project-based — no CS degree or bootcamp. Every system above was specified, built, deployed, documented, and kept running in production by me.",
+      coverLetterText:
+        "Re: AI Engineer\n\n" +
+        "Hello,\n\n" +
+        "Right now, an agent I built is checking a Shopify store for new orders, pushing each one to Printify for fulfillment, and messaging the customer over a self-hosted WhatsApp bridge — without me. It has been doing that hourly for months. I'd like to bring that kind of work to your commerce team as an AI Engineer.\n\n" +
+        "The system is called Marino 007: an autonomous Claude Sonnet 5 agent (Anthropic Python SDK) with a tool-use loop across 87 modular skill domains, running as a single Docker container on Render behind a custom Node.js process supervisor. The interesting part isn't the model call — it's everything around it. Commerce automation is unforgiving: ship an order twice and you've paid twice, emailed twice, and lost the customer's trust. So the agent keeps explicit state-tracking files for processed orders and published content, and every job is idempotent across restarts and redeploys. Zero duplicate fulfillments, zero duplicate sends. That's the difference between an agent demo and something a store can actually depend on.\n\n" +
+        "The same loop runs the marketing side. Each day the agent pulls the oldest unblogged photo from Google Photos, cross-references Google Drive by date, runs live web research, and has Claude write and publish an 800–1,200 word post to the customer list — no manual step. I watch all of it from a Next.js dashboard I built that monitors 7 live subsystems and attributes affiliate sales, and I run brand and campaign operations for the merch store it serves, so I see what the automation does to revenue rather than just whether the job exits clean. I came to this without a CS degree; I learned it by having to keep a real storefront running.\n\n" +
+        "I'd welcome a conversation about where your order, fulfillment, support, or content workflows are still manual — I can walk through the architecture, the failure modes I hit, and how I'd apply it at your scale. Reach me at (786) 838-7137 or losiconosdelabachata@gmail.com; the code is on GitHub.\n\n" +
+        "Thank you for your time,\n" +
+        "Marino Santos"
+    }
+  };
+
   var ACCOUNTS_KEY = "career-copilot-accounts-v1";
   var SESSION_KEY = "career-copilot-session-v1";
   var LS_PREFIX = "career-copilot-v1::";
@@ -274,7 +352,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     try { var raw = localStorage.getItem(userKey()); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
   }
   function saveLocal(){
-    try { localStorage.setItem(userKey(), JSON.stringify({ profile:state.profile, activity:state.activity, jobs:state.jobs })); } catch(e){}
+    try { localStorage.setItem(userKey(), JSON.stringify({ profile:state.profile, activity:state.activity, jobs:state.jobs, cindy:state.cindy })); } catch(e){}
   }
 
   function stripId(j){ var c = Object.assign({}, j); delete c.id; return c; }
@@ -332,6 +410,13 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       state.profile.links = state.profile.links || {};
       state.activity = Array.isArray(local.activity) ? local.activity : [];
       state.jobs = Array.isArray(local.jobs) ? local.jobs : [];
+      var cd = cindyDefault();
+      state.cindy = Object.assign(cd, local.cindy || {});
+      state.cindy.draft = Object.assign(cd.draft, (local.cindy && local.cindy.draft) || {});
+      state.cindy.draft.contact = Object.assign({name:"",email:"",phone:"",location:"",links:""}, state.cindy.draft.contact || {});
+      state.cindy.draft.experience = Array.isArray(state.cindy.draft.experience) ? state.cindy.draft.experience : [];
+      state.cindy.draft.education = Array.isArray(state.cindy.draft.education) ? state.cindy.draft.education : [];
+      state.cindy.history = Array.isArray(state.cindy.history) ? state.cindy.history : [];
     }
     storeReady = true;
     render();
@@ -451,6 +536,14 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     currentUser = key;
     currentUserDisplay = u;
     setSession(key);
+    if (SEED_PROFILES[key]){
+      try {
+        localStorage.setItem(LS_PREFIX + key, JSON.stringify({
+          profile: Object.assign({ links:{} }, SEED_PROFILES[key]),
+          activity: [], jobs: [], cindy: cindyDefault()
+        }));
+      } catch(e){}
+    }
     authState = { mode:"login", error:"", username:"" };
     await initStore();
   }
@@ -459,7 +552,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     clearSession();
     currentUser = null;
     currentUserDisplay = "";
-    state = { profile:{ links:{} }, activity:[], jobs:[] };
+    state = { profile:{ links:{} }, activity:[], jobs:[], cindy:cindyDefault() };
     activeTab = "today";
     planCache = { text:"", running:false, ctl:null };
     authState = { mode:"login", error:"", username:"" };
@@ -484,6 +577,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       strip(c) +
       '<div class="tabs" role="tablist">' +
         tabBtn("today","Today") +
+        tabBtn("cindy","Cindy") +
         tabBtn("pipeline","Pipeline", state.jobs.length ? String(state.jobs.length) : "") +
         tabBtn("profile","Profile") +
         tabBtn("activity","Activity", unread ? String(unread) : "") +
@@ -517,6 +611,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   function renderBody(){
     var b = $("#tab-body");
     if (activeTab==="today") return renderToday(b);
+    if (activeTab==="cindy") return renderCindy(b);
     if (activeTab==="pipeline") return renderPipeline(b);
     if (activeTab==="profile") return renderProfile(b);
     if (activeTab==="activity") return renderActivity(b);
@@ -582,6 +677,342 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       planCache.running = false; planCache.ctl = null;
       renderToday($("#tab-body"));
     }
+  }
+
+  // ---------- Cindy ----------
+  function cindyPush(who, text){ state.cindy.history.push({ who:who, text:text }); }
+
+  function renderCindy(b){
+    if (!state.cindy.history.length){
+      cindyPush("cindy", "Hi, I’m Cindy 👋 — your résumé and career-search guide. I can help you build a résumé from scratch, or look at your pipeline and tell you what to do next. What do you want to do?");
+    }
+    b.innerHTML =
+      '<div class="card">' +
+        '<h2>Cindy</h2>' +
+        '<div class="lede">Your résumé &amp; career-search guide.'+
+          (!AI_ENABLED ? ' Running on built-in guidance right now — she’ll switch on full AI conversation automatically once the AI backend is connected.' : '') +
+        '</div>' +
+        '<div class="cindy-wrap" id="cindy-log"></div>' +
+        '<div id="cindy-step">' + cindyStepHtml() + '</div>' +
+        '<div class="btn-row" style="margin-top:14px;">' +
+          '<input id="cindy-input" placeholder="Ask Cindy something…" style="flex:1;">' +
+          '<button class="btn-primary" id="cindy-send">Send</button>' +
+        '</div>' +
+      '</div>';
+
+    $("#cindy-log").innerHTML = state.cindy.history.map(function(m){
+      return '<div class="cindy-row from-'+(m.who==="cindy"?"cindy":"user")+'">' +
+        '<div class="cindy-bubble '+(m.who==="cindy"?"cindy":"user")+'">'+esc(m.text)+'</div>' +
+      '</div>';
+    }).join("");
+
+    wireCindyStep();
+    $("#cindy-send").onclick = onCindySend;
+    $("#cindy-input").onkeydown = function(e){ if (e.key==="Enter" || e.keyCode===13){ e.preventDefault(); onCindySend(); } };
+    var log = $("#cindy-log"); if (log) log.scrollTop = log.scrollHeight;
+  }
+
+  function chip(label, id){ return '<button type="button" class="chip" id="'+id+'">'+esc(label)+'</button>'; }
+
+  function cindyStepHtml(){
+    var step = state.cindy.step, d = state.cindy.draft;
+    if (step === "idle"){
+      return '<div class="cindy-quick">' +
+        chip("Build my résumé","cq-resume") +
+        chip("What should I do next?","cq-next") +
+        chip("Give me a pep talk","cq-pep") +
+        chip("Tips for today","cq-tips") +
+      '</div>';
+    }
+    if (step === "resume:contact"){
+      return '<div class="cindy-form"><div class="stack">' +
+        '<div class="grid2">' +
+          '<div><label for="cf-name">Name</label><input id="cf-name" value="'+esc(d.contact.name||"")+'"></div>' +
+          '<div><label for="cf-loc">Location</label><input id="cf-loc" value="'+esc(d.contact.location||"")+'"></div>' +
+        '</div>' +
+        '<div class="grid2">' +
+          '<div><label for="cf-email">Email</label><input id="cf-email" value="'+esc(d.contact.email||"")+'"></div>' +
+          '<div><label for="cf-phone">Phone</label><input id="cf-phone" value="'+esc(d.contact.phone||"")+'"></div>' +
+        '</div>' +
+        '<div><label for="cf-links">Links <span style="text-transform:none; font-weight:400;">(LinkedIn, portfolio — optional)</span></label><input id="cf-links" value="'+esc(d.contact.links||"")+'"></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="cf-continue">Continue</button><button class="btn-ghost" id="cf-cancel">Cancel</button></div>' +
+      '</div></div>';
+    }
+    if (step === "resume:summary"){
+      return '<div class="cindy-form"><div class="stack">' +
+        '<div><label for="cf-summary">Professional summary <span style="text-transform:none; font-weight:400;">(1–3 sentences — the role you want and what you bring)</span></label>' +
+        '<textarea id="cf-summary" rows="3">'+esc(d.summary||"")+'</textarea></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="cf-continue">Continue</button><button class="btn-ghost" id="cf-back">Back</button></div>' +
+      '</div></div>';
+    }
+    if (step === "resume:experience"){
+      return '<div class="cindy-form"><div class="stack">' +
+        '<div class="lede" style="margin-bottom:0;">Role '+(d.experience.length+1)+(d.experience.length ? " — or click Done if that’s enough." : "")+'</div>' +
+        '<div class="grid2">' +
+          '<div><label for="cf-title">Job title</label><input id="cf-title"></div>' +
+          '<div><label for="cf-company">Company</label><input id="cf-company"></div>' +
+        '</div>' +
+        '<div><label for="cf-dates">Dates <span style="text-transform:none; font-weight:400;">(e.g. 2022–Present)</span></label><input id="cf-dates"></div>' +
+        '<div><label for="cf-bullets">What did you do? <span style="text-transform:none; font-weight:400;">(one accomplishment per line)</span></label><textarea id="cf-bullets" rows="4"></textarea></div>' +
+        '<div class="btn-row">' +
+          '<button class="btn-primary" id="cf-add">Add this role</button>' +
+          (d.experience.length ? '<button class="btn-ghost" id="cf-done">Done adding roles</button>' : '<button class="btn-ghost" id="cf-skip">Skip — no work history yet</button>') +
+        '</div>' +
+      '</div></div>';
+    }
+    if (step === "resume:education"){
+      return '<div class="cindy-form"><div class="stack">' +
+        '<div class="grid2">' +
+          '<div><label for="cf-school">School</label><input id="cf-school"></div>' +
+          '<div><label for="cf-degree">Degree / program</label><input id="cf-degree"></div>' +
+        '</div>' +
+        '<div><label for="cf-edudates">Dates</label><input id="cf-edudates"></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="cf-add">Add</button><button class="btn-ghost" id="cf-skip">Skip</button></div>' +
+      '</div></div>';
+    }
+    if (step === "resume:skills"){
+      return '<div class="cindy-form"><div class="stack">' +
+        '<div><label for="cf-skills">Skills <span style="text-transform:none; font-weight:400;">(comma separated)</span></label><input id="cf-skills" value="'+esc(d.skills||"")+'"></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="cf-continue">Review résumé</button></div>' +
+      '</div></div>';
+    }
+    if (step === "resume:review"){
+      var text = compileResume(d);
+      return '<div class="cindy-form">' +
+        '<div class="out-h" style="margin-top:0;">Your draft résumé</div>' +
+        '<div class="out">'+esc(text)+'</div>' +
+        '<div class="btn-row" style="margin-top:10px;">' +
+          '<button class="btn-primary" id="cf-save">Save as my résumé</button>' +
+          '<button class="btn-ghost" id="cf-copy">Copy</button>' +
+          '<button class="btn-ghost" id="cf-download">Download .txt</button>' +
+          '<button class="btn-ghost" id="cf-restart">Start over</button>' +
+        '</div>' +
+      '</div>';
+    }
+    return "";
+  }
+
+  function compileResume(d){
+    var lines = [];
+    var c = d.contact || {};
+    lines.push(c.name || "Your Name");
+    var bits = [c.location, c.email, c.phone, c.links].filter(Boolean);
+    if (bits.length) lines.push(bits.join(" · "));
+    lines.push("");
+    if (d.summary){ lines.push("SUMMARY"); lines.push(d.summary); lines.push(""); }
+    if (d.experience && d.experience.length){
+      lines.push("EXPERIENCE");
+      d.experience.forEach(function(e){
+        lines.push((e.title||"Role") + " — " + (e.company||"Company") + (e.dates ? " (" + e.dates + ")" : ""));
+        String(e.bullets||"").split("\n").map(function(s){ return s.trim(); }).filter(Boolean).forEach(function(bul){ lines.push("- " + bul); });
+        lines.push("");
+      });
+    }
+    if (d.education && d.education.length){
+      lines.push("EDUCATION");
+      d.education.forEach(function(ed){
+        lines.push((ed.degree||"") + (ed.degree && ed.school ? ", " : "") + (ed.school||"") + (ed.dates ? " (" + ed.dates + ")" : ""));
+      });
+      lines.push("");
+    }
+    if (d.skills){ lines.push("SKILLS"); lines.push(d.skills); }
+    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  function startResumeBuilder(){
+    var d = state.cindy.draft;
+    if (!d.contact.name && state.profile.name) d.contact.name = state.profile.name;
+    if (!d.contact.email && state.profile.email) d.contact.email = state.profile.email;
+    if (!d.contact.phone && state.profile.phone) d.contact.phone = state.profile.phone;
+    if (!d.contact.location && state.profile.location) d.contact.location = state.profile.location;
+    cindyPush("cindy", "Let’s build your résumé together — a few questions at a time. First: your contact info (I’ve pulled in what’s already in your Profile).");
+    state.cindy.step = "resume:contact";
+    persistMain(); render();
+  }
+
+  function cindyNextSteps(){
+    var c = counts(), stalled = stalledItems(), msgs = [];
+    if (!state.jobs.length){
+      msgs.push("Your pipeline’s empty — add a role you’re interested in on the Pipeline tab, even if you’re not ready to apply yet. Tracking it is step one.");
+    } else if (stalled.length){
+      msgs.push("Here’s what’s stalled right now:");
+      stalled.slice(0,5).forEach(function(it){ msgs.push("• " + it.job.title + " at " + it.job.company + " — " + it.why); });
+    } else {
+      msgs.push("Nothing’s stalled — nice. " + (c.saved ? "You’ve got " + c.saved + " saved role(s) ready to tailor." : "Consider adding a few more roles to your pipeline so you’ve always got options moving."));
+    }
+    if (!(state.profile.resumeText && state.profile.resumeText.trim())) msgs.push("Also: you don’t have a résumé on file yet — want me to help you build one? Just say the word.");
+    cindyPush("cindy", msgs.join("\n"));
+    persistMain(); render();
+  }
+
+  var CINDY_PEP = [
+    "Job searching is a numbers game with a skill layer on top — you're building both right now. Keep going.",
+    "One rejection isn't data about your worth, it's data about one company on one day. Next one.",
+    "You don't need to feel ready to apply. Send the tailored version and let them decide.",
+    "Momentum beats perfection here — one small pipeline move today counts.",
+    "The right role isn't found by refreshing job boards more, it's found by moving the roles you already have forward."
+  ];
+  function cindyPepTalk(){
+    cindyPush("cindy", CINDY_PEP[Math.floor(Math.random()*CINDY_PEP.length)]);
+    persistMain(); render();
+  }
+
+  var CINDY_TIPS = [
+    "Lead résumé bullets with a verb and end with a number when you can — even a rough estimate beats none.",
+    "Tailor your summary line per role — it's the first thing a recruiter reads and the easiest thing to personalize.",
+    "Follow up 5–7 business days after applying if you haven't heard back — a short, polite note, not a resend.",
+    "Save the job posting text when you apply — postings get taken down and you'll want it later for interview prep.",
+    "Keep a running list of accomplishments as they happen — it's much harder to remember them 6 months later at résumé time.",
+    "A short, warm note to someone at the company beats a cold application almost every time."
+  ];
+  function cindyTip(){
+    var i = state.cindy.tipIdx % CINDY_TIPS.length;
+    cindyPush("cindy", CINDY_TIPS[i]);
+    state.cindy.tipIdx = i + 1;
+    persistMain(); render();
+  }
+
+  function wireCindyStep(){
+    var step = state.cindy.step, d = state.cindy.draft;
+    if (step === "idle"){
+      $("#cq-resume").onclick = function(){ cindyPush("user","Build my résumé"); startResumeBuilder(); };
+      $("#cq-next").onclick = function(){ cindyPush("user","What should I do next?"); cindyNextSteps(); };
+      $("#cq-pep").onclick = function(){ cindyPush("user","Give me a pep talk"); cindyPepTalk(); };
+      $("#cq-tips").onclick = function(){ cindyPush("user","Tips for today"); cindyTip(); };
+      return;
+    }
+    if (step === "resume:contact"){
+      $("#cf-continue").onclick = function(){
+        d.contact = { name:$("#cf-name").value.trim(), location:$("#cf-loc").value.trim(), email:$("#cf-email").value.trim(), phone:$("#cf-phone").value.trim(), links:$("#cf-links").value.trim() };
+        cindyPush("user", "(filled in contact info)");
+        cindyPush("cindy", "Got it. Now — write a short summary of who you are professionally, or tell me the role you're targeting.");
+        state.cindy.step = "resume:summary";
+        persistMain(); render();
+      };
+      $("#cf-cancel").onclick = function(){
+        state.cindy.step = "idle";
+        cindyPush("cindy", "No problem — ping me whenever you’re ready.");
+        persistMain(); render();
+      };
+      return;
+    }
+    if (step === "resume:summary"){
+      $("#cf-continue").onclick = function(){
+        d.summary = $("#cf-summary").value.trim();
+        cindyPush("user", d.summary || "(skipped summary)");
+        cindyPush("cindy", "Now let's add your work experience — add as many roles as you want, or skip if you're just starting out.");
+        state.cindy.step = "resume:experience";
+        persistMain(); render();
+      };
+      $("#cf-back").onclick = function(){ state.cindy.step = "resume:contact"; render(); };
+      return;
+    }
+    if (step === "resume:experience"){
+      $("#cf-add").onclick = function(){
+        var title = $("#cf-title").value.trim(), company = $("#cf-company").value.trim();
+        if (!title || !company){ toast("Add at least a title and company."); return; }
+        d.experience.push({ title:title, company:company, dates:$("#cf-dates").value.trim(), bullets:$("#cf-bullets").value });
+        cindyPush("user", title + " @ " + company);
+        cindyPush("cindy", "Added. Want to add another role, or are you done?");
+        persistMain(); render();
+      };
+      var doneBtn = $("#cf-done");
+      if (doneBtn) doneBtn.onclick = function(){
+        cindyPush("user", "Done adding roles");
+        cindyPush("cindy", "Great — got your experience. Let's add your education, or skip if it's not relevant.");
+        state.cindy.step = "resume:education";
+        persistMain(); render();
+      };
+      var skipBtn = $("#cf-skip");
+      if (skipBtn) skipBtn.onclick = function(){
+        cindyPush("user", "Skip — no work history yet");
+        cindyPush("cindy", "No worries — plenty of strong résumés lead with skills and education instead. Let's add your education.");
+        state.cindy.step = "resume:education";
+        persistMain(); render();
+      };
+      return;
+    }
+    if (step === "resume:education"){
+      $("#cf-add").onclick = function(){
+        var school = $("#cf-school").value.trim();
+        if (!school){ toast("Add a school name, or skip."); return; }
+        d.education.push({ school:school, degree:$("#cf-degree").value.trim(), dates:$("#cf-edudates").value.trim() });
+        cindyPush("user", school);
+        cindyPush("cindy", "Got it. Last step — your skills.");
+        state.cindy.step = "resume:skills";
+        persistMain(); render();
+      };
+      $("#cf-skip").onclick = function(){
+        cindyPush("user", "Skip");
+        cindyPush("cindy", "No problem. Last step — your skills.");
+        state.cindy.step = "resume:skills";
+        persistMain(); render();
+      };
+      return;
+    }
+    if (step === "resume:skills"){
+      $("#cf-continue").onclick = function(){
+        d.skills = $("#cf-skills").value.trim();
+        cindyPush("user", d.skills || "(skipped skills)");
+        cindyPush("cindy", "Here’s your draft — take a look, and save it when you’re happy with it.");
+        state.cindy.step = "resume:review";
+        persistMain(); render();
+      };
+      return;
+    }
+    if (step === "resume:review"){
+      $("#cf-save").onclick = async function(){
+        state.profile.resumeText = compileResume(d);
+        state.profile.updatedAt = now();
+        await persistMain();
+        cindyPush("cindy", "Saved to your Profile — Copilot will use this résumé for tailoring going forward. Anything else?");
+        state.cindy.step = "idle";
+        await pushActivity("Built a résumé draft with Cindy and saved it to Profile.");
+        render();
+      };
+      $("#cf-copy").onclick = function(){ copyText(compileResume(d)); };
+      $("#cf-download").onclick = function(){ saveFile("resume-draft.txt", compileResume(d)); };
+      $("#cf-restart").onclick = function(){
+        state.cindy.draft = { contact:d.contact, summary:"", experience:[], education:[], skills:"" };
+        cindyPush("user", "Start over");
+        cindyPush("cindy", "Sure — let's redo this. What's your summary?");
+        state.cindy.step = "resume:summary";
+        persistMain(); render();
+      };
+      return;
+    }
+  }
+
+  async function onCindySend(){
+    var input = $("#cindy-input");
+    var text = input.value.trim();
+    if (!text) return;
+    cindyPush("user", text);
+    input.value = "";
+
+    if (AI_ENABLED){
+      render();
+      try {
+        var res = await aiRequest("/api/cindy", { message:text, history: state.cindy.history.slice(-20) });
+        cindyPush("cindy", String(res && res.text || "").trim() || "Hmm, nothing came back — try again?");
+      } catch(e){
+        cindyPush("cindy", (e && e.message) || "That didn’t go through. Try again in a moment.");
+      }
+      persistMain(); render();
+      return;
+    }
+
+    var t = text.toLowerCase();
+    if (/resum|\bcv\b/.test(t)){ startResumeBuilder(); return; }
+    if (/cover letter/.test(t)){
+      cindyPush("cindy", "Cover letters come together fastest once a specific job's on your Pipeline — add it there and hit Tailor, and I'll draft one alongside your résumé once the AI backend's connected.");
+    } else if (/next|what should i do/.test(t)){ cindyNextSteps(); return; }
+    else if (/pep|motivat|discourag|down|tired/.test(t)){ cindyPepTalk(); return; }
+    else if (/tip/.test(t)){ cindyTip(); return; }
+    else {
+      cindyPush("cindy", "I run on built-in guidance on this static build, so I do best with the buttons below — but I can build a résumé, look at your pipeline, or talk you off the ledge. What sounds useful?");
+    }
+    persistMain(); render();
   }
 
   // ---------- Pipeline ----------
@@ -810,6 +1241,13 @@ button:disabled{opacity:.45; cursor:not-allowed;}
         '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-resume">Save résumé</button><span class="saveflash" id="r-flash"></span></div>' +
       '</div>' +
       '<div class="card">' +
+        '<h3>Cover letter</h3>' +
+        '<div class="lede">A master cover letter template — Cindy and the tailoring step start from this instead of a blank page.</div>' +
+        '<input type="file" id="p-cl-file" accept=".txt,.md,text/plain" style="margin-bottom:10px; font-size:13px;">' +
+        '<textarea id="p-coverletter" rows="12" placeholder="Paste your cover letter here…">'+esc(p.coverLetterText||"")+'</textarea>' +
+        '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-cl">Save cover letter</button><span class="saveflash" id="cl-flash"></span></div>' +
+      '</div>' +
+      '<div class="card">' +
         '<h3>Back up &amp; restore</h3>' +
         '<div class="lede">Everything lives in this browser. Download a backup file to keep it safe or move it to another device.</div>' +
         '<div class="btn-row">' +
@@ -846,6 +1284,17 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       var f = e.target.files[0]; if (!f) return;
       var reader = new FileReader();
       reader.onload = function(){ $("#p-resume").value = String(reader.result||""); toast("Loaded — press Save résumé to keep it."); };
+      reader.readAsText(f);
+    };
+    $("#p-save-cl").onclick = async function(){
+      state.profile.coverLetterText = $("#p-coverletter").value;
+      await persistMain();
+      flash("#cl-flash");
+    };
+    $("#p-cl-file").onchange = function(e){
+      var f = e.target.files[0]; if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function(){ $("#p-coverletter").value = String(reader.result||""); toast("Loaded — press Save cover letter to keep it."); };
       reader.readAsText(f);
     };
     $("#p-backup").onclick = function(){
