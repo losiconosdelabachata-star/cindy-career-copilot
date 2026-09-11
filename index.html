@@ -698,6 +698,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
           '<input id="cindy-input" placeholder="Ask Cindy something…" style="flex:1;">' +
           '<button class="btn-primary" id="cindy-send">Send</button>' +
         '</div>' +
+        '<input type="file" id="cindy-resume-file" accept=".txt,.md,.pdf,text/plain,application/pdf" hidden>' +
       '</div>';
 
     $("#cindy-log").innerHTML = state.cindy.history.map(function(m){
@@ -709,7 +710,24 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     wireCindyStep();
     $("#cindy-send").onclick = onCindySend;
     $("#cindy-input").onkeydown = function(e){ if (e.key==="Enter" || e.keyCode===13){ e.preventDefault(); onCindySend(); } };
+    $("#cindy-resume-file").onchange = onCindyResumeUpload;
     var log = $("#cindy-log"); if (log) log.scrollTop = log.scrollHeight;
+  }
+
+  async function onCindyResumeUpload(e){
+    var f = e.target.files[0]; if (!f) return;
+    var isPdf = /\.pdf$/i.test(f.name || "");
+    if (isPdf) toast("Reading PDF…");
+    try {
+      var text = await extractResumeFile(f);
+      state.cindy.draft.uploadedText = text;
+      cindyPush("cindy", "Got it — here’s what I pulled from “" + f.name + "”. Take a look, fix anything that came through wrong, and save it when it’s ready.");
+      state.cindy.step = "resume:uploaded";
+    } catch(err){
+      cindyPush("cindy", (err && err.message) || "Couldn’t read that file — try a .txt, .md, or text-based .pdf.");
+    }
+    e.target.value = "";
+    persistMain(); render();
   }
 
   function chip(label, id){ return '<button type="button" class="chip" id="'+id+'">'+esc(label)+'</button>'; }
@@ -719,9 +737,20 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     if (step === "idle"){
       return '<div class="cindy-quick">' +
         chip("Build my résumé","cq-resume") +
+        chip("Upload my résumé","cq-upload") +
         chip("What should I do next?","cq-next") +
         chip("Give me a pep talk","cq-pep") +
         chip("Tips for today","cq-tips") +
+      '</div>';
+    }
+    if (step === "resume:uploaded"){
+      return '<div class="cindy-form">' +
+        '<div class="out-h" style="margin-top:0;">From your upload — edit anything before saving</div>' +
+        '<textarea id="cf-uploaded" rows="16">'+esc(d.uploadedText||"")+'</textarea>' +
+        '<div class="btn-row" style="margin-top:10px;">' +
+          '<button class="btn-primary" id="cf-save-uploaded">Save as my résumé</button>' +
+          '<button class="btn-ghost" id="cf-cancel-uploaded">Cancel</button>' +
+        '</div>' +
       '</div>';
     }
     if (step === "resume:contact"){
@@ -876,9 +905,28 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     var step = state.cindy.step, d = state.cindy.draft;
     if (step === "idle"){
       $("#cq-resume").onclick = function(){ cindyPush("user","Build my résumé"); startResumeBuilder(); };
+      $("#cq-upload").onclick = function(){ cindyPush("user","Upload my résumé"); $("#cindy-resume-file").click(); };
       $("#cq-next").onclick = function(){ cindyPush("user","What should I do next?"); cindyNextSteps(); };
       $("#cq-pep").onclick = function(){ cindyPush("user","Give me a pep talk"); cindyPepTalk(); };
       $("#cq-tips").onclick = function(){ cindyPush("user","Tips for today"); cindyTip(); };
+      return;
+    }
+    if (step === "resume:uploaded"){
+      $("#cf-save-uploaded").onclick = async function(){
+        state.profile.resumeText = $("#cf-uploaded").value;
+        state.profile.updatedAt = now();
+        await persistMain();
+        cindyPush("cindy", "Saved to your Profile — Copilot will use this résumé for tailoring going forward. Anything else?");
+        state.cindy.step = "idle";
+        await pushActivity("Uploaded a résumé with Cindy and saved it to Profile.");
+        render();
+      };
+      $("#cf-cancel-uploaded").onclick = function(){
+        cindyPush("user", "Cancel");
+        cindyPush("cindy", "No problem — it wasn’t saved. Anything else?");
+        state.cindy.step = "idle";
+        persistMain(); render();
+      };
       return;
     }
     if (step === "resume:contact"){
@@ -1164,6 +1212,68 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     }
   }
 
+  // ---------- résumé/cover-letter file upload (.txt/.md/.rtf as plain text, .pdf via pdf.js) ----------
+  var PDFJS_VERSION = "3.11.174";
+  var pdfjsLoadPromise = null;
+  function loadPdfJs(){
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (pdfjsLoadPromise) return pdfjsLoadPromise;
+    pdfjsLoadPromise = new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/" + PDFJS_VERSION + "/pdf.min.js";
+      s.onload = function(){
+        try {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/" + PDFJS_VERSION + "/pdf.worker.min.js";
+          resolve(window.pdfjsLib);
+        } catch(e){ reject(e); }
+      };
+      s.onerror = function(){ reject(new Error("Couldn’t load the PDF reader — check your connection and try again.")); };
+      document.head.appendChild(s);
+    });
+    return pdfjsLoadPromise;
+  }
+  async function extractPdfText(file){
+    var pdfjsLib = await loadPdfJs();
+    var buf = await file.arrayBuffer();
+    var doc = await pdfjsLib.getDocument({ data: buf }).promise;
+    var pages = [];
+    for (var i = 1; i <= doc.numPages; i++){
+      var page = await doc.getPage(i);
+      var content = await page.getTextContent();
+      var lines = [], curLine = [], lastY = null;
+      content.items.forEach(function(it){
+        var y = it.transform ? it.transform[5] : null;
+        if (lastY !== null && y !== null && Math.abs(y - lastY) > 2){
+          lines.push(curLine.join(""));
+          curLine = [];
+        }
+        curLine.push(it.str);
+        lastY = y;
+      });
+      if (curLine.length) lines.push(curLine.join(""));
+      pages.push(lines.join("\n"));
+    }
+    return pages.join("\n\n")
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+  function readTextFile(file){
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onload = function(){ resolve(String(reader.result||"")); };
+      reader.onerror = function(){ reject(new Error("Couldn’t read that file.")); };
+      reader.readAsText(file);
+    });
+  }
+  async function extractResumeFile(file){
+    var isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+    if (!isPdf) return readTextFile(file);
+    var text = await extractPdfText(file);
+    if (!text) throw new Error("Couldn’t find any text in that PDF — it may be a scanned image. Paste the text in manually instead.");
+    return text;
+  }
+
   async function copyText(text){
     try { await navigator.clipboard.writeText(text||""); toast("Copied."); }
     catch(e){ toast("Copy failed — select the text manually."); }
@@ -1235,15 +1345,15 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       '</div>' +
       '<div class="card">' +
         '<h3>Résumé</h3>' +
-        '<div class="lede">Paste your résumé text, or load a .txt / .md file. This is the source for every tailored version.</div>' +
-        '<input type="file" id="p-file" accept=".txt,.md,text/plain" style="margin-bottom:10px; font-size:13px;">' +
+        '<div class="lede">Paste your résumé text, or upload a .txt, .md, or .pdf file. This is the source for every tailored version.</div>' +
+        '<input type="file" id="p-file" accept=".txt,.md,.pdf,text/plain,application/pdf" style="margin-bottom:10px; font-size:13px;">' +
         '<textarea id="p-resume" rows="16" placeholder="Paste your résumé here…">'+esc(p.resumeText||"")+'</textarea>' +
         '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-resume">Save résumé</button><span class="saveflash" id="r-flash"></span></div>' +
       '</div>' +
       '<div class="card">' +
         '<h3>Cover letter</h3>' +
         '<div class="lede">A master cover letter template — Cindy and the tailoring step start from this instead of a blank page.</div>' +
-        '<input type="file" id="p-cl-file" accept=".txt,.md,text/plain" style="margin-bottom:10px; font-size:13px;">' +
+        '<input type="file" id="p-cl-file" accept=".txt,.md,.pdf,text/plain,application/pdf" style="margin-bottom:10px; font-size:13px;">' +
         '<textarea id="p-coverletter" rows="12" placeholder="Paste your cover letter here…">'+esc(p.coverLetterText||"")+'</textarea>' +
         '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-cl">Save cover letter</button><span class="saveflash" id="cl-flash"></span></div>' +
       '</div>' +
@@ -1280,22 +1390,32 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       await persistMain();
       flash("#r-flash");
     };
-    $("#p-file").onchange = function(e){
+    $("#p-file").onchange = async function(e){
       var f = e.target.files[0]; if (!f) return;
-      var reader = new FileReader();
-      reader.onload = function(){ $("#p-resume").value = String(reader.result||""); toast("Loaded — press Save résumé to keep it."); };
-      reader.readAsText(f);
+      var isPdf = /\.pdf$/i.test(f.name || "");
+      if (isPdf) toast("Reading PDF…");
+      try {
+        var text = await extractResumeFile(f);
+        $("#p-resume").value = text;
+        toast("Loaded — press Save résumé to keep it.");
+      } catch(err){ toast((err && err.message) || "Couldn’t read that file."); }
+      e.target.value = "";
     };
     $("#p-save-cl").onclick = async function(){
       state.profile.coverLetterText = $("#p-coverletter").value;
       await persistMain();
       flash("#cl-flash");
     };
-    $("#p-cl-file").onchange = function(e){
+    $("#p-cl-file").onchange = async function(e){
       var f = e.target.files[0]; if (!f) return;
-      var reader = new FileReader();
-      reader.onload = function(){ $("#p-coverletter").value = String(reader.result||""); toast("Loaded — press Save cover letter to keep it."); };
-      reader.readAsText(f);
+      var isPdf = /\.pdf$/i.test(f.name || "");
+      if (isPdf) toast("Reading PDF…");
+      try {
+        var text = await extractResumeFile(f);
+        $("#p-coverletter").value = text;
+        toast("Loaded — press Save cover letter to keep it.");
+      } catch(err){ toast((err && err.message) || "Couldn’t read that file."); }
+      e.target.value = "";
     };
     $("#p-backup").onclick = function(){
       var stamp = new Date().toISOString().slice(0,10);

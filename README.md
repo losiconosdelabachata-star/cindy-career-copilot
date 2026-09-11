@@ -16,14 +16,16 @@ https://losiconosdelabachata-star.github.io/cindy-career-copilot/
   job searches apart, not for anything sensitive.
 - **Cindy** — a résumé and career-search guide, in a chat-style tab. She walks you through
   building a résumé from scratch (contact → summary → experience → education → skills →
-  save to Profile), reads your pipeline to tell you what's stalled and what to do next,
-  and has a stock of career tips and pep talks. She runs on built-in guidance today (no
-  server needed); free-text chat is wired to switch to a real AI backend automatically
-  once one's connected (see "What's intentionally off here").
+  save to Profile) or uploading an existing one (.txt, .md, or .pdf — text is extracted
+  client-side via pdf.js, shown editable before you save it), reads your pipeline to tell
+  you what's stalled and what to do next, and has a stock of career tips and pep talks.
+  She runs on built-in guidance today (no server needed); free-text chat is wired to
+  switch to a real AI backend automatically once one's connected (see "What's
+  intentionally off here").
 - **Pipeline** — track roles (title, company, posting URL, description) through
   Saved → Tailored → Applied → Interview → Closed
 - **Profile** — contact info, target roles, platform links, your master résumé, and a
-  master cover letter template
+  master cover letter template — both pasteable or uploadable (.txt/.md/.pdf)
 - **Needs attention** — auto-flags stalled items (saved with no materials, tailored but
   not applied after 2 days, applied with no follow-up after 7 days)
 - **Back up & restore** — since there's no server, everything lives in the visitor's own
