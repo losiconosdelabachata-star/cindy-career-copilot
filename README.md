@@ -27,15 +27,19 @@ to the Cloudflare Pages URL regardless of which one you're on (CORS is open for 
   Free-text chat runs on a real AI backend (see "AI backend" below).
 - **Pipeline** — track roles (title, company, posting URL, description) through
   Saved → Tailored → Applied → Interview → Denied → Closed
+- **Job Matches** — real, live openings pulled from Adzuna (aggregates thousands of job
+  boards) based on target roles + location. Nothing here applies on your behalf: each
+  result links straight to the original posting, with a one-click "Save to pipeline" so
+  you can track it. Also has quick-search launchers that open LinkedIn's or Indeed's own
+  job search in a new tab (with an optional "Easy Apply only" toggle for LinkedIn, via its
+  `f_AL=true` filter) so you can browse and apply there directly.
 - **Unemployment work-search log** — in Profile, a toggle for people claiming unemployment
   benefits: keeps a downloadable record (PDF or CSV) of every job with an "applied" date —
   date, employer, position, method, result, posting URL — for the work-search documentation
   most states require if a claim is reviewed. Self-reported from your own pipeline data;
   not legal advice.
-- **Profile** — contact info (including date of birth — stored locally only, for
-  applications that require confirming a minimum age; never included in the résumé/cover
-  letter output), target roles, platform links, your master résumé, and a master cover
-  letter template — both pasteable or uploadable (.txt/.md/.pdf)
+- **Profile** — contact info, target roles, platform links, your master résumé, and a
+  master cover letter template — both pasteable or uploadable (.txt/.md/.pdf)
 - **Needs attention** — auto-flags stalled items (saved with no materials, tailored but
   not applied after 2 days, applied with no follow-up after 7 days)
 - **Back up & restore** — since there's no server, everything lives in the visitor's own
@@ -56,6 +60,16 @@ Cloudflare Pages Functions that call Cloudflare Workers AI (`@cf/meta/llama-3.3-
 via the `[ai]` binding in `wrangler.toml` — free, billed to the Cloudflare account, no
 separate API key. They power "Build my plan", "Tailor résumé + cover letter", and Cindy's
 free-text chat (`AI_ENABLED = true` in `index.html`).
+
+`functions/api/jobs.js` proxies the [Adzuna Jobs API](https://developer.adzuna.com/) (a
+free, self-serve job-search API — neither LinkedIn nor Indeed offer one) to power the "Job
+Matches" tab. It reads `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` from Cloudflare Pages secrets
+so the credentials never reach the browser:
+
+```bash
+npx wrangler pages secret put ADZUNA_APP_ID
+npx wrangler pages secret put ADZUNA_APP_KEY
+```
 
 To redeploy the backend after editing anything under `functions/` or `wrangler.toml`:
 

@@ -126,6 +126,8 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
 .btn-danger{background:transparent; color:var(--danger); border-color:var(--danger);}
 .btn-danger:hover{background:var(--danger-ghost);}
 button:disabled{opacity:.45; cursor:not-allowed;}
+a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600; font-size:13.5px; text-transform:uppercase; letter-spacing:.05em;
+  border:1px solid transparent; border-radius:var(--radius); padding:9px 16px; cursor:pointer; text-decoration:none; display:inline-block;}
 .btn-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
 .saveflash{font-family:var(--mono); font-size:12px; color:var(--green);}
 
@@ -240,8 +242,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       tailoredResumeH: "Tailored résumé", coverLetterH: "Cover letter", copyBtn: "Copy", downloadTxtBtn: "Download .txt",
 
       contactTargetsH: "Contact & targets", nameLabel: "Name", locationLabel: "Location",
-      emailLabel: "Email", phoneLabel: "Phone", dobLabel: "Date of birth",
-      dobHint: "Stored locally only — some job applications ask for this to confirm you meet minimum age requirements. Never put this on a résumé.",
+      emailLabel: "Email", phoneLabel: "Phone",
       targetRolesLabel: "Target roles / keywords",
       saveBtn: "Save",
       applyingFromH: "Where you’re applying from", applyingFromLede: "Keep every profile link in one place.",
@@ -269,7 +270,23 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       cindyAskPlaceholder: "Ask Cindy something…", sendBtn: "Send",
       connectLede: "Drop in your profile links so I can point tailored materials at them — then I’ll give you a quick checklist for each.",
       linkedinUrlLabel: "LinkedIn URL", indeedUrlLabel: "Indeed URL",
-      saveGetTips: "Save & get tips", justTips: "Just give me tips"
+      saveGetTips: "Save & get tips", justTips: "Just give me tips",
+
+      tabMatches: "Job Matches",
+      matchesTitle: "Job Matches", matchesLede: "Real, live openings pulled from thousands of job boards — you review and apply yourself, nothing here applies for you.",
+      matchesWhatLabel: "Role / keywords", matchesWhereLabel: "Location (city, state, or \"remote\")",
+      matchesSearchBtn: "Search jobs", matchesSearching: "Searching…",
+      matchesEasyApplyLabel: "LinkedIn: Easy Apply only",
+      matchesNoQuery: "Add target roles above (or in your Profile) to search.",
+      matchesEmpty: "No matches yet — try broader keywords or a wider location.",
+      matchesCount: " results",
+      matchesSaveBtn: "Save to pipeline", matchesSavedBtn: "Saved ✓", matchesViewBtn: "View posting",
+      matchesLinkedinBtn: "Search on LinkedIn", matchesIndeedBtn: "Search on Indeed",
+      matchesQuickLinksH: "Quick search on LinkedIn / Indeed",
+      matchesQuickLinksLede: "Opens their own search in a new tab — you sign in there and apply directly.",
+      matchesErrorNotConfigured: "Job matching isn't set up yet.",
+      matchesErrorGeneric: "Job search didn't come through — try again in a moment.",
+      matchesAlreadyTracked: "Already in your pipeline"
     },
     es: {
       brandTag: "guardado en este dispositivo", theme: "◐ tema", logout: "⎋ cerrar sesión",
@@ -304,8 +321,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       tailoredResumeH: "Currículum adaptado", coverLetterH: "Carta de presentación", copyBtn: "Copiar", downloadTxtBtn: "Descargar .txt",
 
       contactTargetsH: "Contacto y objetivos", nameLabel: "Nombre", locationLabel: "Ubicación",
-      emailLabel: "Correo", phoneLabel: "Teléfono", dobLabel: "Fecha de nacimiento",
-      dobHint: "Se guarda solo en este dispositivo — algunas solicitudes de empleo la piden para confirmar la edad mínima. Nunca la incluyas en un currículum.",
+      emailLabel: "Correo", phoneLabel: "Teléfono",
       targetRolesLabel: "Puestos objetivo / palabras clave",
       saveBtn: "Guardar",
       applyingFromH: "Desde dónde te postulas", applyingFromLede: "Ten todos tus enlaces de perfil en un solo lugar.",
@@ -333,7 +349,23 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       cindyAskPlaceholder: "Pregúntale algo a Cindy…", sendBtn: "Enviar",
       connectLede: "Agrega tus enlaces de perfil para que pueda usarlos en tus materiales adaptados — luego te doy una lista rápida de mejoras para cada uno.",
       linkedinUrlLabel: "URL de LinkedIn", indeedUrlLabel: "URL de Indeed",
-      saveGetTips: "Guardar y ver consejos", justTips: "Solo dame los consejos"
+      saveGetTips: "Guardar y ver consejos", justTips: "Solo dame los consejos",
+
+      tabMatches: "Empleos",
+      matchesTitle: "Empleos sugeridos", matchesLede: "Vacantes reales, en vivo, de miles de bolsas de trabajo — tú revisas y aplicas, esto no aplica por ti.",
+      matchesWhatLabel: "Puesto / palabras clave", matchesWhereLabel: "Ubicación (ciudad, estado, o \"remoto\")",
+      matchesSearchBtn: "Buscar empleos", matchesSearching: "Buscando…",
+      matchesEasyApplyLabel: "LinkedIn: solo Easy Apply",
+      matchesNoQuery: "Agrega puestos objetivo arriba (o en tu Perfil) para buscar.",
+      matchesEmpty: "Sin resultados todavía — prueba palabras clave más amplias o una ubicación más amplia.",
+      matchesCount: " resultados",
+      matchesSaveBtn: "Guardar en postulaciones", matchesSavedBtn: "Guardado ✓", matchesViewBtn: "Ver publicación",
+      matchesLinkedinBtn: "Buscar en LinkedIn", matchesIndeedBtn: "Buscar en Indeed",
+      matchesQuickLinksH: "Búsqueda rápida en LinkedIn / Indeed",
+      matchesQuickLinksLede: "Abre su propia búsqueda en una pestaña nueva — inicias sesión ahí y aplicas directamente.",
+      matchesErrorNotConfigured: "La búsqueda de empleos aún no está configurada.",
+      matchesErrorGeneric: "La búsqueda de empleos no funcionó — intenta de nuevo en un momento.",
+      matchesAlreadyTracked: "Ya está en tus postulaciones"
     }
   };
   var LANG = "en";
@@ -419,6 +451,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   var activeTab = "today";
   var storeReady = false;
   var planCache = { text:"", running:false, ctl:null };
+  var matchesCache = { what:"", where:"", easyApply:false, running:false, error:"", results:null };
 
   // ---------- accounts (separate, password-gated data per person — all still
   // local to this browser; there's no server, so this is data separation +
@@ -706,6 +739,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     state = { profile:{ links:{} }, activity:[], jobs:[], cindy:cindyDefault() };
     activeTab = "today";
     planCache = { text:"", running:false, ctl:null };
+    matchesCache = { what:"", where:"", easyApply:false, running:false, error:"", results:null };
     authState = { mode:"login", error:"", username:"" };
     renderAuth();
   }
@@ -734,6 +768,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
         tabBtn("today",t("tabToday")) +
         tabBtn("cindy",t("tabCindy")) +
         tabBtn("pipeline",t("tabPipeline"), state.jobs.length ? String(state.jobs.length) : "") +
+        tabBtn("matches",t("tabMatches")) +
         tabBtn("profile",t("tabProfile")) +
         tabBtn("activity",t("tabActivity"), unread ? String(unread) : "") +
       '</div>' +
@@ -769,6 +804,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     if (activeTab==="today") return renderToday(b);
     if (activeTab==="cindy") return renderCindy(b);
     if (activeTab==="pipeline") return renderPipeline(b);
+    if (activeTab==="matches") return renderMatches(b);
     if (activeTab==="profile") return renderProfile(b);
     if (activeTab==="activity") return renderActivity(b);
   }
@@ -1426,6 +1462,151 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     }
   }
 
+  // ---------- Job Matches (real listings via Adzuna proxy — search + link only, never auto-apply) ----------
+  function renderMatches(b){
+    var m = matchesCache;
+    if (!m.what) m.what = state.profile.targetRoles || "";
+    if (!m.where) m.where = state.profile.location || "";
+
+    b.innerHTML =
+      '<div class="card">' +
+        '<h2>'+esc(t("matchesTitle"))+'</h2>' +
+        '<div class="lede">'+esc(t("matchesLede"))+'</div>' +
+        '<div class="stack">' +
+          '<div class="grid2">' +
+            '<div><label for="m-what">'+esc(t("matchesWhatLabel"))+'</label><input id="m-what" value="'+esc(m.what)+'" placeholder="Customer Success, AI Engineer…"></div>' +
+            '<div><label for="m-where">'+esc(t("matchesWhereLabel"))+'</label><input id="m-where" value="'+esc(m.where)+'" placeholder="Miami, FL"></div>' +
+          '</div>' +
+          '<div class="btn-row">' +
+            '<button class="btn-primary" id="m-search">'+ esc(m.running ? t("matchesSearching") : t("matchesSearchBtn")) +'</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h3>'+esc(t("matchesQuickLinksH"))+'</h3>' +
+        '<div class="lede">'+esc(t("matchesQuickLinksLede"))+'</div>' +
+        '<div class="btn-row">' +
+          '<a class="btn-ghost" id="m-linkedin" target="_blank" rel="noopener noreferrer" style="text-decoration:none; text-align:center;">'+esc(t("matchesLinkedinBtn"))+'</a>' +
+          '<a class="btn-ghost" id="m-indeed" target="_blank" rel="noopener noreferrer" style="text-decoration:none; text-align:center;">'+esc(t("matchesIndeedBtn"))+'</a>' +
+        '</div>' +
+        '<label style="display:flex; align-items:center; gap:8px; margin-top:10px; text-transform:none; font-weight:400;">' +
+          '<input type="checkbox" id="m-easy" style="width:auto;"'+(m.easyApply?" checked":"")+'> '+esc(t("matchesEasyApplyLabel")) +
+        '</label>' +
+      '</div>' +
+      '<div id="m-results">' + matchesResultsHtml() + '</div>';
+
+    $("#m-search").onclick = onSearchMatches;
+    $("#m-easy").onchange = function(){ matchesCache.easyApply = $("#m-easy").checked; updateQuickLinks(); };
+    $("#m-what").oninput = function(){ matchesCache.what = $("#m-what").value; updateQuickLinks(); };
+    $("#m-where").oninput = function(){ matchesCache.where = $("#m-where").value; updateQuickLinks(); };
+    updateQuickLinks();
+    wireMatchResults();
+  }
+
+  function updateQuickLinks(){
+    var what = (matchesCache.what || "").trim();
+    var where = (matchesCache.where || "").trim();
+    var li = $("#m-linkedin"), ind = $("#m-indeed");
+    if (li){
+      var liUrl = "https://www.linkedin.com/jobs/search/?keywords=" + encodeURIComponent(what) +
+        (where ? "&location=" + encodeURIComponent(where) : "") +
+        (matchesCache.easyApply ? "&f_AL=true" : "");
+      li.href = liUrl;
+    }
+    if (ind){
+      var indUrl = "https://www.indeed.com/jobs?q=" + encodeURIComponent(what) +
+        (where ? "&l=" + encodeURIComponent(where) : "");
+      ind.href = indUrl;
+    }
+  }
+
+  function matchesResultsHtml(){
+    var m = matchesCache;
+    if (m.error) return '<div class="card"><div class="empty">'+esc(m.error)+'</div></div>';
+    if (m.running) return '<div class="card"><div class="thinking">'+esc(t("thinking"))+'</div></div>';
+    if (!m.results) return "";
+    if (!m.results.length) return '<div class="card"><div class="empty">'+esc(t("matchesEmpty"))+'</div></div>';
+    return '<div class="card" style="padding-bottom:4px;"><div class="lede" style="margin-bottom:10px;">'+ m.results.length +esc(t("matchesCount"))+'</div></div>' +
+      m.results.map(matchCard).join("");
+  }
+
+  function alreadyTracked(url){
+    if (!url) return null;
+    return state.jobs.filter(function(j){ return j.url && j.url === url; })[0] || null;
+  }
+
+  function matchCard(r, idx){
+    var tracked = alreadyTracked(r.url);
+    var salary = (r.salaryMin || r.salaryMax)
+      ? '<span class="age">$' + Math.round(r.salaryMin||r.salaryMax).toLocaleString() + (r.salaryMax && r.salaryMax!==r.salaryMin ? "–$"+Math.round(r.salaryMax).toLocaleString() : "") + '</span>'
+      : "";
+    return '<div class="job" data-idx="'+idx+'">' +
+      '<div class="job-head">' +
+        '<div>' +
+          '<h3>'+esc(r.title)+'</h3>' +
+          '<div class="job-co">'+esc(r.company)+ (r.location ? " · " + esc(r.location) : "") +'</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="job-meta">' + salary + (r.created ? '<span class="age">'+esc(t("addedAgo"))+esc(agoLabel(new Date(r.created).getTime()))+'</span>' : "") + '</div>' +
+      (r.description ? '<details><summary>'+esc(t("jobDescSummary"))+'</summary><div class="desc">'+esc(r.description)+'…</div></details>' : "") +
+      '<div class="job-actions">' +
+        '<a class="btn-ghost m-view" href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none; text-align:center;">'+esc(t("matchesViewBtn"))+'</a>' +
+        (tracked
+          ? '<button class="btn-ghost" disabled>'+esc(t("matchesAlreadyTracked"))+'</button>'
+          : '<button class="btn-primary m-save">'+esc(t("matchesSaveBtn"))+'</button>') +
+      '</div>' +
+    '</div>';
+  }
+
+  function wireMatchResults(){
+    Array.prototype.forEach.call(document.querySelectorAll("#m-results .job"), function(el){
+      var idx = parseInt(el.dataset.idx, 10);
+      var save = $(".m-save", el);
+      if (save) save.onclick = function(){ onSaveMatch(idx, save); };
+    });
+  }
+
+  async function onSearchMatches(){
+    var what = ($("#m-what").value || "").trim();
+    var where = ($("#m-where").value || "").trim();
+    matchesCache.what = what; matchesCache.where = where;
+    if (!what){ toast(t("matchesNoQuery")); return; }
+
+    matchesCache.running = true; matchesCache.error = ""; matchesCache.results = null;
+    renderMatches($("#tab-body"));
+    try {
+      var url = AI_BASE + "/api/jobs?what=" + encodeURIComponent(what) + (where ? "&where=" + encodeURIComponent(where) : "");
+      var res = await fetch(url);
+      var data = await res.json().catch(function(){ return null; });
+      if (!res.ok || !data || data.error){
+        matchesCache.error = (data && data.error === "not_configured") ? t("matchesErrorNotConfigured") : t("matchesErrorGeneric");
+        matchesCache.results = null;
+      } else {
+        matchesCache.results = data.results || [];
+      }
+    } catch(e){
+      matchesCache.error = t("matchesErrorGeneric");
+    } finally {
+      matchesCache.running = false;
+      renderMatches($("#tab-body"));
+    }
+  }
+
+  async function onSaveMatch(idx, btn){
+    var r = matchesCache.results && matchesCache.results[idx];
+    if (!r) return;
+    if (alreadyTracked(r.url)) return;
+    btn.disabled = true; btn.textContent = t("matchesSavedBtn");
+    var job = { id:uid(), title:r.title, company:r.company, url:r.url,
+      description:(r.description || "").slice(0, 1500),
+      status:"saved", tailoredResume:"", coverLetter:"", createdAt:now(), updatedAt:now(), appliedAt:null };
+    state.jobs.unshift(job);
+    await persistJob(job);
+    await pushActivity("Added " + r.title + " at " + r.company + " to the pipeline.", job.id);
+    toast("Saved to pipeline.");
+    render();
+  }
+
   // ---------- résumé/cover-letter file upload (.txt/.md/.rtf as plain text, .pdf via pdf.js) ----------
   var PDFJS_VERSION = "3.11.174";
   var pdfjsLoadPromise = null;
@@ -1640,8 +1821,6 @@ button:disabled{opacity:.45; cursor:not-allowed;}
             '<div><label for="p-email">'+esc(t("emailLabel"))+'</label><input id="p-email" value="'+esc(p.email||"")+'"></div>' +
             '<div><label for="p-phone">'+esc(t("phoneLabel"))+'</label><input id="p-phone" value="'+esc(p.phone||"")+'"></div>' +
           '</div>' +
-          '<div><label for="p-dob">'+esc(t("dobLabel"))+'</label><input id="p-dob" type="date" value="'+esc(p.dob||"")+'">' +
-            '<div style="font-size:12px; color:var(--faint); margin-top:4px;">'+esc(t("dobHint"))+'</div></div>' +
           '<div><label for="p-roles">'+esc(t("targetRolesLabel"))+'</label><input id="p-roles" value="'+esc(p.targetRoles||"")+'" placeholder="e.g. Customer Success, Healthcare Ops, Remote"></div>' +
           '<div class="btn-row"><button class="btn-primary" id="p-save">'+esc(t("saveBtn"))+'</button><span class="saveflash" id="p-flash"></span></div>' +
         '</div>' +
@@ -1712,7 +1891,6 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       state.profile.location = $("#p-loc").value.trim();
       state.profile.email = $("#p-email").value.trim();
       state.profile.phone = $("#p-phone").value.trim();
-      state.profile.dob = $("#p-dob").value;
       state.profile.targetRoles = $("#p-roles").value.trim();
       state.profile.updatedAt = now();
       await persistMain();
