@@ -24,12 +24,18 @@ https://losiconosdelabachata-star.github.io/cindy-career-copilot/
   intentionally off here").
 - **Pipeline** — track roles (title, company, posting URL, description) through
   Saved → Tailored → Applied → Interview → Closed
-- **Profile** — contact info, target roles, platform links, your master résumé, and a
-  master cover letter template — both pasteable or uploadable (.txt/.md/.pdf)
+- **Profile** — contact info (including date of birth — stored locally only, for
+  applications that require confirming a minimum age; never included in the résumé/cover
+  letter output), target roles, platform links, your master résumé, and a master cover
+  letter template — both pasteable or uploadable (.txt/.md/.pdf)
 - **Needs attention** — auto-flags stalled items (saved with no materials, tailored but
   not applied after 2 days, applied with no follow-up after 7 days)
 - **Back up & restore** — since there's no server, everything lives in the visitor's own
   browser (localStorage); Profile → Download backup exports it as JSON, Restore reloads it
+- **English / Español** — an EN/ES toggle in the masthead (and on the sign-in screen)
+  switches all tabs, forms, buttons, and Cindy's opening chat/menu; the choice is
+  remembered per browser. Cindy's longer free-form replies (tips, résumé-builder prompts)
+  are still English-only for now.
 
 Marino's account comes pre-seeded with his résumé and cover letter the first time the
 username `marino` is registered on a given browser (see `SEED_PROFILES` in `index.html`) —

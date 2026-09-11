@@ -201,6 +201,140 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   var $ = function(s, r){ return (r||document).querySelector(s); };
   var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+
+  // ---------- language ----------
+  var I18N = {
+    en: {
+      brandTag: "saved on this device", theme: "◐ theme", logout: "⎋ log out",
+      tabToday: "Today", tabCindy: "Cindy", tabPipeline: "Pipeline", tabProfile: "Profile", tabActivity: "Activity",
+      stageSaved: "Saved", stageTailored: "Tailored", stageApplied: "Applied", stageInterview: "Interview", stageClosed: "Closed",
+      footer: "saved in this browser only — use Back up in the Profile tab",
+
+      authTagline: "private pipeline · one account per person",
+      signInTitle: "Sign in", registerTitle: "Create account",
+      signInLede: "Each person signs in to their own private pipeline, saved on this device.",
+      registerLede: "Pick a username and password — your pipeline stays private to this account, on this browser.",
+      username: "Username", password: "Password", confirmPassword: "Confirm password",
+      logIn: "Log in", createAccount: "Create account",
+      noAccountYet: "No account yet? ", haveAccount: "Already have an account? ", registerLink: "Register", loginLink: "Log in",
+
+      todayPlanTitle: "Today’s plan",
+      todayPlanLede: "A short, specific list of what moves your search forward right now — built from your live pipeline.",
+      todayStaticNote: "This is a static site, so the auto-plan and AI tailoring aren’t available here — the stalled-items list, pipeline, and downloads all still work.",
+      buildPlan: "Build my plan", replan: "Re-plan", working: "Working…", stop: "Stop", thinking: "Thinking…",
+      needsAttention: "Needs attention", needsAttentionLede: "Items sitting still in the pipeline.",
+      nothingStalledMoving: "Nothing stalled. Pipeline’s moving.",
+      nothingStalledEmpty: "Nothing stalled. Add a job in the Pipeline tab to get started.",
+      addResumeNudge: "Add your résumé in the ", profileWord: "Profile", addResumeNudge2: " tab so Copilot can tailor it per job.",
+
+      addRoleTitle: "Add a role to track",
+      jobTitleLabel: "Job title", companyLabel: "Company", postingUrlLabel: "Posting URL ", optionalWord: "(optional)",
+      jobDescLabel: "Job description ", jobDescHint: "(paste it — powers the tailoring)",
+      addToPipeline: "Add to pipeline", noRolesYet: "No roles tracked yet. Add one above.",
+      remove: "Remove", tailorBtn: "Tailor résumé + cover letter", retailorBtn: "Re-tailor",
+      statusAria: "Status", jobDescSummary: "Job description",
+      addedAgo: "added ", appliedAgo: "· applied ",
+      tailoredResumeH: "Tailored résumé", coverLetterH: "Cover letter", copyBtn: "Copy", downloadTxtBtn: "Download .txt",
+
+      contactTargetsH: "Contact & targets", nameLabel: "Name", locationLabel: "Location",
+      emailLabel: "Email", phoneLabel: "Phone", dobLabel: "Date of birth",
+      dobHint: "Stored locally only — some job applications ask for this to confirm you meet minimum age requirements. Never put this on a résumé.",
+      targetRolesLabel: "Target roles / keywords",
+      saveBtn: "Save",
+      applyingFromH: "Where you’re applying from", applyingFromLede: "Keep every profile link in one place.",
+      linkedinLabel: "LinkedIn", indeedLabel: "Indeed", portfolioLabel: "Portfolio / website", otherLabel: "Other",
+      saveLinksBtn: "Save links",
+      resumeH: "Résumé", resumeLede: "Paste your résumé text, or upload a .txt, .md, or .pdf file. This is the source for every tailored version.",
+      saveResumeBtn: "Save résumé",
+      coverLetterCardH: "Cover letter", coverLetterCardLede: "A master cover letter template — Cindy and the tailoring step start from this instead of a blank page.",
+      saveCoverLetterBtn: "Save cover letter",
+      backupH: "Back up & restore", backupLede: "Everything lives in this browser. Download a backup file to keep it safe or move it to another device.",
+      downloadBackupBtn: "Download backup", restoreBtn: "Restore from file",
+
+      activityLogH: "Activity log", markAllReadBtn: "Mark all read", noActivityYet: "No activity yet. It logs here as you add and move roles.",
+
+      cindyTitle: "Cindy", cindyLede: "Your résumé & career-search guide.",
+      cindyAiNote: " Running on built-in guidance right now — she’ll switch on full AI conversation automatically once the AI backend is connected.",
+      cindyGreeting: "Hi, I’m Cindy 👋 — your résumé and career-search guide. I can help you build a résumé from scratch, or look at your pipeline and tell you what to do next. What do you want to do?",
+      chipBuildResume: "Build my résumé", chipUploadResume: "Upload my résumé", chipConnect: "Organize my LinkedIn/Indeed",
+      chipNext: "What should I do next?", chipPep: "Give me a pep talk", chipTips: "Tips for today",
+      cindyAskPlaceholder: "Ask Cindy something…", sendBtn: "Send",
+      connectLede: "Drop in your profile links so I can point tailored materials at them — then I’ll give you a quick checklist for each.",
+      linkedinUrlLabel: "LinkedIn URL", indeedUrlLabel: "Indeed URL",
+      saveGetTips: "Save & get tips", justTips: "Just give me tips"
+    },
+    es: {
+      brandTag: "guardado en este dispositivo", theme: "◐ tema", logout: "⎋ cerrar sesión",
+      tabToday: "Hoy", tabCindy: "Cindy", tabPipeline: "Postulaciones", tabProfile: "Perfil", tabActivity: "Actividad",
+      stageSaved: "Guardado", stageTailored: "Adaptado", stageApplied: "Enviado", stageInterview: "Entrevista", stageClosed: "Cerrado",
+      footer: "guardado solo en este navegador — usa Respaldar en la pestaña Perfil",
+
+      authTagline: "postulaciones privadas · una cuenta por persona",
+      signInTitle: "Iniciar sesión", registerTitle: "Crear cuenta",
+      signInLede: "Cada persona inicia sesión en sus propias postulaciones privadas, guardadas en este dispositivo.",
+      registerLede: "Elige un usuario y contraseña — tus postulaciones quedan privadas para esta cuenta, en este navegador.",
+      username: "Usuario", password: "Contraseña", confirmPassword: "Confirmar contraseña",
+      logIn: "Iniciar sesión", createAccount: "Crear cuenta",
+      noAccountYet: "¿Aún no tienes cuenta? ", haveAccount: "¿Ya tienes cuenta? ", registerLink: "Regístrate", loginLink: "Iniciar sesión",
+
+      todayPlanTitle: "Plan de hoy",
+      todayPlanLede: "Una lista breve y concreta de lo que hace avanzar tu búsqueda ahora mismo — creada desde tus postulaciones activas.",
+      todayStaticNote: "Este es un sitio estático, así que el plan automático y el ajuste con IA no están disponibles aquí — la lista de pendientes, las postulaciones y las descargas sí funcionan.",
+      buildPlan: "Crear mi plan", replan: "Rehacer plan", working: "Trabajando…", stop: "Detener", thinking: "Pensando…",
+      needsAttention: "Necesita atención", needsAttentionLede: "Elementos estancados en tus postulaciones.",
+      nothingStalledMoving: "Nada estancado. Tus postulaciones avanzan.",
+      nothingStalledEmpty: "Nada estancado. Agrega un puesto en la pestaña Postulaciones para empezar.",
+      addResumeNudge: "Agrega tu currículum en la pestaña ", profileWord: "Perfil", addResumeNudge2: " para que Copilot pueda adaptarlo a cada puesto.",
+
+      addRoleTitle: "Agregar un puesto a seguir",
+      jobTitleLabel: "Puesto", companyLabel: "Empresa", postingUrlLabel: "URL de la publicación ", optionalWord: "(opcional)",
+      jobDescLabel: "Descripción del puesto ", jobDescHint: "(pégala — hace posible el ajuste con IA)",
+      addToPipeline: "Agregar a postulaciones", noRolesYet: "Aún no hay puestos registrados. Agrega uno arriba.",
+      remove: "Eliminar", tailorBtn: "Adaptar currículum + carta", retailorBtn: "Volver a adaptar",
+      statusAria: "Estado", jobDescSummary: "Descripción del puesto",
+      addedAgo: "agregado hace ", appliedAgo: "· enviado hace ",
+      tailoredResumeH: "Currículum adaptado", coverLetterH: "Carta de presentación", copyBtn: "Copiar", downloadTxtBtn: "Descargar .txt",
+
+      contactTargetsH: "Contacto y objetivos", nameLabel: "Nombre", locationLabel: "Ubicación",
+      emailLabel: "Correo", phoneLabel: "Teléfono", dobLabel: "Fecha de nacimiento",
+      dobHint: "Se guarda solo en este dispositivo — algunas solicitudes de empleo la piden para confirmar la edad mínima. Nunca la incluyas en un currículum.",
+      targetRolesLabel: "Puestos objetivo / palabras clave",
+      saveBtn: "Guardar",
+      applyingFromH: "Desde dónde te postulas", applyingFromLede: "Ten todos tus enlaces de perfil en un solo lugar.",
+      linkedinLabel: "LinkedIn", indeedLabel: "Indeed", portfolioLabel: "Portafolio / sitio web", otherLabel: "Otro",
+      saveLinksBtn: "Guardar enlaces",
+      resumeH: "Currículum", resumeLede: "Pega el texto de tu currículum, o sube un archivo .txt, .md o .pdf. Esta es la base de cada versión adaptada.",
+      saveResumeBtn: "Guardar currículum",
+      coverLetterCardH: "Carta de presentación", coverLetterCardLede: "Una plantilla maestra de carta de presentación — Cindy y el ajuste con IA parten de aquí en vez de una página en blanco.",
+      saveCoverLetterBtn: "Guardar carta",
+      backupH: "Respaldar y restaurar", backupLede: "Todo vive en este navegador. Descarga un respaldo para guardarlo a salvo o moverlo a otro dispositivo.",
+      downloadBackupBtn: "Descargar respaldo", restoreBtn: "Restaurar desde archivo",
+
+      activityLogH: "Registro de actividad", markAllReadBtn: "Marcar todo como leído", noActivityYet: "Aún no hay actividad. Se registra aquí cuando agregas o mueves puestos.",
+
+      cindyTitle: "Cindy", cindyLede: "Tu guía de currículum y búsqueda de empleo.",
+      cindyAiNote: " Por ahora funciona con guía integrada — cambiará a conversación completa con IA automáticamente cuando se conecte el backend de IA.",
+      cindyGreeting: "Hola, soy Cindy 👋 — tu guía de currículum y búsqueda de empleo. Puedo ayudarte a crear un currículum desde cero, o revisar tus postulaciones y decirte qué hacer después. ¿Qué quieres hacer?",
+      chipBuildResume: "Crear mi currículum", chipUploadResume: "Subir mi currículum", chipConnect: "Organizar mi LinkedIn/Indeed",
+      chipNext: "¿Qué debo hacer ahora?", chipPep: "Dame un ánimo", chipTips: "Consejos de hoy",
+      cindyAskPlaceholder: "Pregúntale algo a Cindy…", sendBtn: "Enviar",
+      connectLede: "Agrega tus enlaces de perfil para que pueda usarlos en tus materiales adaptados — luego te doy una lista rápida de mejoras para cada uno.",
+      linkedinUrlLabel: "URL de LinkedIn", indeedUrlLabel: "URL de Indeed",
+      saveGetTips: "Guardar y ver consejos", justTips: "Solo dame los consejos"
+    }
+  };
+  var LANG = "en";
+  try {
+    var savedLang = localStorage.getItem("career-copilot-lang");
+    if (savedLang === "en" || savedLang === "es") LANG = savedLang;
+  } catch(e){}
+  function t(key){ return (I18N[LANG] && I18N[LANG][key] != null) ? I18N[LANG][key] : (I18N.en[key] != null ? I18N.en[key] : key); }
+  function toggleLang(){
+    LANG = LANG === "en" ? "es" : "en";
+    try { localStorage.setItem("career-copilot-lang", LANG); } catch(e){}
+    if (currentUser) render(); else renderAuth();
+  }
+
   var uid = function(){
     try { return crypto.randomUUID(); } catch(e){}
     return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8);
@@ -247,13 +381,14 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   }
 
   var STAGES = [
-    { key:"saved",     label:"Saved" },
-    { key:"tailored",  label:"Tailored" },
-    { key:"applied",   label:"Applied" },
-    { key:"interview", label:"Interview" },
-    { key:"closed",    label:"Closed" }
+    { key:"saved",     tkey:"stageSaved" },
+    { key:"tailored",  tkey:"stageTailored" },
+    { key:"applied",   tkey:"stageApplied" },
+    { key:"interview", tkey:"stageInterview" },
+    { key:"closed",    tkey:"stageClosed" }
   ];
-  var STAGE_LABEL = {}; STAGES.forEach(function(s){ STAGE_LABEL[s.key] = s.label; });
+  var STAGE_TKEY = {}; STAGES.forEach(function(s){ STAGE_TKEY[s.key] = s.tkey; });
+  function stageLabel(key){ return t(STAGE_TKEY[key] || key); }
 
   // ---------- cindy (guide + résumé/career builder) ----------
   function cindyDefault(){
@@ -463,29 +598,31 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       '<div class="masthead">' +
         '<div class="brand">' +
           '<h1>Job Search Deck</h1>' +
-          '<span class="tag">private pipeline · one account per person</span>' +
+          '<span class="tag">'+esc(t("authTagline"))+'</span>' +
+        '</div>' +
+        '<div class="btn-row">' +
+          '<button class="iconbtn" id="lang-btn" title="Español / English">'+(LANG==="en"?"ES":"EN")+'</button>' +
         '</div>' +
       '</div>' +
       '<div class="card fade" style="max-width:420px; margin:32px auto 0;">' +
-        '<h2>'+ (isRegister ? "Create account" : "Sign in") +'</h2>' +
-        '<div class="lede">'+ (isRegister
-          ? "Pick a username and password — your pipeline stays private to this account, on this browser."
-          : "Each person signs in to their own private pipeline, saved on this device.") +'</div>' +
+        '<h2>'+ (isRegister ? esc(t("registerTitle")) : esc(t("signInTitle"))) +'</h2>' +
+        '<div class="lede">'+ (isRegister ? esc(t("registerLede")) : esc(t("signInLede"))) +'</div>' +
         (authState.error ? '<div class="note" style="border-color:var(--danger); color:var(--danger); background:var(--danger-ghost);">'+esc(authState.error)+'</div>' : "") +
         '<div class="stack">' +
-          '<div><label for="auth-user">Username</label><input id="auth-user" autocomplete="username" value="'+esc(authState.username||"")+'"></div>' +
-          '<div><label for="auth-pass">Password</label><input id="auth-pass" type="password" autocomplete="'+(isRegister?"new-password":"current-password")+'"></div>' +
-          (isRegister ? '<div><label for="auth-pass2">Confirm password</label><input id="auth-pass2" type="password" autocomplete="new-password"></div>' : "") +
-          '<div class="btn-row"><button class="btn-primary" id="auth-submit">'+ (isRegister ? "Create account" : "Log in") +'</button></div>' +
+          '<div><label for="auth-user">'+esc(t("username"))+'</label><input id="auth-user" autocomplete="username" value="'+esc(authState.username||"")+'"></div>' +
+          '<div><label for="auth-pass">'+esc(t("password"))+'</label><input id="auth-pass" type="password" autocomplete="'+(isRegister?"new-password":"current-password")+'"></div>' +
+          (isRegister ? '<div><label for="auth-pass2">'+esc(t("confirmPassword"))+'</label><input id="auth-pass2" type="password" autocomplete="new-password"></div>' : "") +
+          '<div class="btn-row"><button class="btn-primary" id="auth-submit">'+ (isRegister ? esc(t("createAccount")) : esc(t("logIn"))) +'</button></div>' +
           '<div style="font-size:13px; color:var(--muted);">' +
-            (isRegister ? "Already have an account? " : "No account yet? ") +
-            '<a href="#" id="auth-switch">'+ (isRegister ? "Log in" : "Register") +'</a>' +
+            (isRegister ? esc(t("haveAccount")) : esc(t("noAccountYet"))) +
+            '<a href="#" id="auth-switch">'+ (isRegister ? esc(t("loginLink")) : esc(t("registerLink"))) +'</a>' +
           '</div>' +
         '</div>' +
       '</div>';
 
     var submit = function(){ isRegister ? handleRegister() : handleLogin(); };
     $("#auth-submit").onclick = submit;
+    $("#lang-btn").onclick = toggleLang;
     Array.prototype.forEach.call(app.querySelectorAll("#auth-user, #auth-pass, #auth-pass2"), function(el){
       el.onkeydown = function(e){ if (e.key === "Enter") submit(); };
     });
@@ -566,31 +703,33 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       '<div class="masthead">' +
         '<div class="brand">' +
           '<h1>Job Search Deck</h1>' +
-          '<span class="tag">saved on this device</span>' +
+          '<span class="tag">'+esc(t("brandTag"))+'</span>' +
         '</div>' +
         '<div class="btn-row">' +
           '<span class="owner">'+esc(state.profile.name || currentUserDisplay)+'</span>' +
           (state.profile.links && state.profile.links.linkedin
             ? '<a class="iconbtn" href="'+esc(state.profile.links.linkedin)+'" target="_blank" rel="noopener noreferrer" title="Open LinkedIn profile">in LinkedIn</a>'
             : '') +
-          '<button class="iconbtn" id="theme-btn" title="Toggle light / dark">◐ theme</button>' +
-          '<button class="iconbtn" id="logout-btn" title="Log out">⎋ log out</button>' +
+          '<button class="iconbtn" id="lang-btn" title="Español / English">'+(LANG==="en"?"ES":"EN")+'</button>' +
+          '<button class="iconbtn" id="theme-btn" title="Toggle light / dark">'+esc(t("theme"))+'</button>' +
+          '<button class="iconbtn" id="logout-btn" title="Log out">'+esc(t("logout"))+'</button>' +
         '</div>' +
       '</div>' +
       strip(c) +
       '<div class="tabs" role="tablist">' +
-        tabBtn("today","Today") +
-        tabBtn("cindy","Cindy") +
-        tabBtn("pipeline","Pipeline", state.jobs.length ? String(state.jobs.length) : "") +
-        tabBtn("profile","Profile") +
-        tabBtn("activity","Activity", unread ? String(unread) : "") +
+        tabBtn("today",t("tabToday")) +
+        tabBtn("cindy",t("tabCindy")) +
+        tabBtn("pipeline",t("tabPipeline"), state.jobs.length ? String(state.jobs.length) : "") +
+        tabBtn("profile",t("tabProfile")) +
+        tabBtn("activity",t("tabActivity"), unread ? String(unread) : "") +
       '</div>' +
       '<div id="tab-body" class="fade"></div>' +
       '<div class="foot">' +
-        "saved in this browser only — use Back up in the Profile tab" +
+        esc(t("footer")) +
       '</div>';
 
     $("#theme-btn").onclick = toggleTheme;
+    $("#lang-btn").onclick = toggleLang;
     $("#logout-btn").onclick = logout;
     Array.prototype.forEach.call(app.querySelectorAll(".tab"), function(b){
       b.onclick = function(){ activeTab = b.dataset.tab; render(); };
@@ -602,7 +741,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     return '<div class="strip">' + STAGES.map(function(s){
       return '<div class="cell on-'+s.key+'">' +
         '<span class="n mono">'+ (c[s.key]||0) +'</span>' +
-        '<span class="k">'+ s.label +'</span>' +
+        '<span class="k">'+ stageLabel(s.key) +'</span>' +
       '</div>';
     }).join("") + '</div>';
   }
@@ -626,28 +765,28 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     var hasResume = !!(state.profile.resumeText && state.profile.resumeText.trim());
     b.innerHTML =
       '<div class="card">' +
-        '<h2>Today’s plan</h2>' +
-        '<div class="lede">A short, specific list of what moves your search forward right now — built from your live pipeline.</div>' +
-        (!AI_ENABLED ? '<div class="note">This is a static site, so the auto-plan and AI tailoring aren’t available here — the stalled-items list, pipeline, and downloads all still work.</div>' : '') +
+        '<h2>'+esc(t("todayPlanTitle"))+'</h2>' +
+        '<div class="lede">'+esc(t("todayPlanLede"))+'</div>' +
+        (!AI_ENABLED ? '<div class="note">'+esc(t("todayStaticNote"))+'</div>' : '') +
         '<div class="btn-row">' +
-          '<button class="btn-primary" id="plan-btn"'+ (!AI_ENABLED ? " disabled" : "") +'>'+ (planCache.running ? "Working…" : (planCache.text ? "Re-plan" : "Build my plan")) +'</button>' +
-          (planCache.running ? '<button class="btn-ghost" id="plan-stop">Stop</button>' : "") +
+          '<button class="btn-primary" id="plan-btn"'+ (!AI_ENABLED ? " disabled" : "") +'>'+ esc(planCache.running ? t("working") : (planCache.text ? t("replan") : t("buildPlan"))) +'</button>' +
+          (planCache.running ? '<button class="btn-ghost" id="plan-stop">'+esc(t("stop"))+'</button>' : "") +
         '</div>' +
-        (planCache.running && !planCache.text ? '<div class="thinking" style="margin-top:12px;">Thinking…</div>' : "") +
+        (planCache.running && !planCache.text ? '<div class="thinking" style="margin-top:12px;">'+esc(t("thinking"))+'</div>' : "") +
         (planCache.text ? '<div class="plan" style="margin-top:14px;">'+ esc(planCache.text) +'</div>' : "") +
       '</div>' +
       '<div class="card">' +
-        '<h3>Needs attention</h3>' +
-        '<div class="lede">Items sitting still in the pipeline.</div>' +
+        '<h3>'+esc(t("needsAttention"))+'</h3>' +
+        '<div class="lede">'+esc(t("needsAttentionLede"))+'</div>' +
         (stalled.length
           ? '<ul class="stalled" style="margin:0; padding-left:2px; list-style:none;">' + stalled.map(function(it){
               return '<li><span class="pill">'+esc(it.tag)+'</span> ' +
                 '<strong>'+esc(it.job.title)+'</strong> — '+esc(it.job.company)+
                 ' <span class="age">('+esc(it.why)+')</span></li>';
             }).join("") + '</ul>'
-          : '<div class="empty">Nothing stalled. '+ (state.jobs.length ? "Pipeline’s moving." : "Add a job in the Pipeline tab to get started.") +'</div>') +
+          : '<div class="empty">'+ esc(state.jobs.length ? t("nothingStalledMoving") : t("nothingStalledEmpty")) +'</div>') +
       '</div>' +
-      (!hasResume ? '<div class="card"><div class="empty">Add your résumé in the <strong>Profile</strong> tab so Copilot can tailor it per job.</div></div>' : "");
+      (!hasResume ? '<div class="card"><div class="empty">'+esc(t("addResumeNudge"))+'<strong>'+esc(t("profileWord"))+'</strong>'+esc(t("addResumeNudge2"))+'</div></div>' : "");
 
     var pb = $("#plan-btn");
     if (pb) pb.onclick = buildPlan;
@@ -658,7 +797,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   async function buildPlan(){
     if (!AI_ENABLED || planCache.running) return;
     var lines = sortedJobs().map(function(j){
-      var bits = "- " + j.title + " @ " + j.company + " | " + STAGE_LABEL[j.status];
+      var bits = "- " + j.title + " @ " + j.company + " | " + stageLabel(j.status);
       if (j.tailoredResume) bits += " | materials ready";
       var age = agoLabel(j.createdAt); if (age) bits += " | added " + age;
       if (j.appliedAt) bits += " | applied " + agoLabel(j.appliedAt);
@@ -687,19 +826,19 @@ button:disabled{opacity:.45; cursor:not-allowed;}
 
   function renderCindy(b){
     if (!state.cindy.history.length){
-      cindyPush("cindy", "Hi, I’m Cindy 👋 — your résumé and career-search guide. I can help you build a résumé from scratch, or look at your pipeline and tell you what to do next. What do you want to do?");
+      cindyPush("cindy", t("cindyGreeting"));
     }
     b.innerHTML =
       '<div class="card">' +
-        '<h2>Cindy</h2>' +
-        '<div class="lede">Your résumé &amp; career-search guide.'+
-          (!AI_ENABLED ? ' Running on built-in guidance right now — she’ll switch on full AI conversation automatically once the AI backend is connected.' : '') +
+        '<h2>'+esc(t("cindyTitle"))+'</h2>' +
+        '<div class="lede">'+esc(t("cindyLede"))+
+          (!AI_ENABLED ? esc(t("cindyAiNote")) : '') +
         '</div>' +
         '<div class="cindy-wrap" id="cindy-log"></div>' +
         '<div id="cindy-step">' + cindyStepHtml() + '</div>' +
         '<div class="btn-row" style="margin-top:14px;">' +
-          '<input id="cindy-input" placeholder="Ask Cindy something…" style="flex:1;">' +
-          '<button class="btn-primary" id="cindy-send">Send</button>' +
+          '<input id="cindy-input" placeholder="'+esc(t("cindyAskPlaceholder"))+'" style="flex:1;">' +
+          '<button class="btn-primary" id="cindy-send">'+esc(t("sendBtn"))+'</button>' +
         '</div>' +
         '<input type="file" id="cindy-resume-file" accept=".txt,.md,.pdf,text/plain,application/pdf" hidden>' +
       '</div>';
@@ -739,12 +878,22 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     var step = state.cindy.step, d = state.cindy.draft;
     if (step === "idle"){
       return '<div class="cindy-quick">' +
-        chip("Build my résumé","cq-resume") +
-        chip("Upload my résumé","cq-upload") +
-        chip("What should I do next?","cq-next") +
-        chip("Give me a pep talk","cq-pep") +
-        chip("Tips for today","cq-tips") +
+        chip(t("chipBuildResume"),"cq-resume") +
+        chip(t("chipUploadResume"),"cq-upload") +
+        chip(t("chipConnect"),"cq-connect") +
+        chip(t("chipNext"),"cq-next") +
+        chip(t("chipPep"),"cq-pep") +
+        chip(t("chipTips"),"cq-tips") +
       '</div>';
+    }
+    if (step === "connect:accounts"){
+      var L = (state.profile.links || {});
+      return '<div class="cindy-form"><div class="stack">' +
+        '<div class="lede" style="margin-bottom:0;">'+esc(t("connectLede"))+'</div>' +
+        '<div><label for="cf-linkedin">'+esc(t("linkedinUrlLabel"))+'</label><input id="cf-linkedin" value="'+esc(L.linkedin||"")+'" placeholder="https://linkedin.com/in/…"></div>' +
+        '<div><label for="cf-indeed">'+esc(t("indeedUrlLabel"))+'</label><input id="cf-indeed" value="'+esc(L.indeed||"")+'" placeholder="https://indeed.com/r/…"></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="cf-save-links">'+esc(t("saveGetTips"))+'</button><button class="btn-ghost" id="cf-skip-links">'+esc(t("justTips"))+'</button></div>' +
+      '</div></div>';
     }
     if (step === "resume:uploaded"){
       return '<div class="cindy-form">' +
@@ -904,14 +1053,60 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     persistMain(); render();
   }
 
+  async function cindyOrganizeTips(){
+    var L = state.profile.links || {};
+    var msg = [];
+    if (L.linkedin || L.indeed){
+      msg.push("Saved" + (L.linkedin && L.indeed ? " both links" : "") + ". Here's what to clean up on each:");
+    } else {
+      msg.push("No problem — here's what to clean up on each, whenever you're ready to add the links:");
+    }
+    msg.push("");
+    msg.push("LINKEDIN");
+    msg.push("• Headline: name the role you want, not just your current title.");
+    msg.push("• About: lead with a concrete result, not “passionate professional.”");
+    msg.push("• Skills: add 10+ — recruiters filter search by skill.");
+    msg.push("• Each Experience entry: 2–4 bullet highlights, not just a title.");
+    msg.push("• Turn on “Open to work · Recruiters only” if you're actively looking.");
+    msg.push("");
+    msg.push("INDEED");
+    msg.push("• Upload an actual résumé file — recruiters search resumes directly, not just filled-in fields.");
+    msg.push("• Set up job alerts for your target roles so new postings hit you same-day.");
+    msg.push("• Keep salary/relocation fields accurate — they're used as hard filters.");
+    msg.push("• Reply fast to messages — Indeed shows your response rate on your profile.");
+    cindyPush("cindy", msg.join("\n"));
+    state.cindy.step = "idle";
+    await persistMain();
+    render();
+  }
+
   function wireCindyStep(){
     var step = state.cindy.step, d = state.cindy.draft;
     if (step === "idle"){
-      $("#cq-resume").onclick = function(){ cindyPush("user","Build my résumé"); startResumeBuilder(); };
-      $("#cq-upload").onclick = function(){ cindyPush("user","Upload my résumé"); $("#cindy-resume-file").click(); };
-      $("#cq-next").onclick = function(){ cindyPush("user","What should I do next?"); cindyNextSteps(); };
-      $("#cq-pep").onclick = function(){ cindyPush("user","Give me a pep talk"); cindyPepTalk(); };
-      $("#cq-tips").onclick = function(){ cindyPush("user","Tips for today"); cindyTip(); };
+      $("#cq-resume").onclick = function(){ cindyPush("user",t("chipBuildResume")); startResumeBuilder(); };
+      $("#cq-upload").onclick = function(){ cindyPush("user",t("chipUploadResume")); $("#cindy-resume-file").click(); };
+      $("#cq-connect").onclick = function(){
+        cindyPush("user",t("chipConnect"));
+        cindyPush("cindy", LANG==="es" ? "Claro — vamos a conectarlas y ordenarlas." : "Sure — let’s connect them and clean them up.");
+        state.cindy.step = "connect:accounts";
+        persistMain(); render();
+      };
+      $("#cq-next").onclick = function(){ cindyPush("user",t("chipNext")); cindyNextSteps(); };
+      $("#cq-pep").onclick = function(){ cindyPush("user",t("chipPep")); cindyPepTalk(); };
+      $("#cq-tips").onclick = function(){ cindyPush("user",t("chipTips")); cindyTip(); };
+      return;
+    }
+    if (step === "connect:accounts"){
+      $("#cf-save-links").onclick = function(){
+        var linkedin = $("#cf-linkedin").value.trim(), indeed = $("#cf-indeed").value.trim();
+        state.profile.links = Object.assign({}, state.profile.links||{}, { linkedin:linkedin, indeed:indeed });
+        cindyPush("user", [linkedin, indeed].filter(Boolean).join(" · ") || "(no links yet)");
+        cindyOrganizeTips();
+      };
+      $("#cf-skip-links").onclick = function(){
+        cindyPush("user", t("justTips"));
+        cindyOrganizeTips();
+      };
       return;
     }
     if (step === "resume:uploaded"){
@@ -1071,19 +1266,19 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     var jobs = sortedJobs();
     b.innerHTML =
       '<div class="card">' +
-        '<h3>Add a role to track</h3>' +
+        '<h3>'+esc(t("addRoleTitle"))+'</h3>' +
         '<div class="stack">' +
           '<div class="grid2">' +
-            '<div><label for="j-title">Job title</label><input id="j-title" placeholder="Customer Success Manager"></div>' +
-            '<div><label for="j-company">Company</label><input id="j-company" placeholder="Acme Health"></div>' +
+            '<div><label for="j-title">'+esc(t("jobTitleLabel"))+'</label><input id="j-title" placeholder="Customer Success Manager"></div>' +
+            '<div><label for="j-company">'+esc(t("companyLabel"))+'</label><input id="j-company" placeholder="Acme Health"></div>' +
           '</div>' +
-          '<div><label for="j-url">Posting URL <span style="text-transform:none; font-weight:400;">(optional)</span></label><input id="j-url" placeholder="https://…"></div>' +
-          '<div><label for="j-desc">Job description <span style="text-transform:none; font-weight:400;">(paste it — powers the tailoring)</span></label><textarea id="j-desc" rows="5" placeholder="Paste the full posting text here…"></textarea></div>' +
-          '<div class="btn-row"><button class="btn-primary" id="j-add">Add to pipeline</button></div>' +
+          '<div><label for="j-url">'+esc(t("postingUrlLabel"))+'<span style="text-transform:none; font-weight:400;">'+esc(t("optionalWord"))+'</span></label><input id="j-url" placeholder="https://…"></div>' +
+          '<div><label for="j-desc">'+esc(t("jobDescLabel"))+'<span style="text-transform:none; font-weight:400;">'+esc(t("jobDescHint"))+'</span></label><textarea id="j-desc" rows="5" placeholder="Paste the full posting text here…"></textarea></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="j-add">'+esc(t("addToPipeline"))+'</button></div>' +
         '</div>' +
       '</div>' +
       '<div id="jobs-list">' +
-        (jobs.length ? jobs.map(jobCard).join("") : '<div class="card"><div class="empty">No roles tracked yet. Add one above.</div></div>') +
+        (jobs.length ? jobs.map(jobCard).join("") : '<div class="card"><div class="empty">'+esc(t("noRolesYet"))+'</div></div>') +
       '</div>';
 
     $("#j-add").onclick = onAddJob;
@@ -1098,34 +1293,34 @@ button:disabled{opacity:.45; cursor:not-allowed;}
           '<h3>'+esc(j.title)+'</h3>' +
           '<div class="job-co">'+esc(j.company)+ (j.url ? ' · <a href="'+esc(j.url)+'" target="_blank" rel="noopener noreferrer">posting</a>' : "") +'</div>' +
         '</div>' +
-        '<button class="btn-danger j-del" style="padding:5px 10px; font-size:12px;">Remove</button>' +
+        '<button class="btn-danger j-del" style="padding:5px 10px; font-size:12px;">'+esc(t("remove"))+'</button>' +
       '</div>' +
       '<div class="job-meta">' +
-        '<span class="stat s-'+s+'">'+esc(STAGE_LABEL[s]||s)+'</span>' +
-        (j.createdAt ? '<span class="age">added '+esc(agoLabel(j.createdAt))+'</span>' : "") +
-        (j.appliedAt ? '<span class="age">· applied '+esc(agoLabel(j.appliedAt))+'</span>' : "") +
+        '<span class="stat s-'+s+'">'+esc(stageLabel(s))+'</span>' +
+        (j.createdAt ? '<span class="age">'+esc(t("addedAgo"))+esc(agoLabel(j.createdAt))+'</span>' : "") +
+        (j.appliedAt ? '<span class="age">'+esc(t("appliedAgo"))+esc(agoLabel(j.appliedAt))+'</span>' : "") +
       '</div>' +
-      (j.description ? '<details><summary>Job description</summary><div class="desc">'+esc(j.description)+'</div></details>' : "") +
+      (j.description ? '<details><summary>'+esc(t("jobDescSummary"))+'</summary><div class="desc">'+esc(j.description)+'</div></details>' : "") +
       '<div class="job-actions">' +
-        '<button class="btn-primary j-tailor"'+ (AI_ENABLED ? "" : " disabled") +'>'+ (j.tailoredResume ? "Re-tailor" : "Tailor résumé + cover letter") +'</button>' +
-        '<select class="j-status" aria-label="Status">' +
-          STAGES.map(function(st){ return '<option value="'+st.key+'"'+(s===st.key?" selected":"")+'>'+st.label+'</option>'; }).join("") +
+        '<button class="btn-primary j-tailor"'+ (AI_ENABLED ? "" : " disabled") +'>'+ esc(j.tailoredResume ? t("retailorBtn") : t("tailorBtn")) +'</button>' +
+        '<select class="j-status" aria-label="'+esc(t("statusAria"))+'">' +
+          STAGES.map(function(st){ return '<option value="'+st.key+'"'+(s===st.key?" selected":"")+'>'+esc(stageLabel(st.key))+'</option>'; }).join("") +
         '</select>' +
       '</div>' +
       (j.tailoredResume ? (
-        '<div class="out-h">Tailored résumé</div>' +
+        '<div class="out-h">'+esc(t("tailoredResumeH"))+'</div>' +
         '<div class="out">'+esc(j.tailoredResume)+'</div>' +
         '<div class="btn-row" style="margin-top:8px;">' +
-          '<button class="btn-ghost j-copy-r" style="font-size:12px; padding:6px 12px;">Copy</button>' +
-          '<button class="btn-ghost j-dl-r" style="font-size:12px; padding:6px 12px;">Download .txt</button>' +
+          '<button class="btn-ghost j-copy-r" style="font-size:12px; padding:6px 12px;">'+esc(t("copyBtn"))+'</button>' +
+          '<button class="btn-ghost j-dl-r" style="font-size:12px; padding:6px 12px;">'+esc(t("downloadTxtBtn"))+'</button>' +
         '</div>'
       ) : "") +
       (j.coverLetter ? (
-        '<div class="out-h">Cover letter</div>' +
+        '<div class="out-h">'+esc(t("coverLetterH"))+'</div>' +
         '<div class="out">'+esc(j.coverLetter)+'</div>' +
         '<div class="btn-row" style="margin-top:8px;">' +
-          '<button class="btn-ghost j-copy-c" style="font-size:12px; padding:6px 12px;">Copy</button>' +
-          '<button class="btn-ghost j-dl-c" style="font-size:12px; padding:6px 12px;">Download .txt</button>' +
+          '<button class="btn-ghost j-copy-c" style="font-size:12px; padding:6px 12px;">'+esc(t("copyBtn"))+'</button>' +
+          '<button class="btn-ghost j-dl-c" style="font-size:12px; padding:6px 12px;">'+esc(t("downloadTxtBtn"))+'</button>' +
         '</div>'
       ) : "") +
     '</div>';
@@ -1181,7 +1376,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     j.updatedAt = now();
     if (status==="applied" && !j.appliedAt) j.appliedAt = now();
     await persistJob(j);
-    await pushActivity("Moved " + j.title + " → " + STAGE_LABEL[status] + ".", id);
+    await pushActivity("Moved " + j.title + " → " + stageLabel(status) + ".", id);
     render();
   }
 
@@ -1317,55 +1512,57 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     var p = state.profile, L = p.links || {};
     b.innerHTML =
       '<div class="card">' +
-        '<h3>Contact &amp; targets</h3>' +
+        '<h3>'+esc(t("contactTargetsH"))+'</h3>' +
         '<div class="stack">' +
           '<div class="grid2">' +
-            '<div><label for="p-name">Name</label><input id="p-name" value="'+esc(p.name||"")+'"></div>' +
-            '<div><label for="p-loc">Location</label><input id="p-loc" value="'+esc(p.location||"")+'" placeholder="City, State · or Remote"></div>' +
+            '<div><label for="p-name">'+esc(t("nameLabel"))+'</label><input id="p-name" value="'+esc(p.name||"")+'"></div>' +
+            '<div><label for="p-loc">'+esc(t("locationLabel"))+'</label><input id="p-loc" value="'+esc(p.location||"")+'" placeholder="City, State · or Remote"></div>' +
           '</div>' +
           '<div class="grid2">' +
-            '<div><label for="p-email">Email</label><input id="p-email" value="'+esc(p.email||"")+'"></div>' +
-            '<div><label for="p-phone">Phone</label><input id="p-phone" value="'+esc(p.phone||"")+'"></div>' +
+            '<div><label for="p-email">'+esc(t("emailLabel"))+'</label><input id="p-email" value="'+esc(p.email||"")+'"></div>' +
+            '<div><label for="p-phone">'+esc(t("phoneLabel"))+'</label><input id="p-phone" value="'+esc(p.phone||"")+'"></div>' +
           '</div>' +
-          '<div><label for="p-roles">Target roles / keywords</label><input id="p-roles" value="'+esc(p.targetRoles||"")+'" placeholder="e.g. Customer Success, Healthcare Ops, Remote"></div>' +
-          '<div class="btn-row"><button class="btn-primary" id="p-save">Save</button><span class="saveflash" id="p-flash"></span></div>' +
+          '<div><label for="p-dob">'+esc(t("dobLabel"))+'</label><input id="p-dob" type="date" value="'+esc(p.dob||"")+'">' +
+            '<div style="font-size:12px; color:var(--faint); margin-top:4px;">'+esc(t("dobHint"))+'</div></div>' +
+          '<div><label for="p-roles">'+esc(t("targetRolesLabel"))+'</label><input id="p-roles" value="'+esc(p.targetRoles||"")+'" placeholder="e.g. Customer Success, Healthcare Ops, Remote"></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="p-save">'+esc(t("saveBtn"))+'</button><span class="saveflash" id="p-flash"></span></div>' +
         '</div>' +
       '</div>' +
       '<div class="card">' +
-        '<h3>Where you’re applying from</h3>' +
-        '<div class="lede">Keep every profile link in one place.</div>' +
+        '<h3>'+esc(t("applyingFromH"))+'</h3>' +
+        '<div class="lede">'+esc(t("applyingFromLede"))+'</div>' +
         '<div class="stack">' +
           '<div class="grid2">' +
-            '<div><label for="l-linkedin">LinkedIn</label><input id="l-linkedin" value="'+esc(L.linkedin||"")+'" placeholder="https://linkedin.com/in/…"></div>' +
-            '<div><label for="l-indeed">Indeed</label><input id="l-indeed" value="'+esc(L.indeed||"")+'"></div>' +
+            '<div><label for="l-linkedin">'+esc(t("linkedinLabel"))+'</label><input id="l-linkedin" value="'+esc(L.linkedin||"")+'" placeholder="https://linkedin.com/in/…"></div>' +
+            '<div><label for="l-indeed">'+esc(t("indeedLabel"))+'</label><input id="l-indeed" value="'+esc(L.indeed||"")+'"></div>' +
           '</div>' +
           '<div class="grid2">' +
-            '<div><label for="l-portfolio">Portfolio / website</label><input id="l-portfolio" value="'+esc(L.portfolio||"")+'"></div>' +
-            '<div><label for="l-other">Other</label><input id="l-other" value="'+esc(L.other||"")+'"></div>' +
+            '<div><label for="l-portfolio">'+esc(t("portfolioLabel"))+'</label><input id="l-portfolio" value="'+esc(L.portfolio||"")+'"></div>' +
+            '<div><label for="l-other">'+esc(t("otherLabel"))+'</label><input id="l-other" value="'+esc(L.other||"")+'"></div>' +
           '</div>' +
-          '<div class="btn-row"><button class="btn-primary" id="l-save">Save links</button><span class="saveflash" id="l-flash"></span></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="l-save">'+esc(t("saveLinksBtn"))+'</button><span class="saveflash" id="l-flash"></span></div>' +
         '</div>' +
       '</div>' +
       '<div class="card">' +
-        '<h3>Résumé</h3>' +
-        '<div class="lede">Paste your résumé text, or upload a .txt, .md, or .pdf file. This is the source for every tailored version.</div>' +
+        '<h3>'+esc(t("resumeH"))+'</h3>' +
+        '<div class="lede">'+esc(t("resumeLede"))+'</div>' +
         '<input type="file" id="p-file" accept=".txt,.md,.pdf,text/plain,application/pdf" style="margin-bottom:10px; font-size:13px;">' +
         '<textarea id="p-resume" rows="16" placeholder="Paste your résumé here…">'+esc(p.resumeText||"")+'</textarea>' +
-        '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-resume">Save résumé</button><span class="saveflash" id="r-flash"></span></div>' +
+        '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-resume">'+esc(t("saveResumeBtn"))+'</button><span class="saveflash" id="r-flash"></span></div>' +
       '</div>' +
       '<div class="card">' +
-        '<h3>Cover letter</h3>' +
-        '<div class="lede">A master cover letter template — Cindy and the tailoring step start from this instead of a blank page.</div>' +
+        '<h3>'+esc(t("coverLetterCardH"))+'</h3>' +
+        '<div class="lede">'+esc(t("coverLetterCardLede"))+'</div>' +
         '<input type="file" id="p-cl-file" accept=".txt,.md,.pdf,text/plain,application/pdf" style="margin-bottom:10px; font-size:13px;">' +
         '<textarea id="p-coverletter" rows="12" placeholder="Paste your cover letter here…">'+esc(p.coverLetterText||"")+'</textarea>' +
-        '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-cl">Save cover letter</button><span class="saveflash" id="cl-flash"></span></div>' +
+        '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-cl">'+esc(t("saveCoverLetterBtn"))+'</button><span class="saveflash" id="cl-flash"></span></div>' +
       '</div>' +
       '<div class="card">' +
-        '<h3>Back up &amp; restore</h3>' +
-        '<div class="lede">Everything lives in this browser. Download a backup file to keep it safe or move it to another device.</div>' +
+        '<h3>'+esc(t("backupH"))+'</h3>' +
+        '<div class="lede">'+esc(t("backupLede"))+'</div>' +
         '<div class="btn-row">' +
-          '<button class="btn-ghost" id="p-backup">Download backup</button>' +
-          '<button class="btn-ghost" id="p-restore-btn">Restore from file</button>' +
+          '<button class="btn-ghost" id="p-backup">'+esc(t("downloadBackupBtn"))+'</button>' +
+          '<button class="btn-ghost" id="p-restore-btn">'+esc(t("restoreBtn"))+'</button>' +
           '<input type="file" id="p-restore" accept="application/json,.json" hidden>' +
         '</div>' +
       '</div>';
@@ -1375,6 +1572,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       state.profile.location = $("#p-loc").value.trim();
       state.profile.email = $("#p-email").value.trim();
       state.profile.phone = $("#p-phone").value.trim();
+      state.profile.dob = $("#p-dob").value;
       state.profile.targetRoles = $("#p-roles").value.trim();
       state.profile.updatedAt = now();
       await persistMain();
@@ -1455,12 +1653,12 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   // ---------- Activity ----------
   function renderActivity(b){
     if (!state.activity.length){
-      b.innerHTML = '<div class="card"><div class="empty">No activity yet. It logs here as you add and move roles.</div></div>';
+      b.innerHTML = '<div class="card"><div class="empty">'+esc(t("noActivityYet"))+'</div></div>';
       return;
     }
     b.innerHTML = '<div class="card"><div class="btn-row" style="justify-content:space-between; margin-bottom:12px;">' +
-        '<h3>Activity log</h3>' +
-        (unreadCount() ? '<button class="btn-ghost" id="a-read" style="font-size:12px; padding:6px 12px;">Mark all read</button>' : "") +
+        '<h3>'+esc(t("activityLogH"))+'</h3>' +
+        (unreadCount() ? '<button class="btn-ghost" id="a-read" style="font-size:12px; padding:6px 12px;">'+esc(t("markAllReadBtn"))+'</button>' : "") +
       '</div>' +
       state.activity.map(function(a){
         return '<div style="display:flex; gap:10px; padding:9px 0; border-top:1px solid var(--border);">' +
