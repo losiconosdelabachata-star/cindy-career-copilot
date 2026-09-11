@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Job Search Deck</title>
-<meta name="description" content="A no-login job-search command deck — pipeline tracker, résumé storage, and stalled-item alerts, saved in your browser.">
+<meta name="description" content="A private, per-person job-search command deck — pipeline tracker, résumé storage, and stalled-item alerts, saved in your browser.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -194,6 +194,19 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8);
   };
   var now = function(){ return Date.now(); };
+  async function sha256Hex(str){
+    try {
+      var enc = new TextEncoder().encode(str);
+      var buf = await crypto.subtle.digest("SHA-256", enc);
+      return Array.prototype.map.call(new Uint8Array(buf), function(b){ return b.toString(16).padStart(2,"0"); }).join("");
+    } catch(e){
+      // fallback for contexts without SubtleCrypto — not cryptographically strong,
+      // but keeps the account gate working everywhere.
+      var h = 0, i, chr;
+      for (i=0;i<str.length;i++){ chr = str.charCodeAt(i); h = ((h<<5)-h)+chr; h|=0; }
+      return "fb" + Math.abs(h).toString(16);
+    }
+  }
   var daysAgo = function(ts){ if(!ts) return null; return Math.floor((now()-ts)/86400000); };
   var agoLabel = function(ts){
     var d = daysAgo(ts);
@@ -236,12 +249,32 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   var storeReady = false;
   var planCache = { text:"", running:false, ctl:null };
 
-  var LS_KEY = "career-copilot-v1";
+  // ---------- accounts (separate, password-gated data per person — all still
+  // local to this browser; there's no server, so this is data separation +
+  // a password gate, not bank-grade security) ----------
+  var ACCOUNTS_KEY = "career-copilot-accounts-v1";
+  var SESSION_KEY = "career-copilot-session-v1";
+  var LS_PREFIX = "career-copilot-v1::";
+  var currentUser = null;        // account key (lowercased username)
+  var currentUserDisplay = "";   // username as typed at registration
+  var authState = { mode:"login", error:"", username:"" };
+
+  function loadAccounts(){
+    try { var raw = localStorage.getItem(ACCOUNTS_KEY); return raw ? JSON.parse(raw) : {}; } catch(e){ return {}; }
+  }
+  function saveAccounts(accts){
+    try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accts)); } catch(e){}
+  }
+  function getSession(){ try { return localStorage.getItem(SESSION_KEY) || ""; } catch(e){ return ""; } }
+  function setSession(key){ try { localStorage.setItem(SESSION_KEY, key); } catch(e){} }
+  function clearSession(){ try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
+
+  function userKey(){ return LS_PREFIX + currentUser; }
   function loadLocal(){
-    try { var raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
+    try { var raw = localStorage.getItem(userKey()); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
   }
   function saveLocal(){
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ profile:state.profile, activity:state.activity, jobs:state.jobs })); } catch(e){}
+    try { localStorage.setItem(userKey(), JSON.stringify({ profile:state.profile, activity:state.activity, jobs:state.jobs })); } catch(e){}
   }
 
   function stripId(j){ var c = Object.assign({}, j); delete c.id; return c; }
@@ -281,6 +314,19 @@ button:disabled{opacity:.45; cursor:not-allowed;}
 
   async function initStore(){
     var local = loadLocal();
+    if (!local){
+      // one-time migration: if this is the very first account ever created on
+      // this device and pre-account data exists (from before accounts were
+      // added), carry it over instead of losing it.
+      try {
+        var accts = loadAccounts();
+        var oldRaw = localStorage.getItem("career-copilot-v1");
+        if (oldRaw && Object.keys(accts).length === 1){
+          localStorage.setItem(userKey(), oldRaw);
+          local = JSON.parse(oldRaw);
+        }
+      } catch(e){}
+    }
     if (local){
       state.profile = Object.assign({ links:{} }, local.profile || {});
       state.profile.links = state.profile.links || {};
@@ -325,6 +371,101 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   // ---------- render ----------
   var app = $("#app");
 
+  // ---------- auth ----------
+  function renderAuth(){
+    var isRegister = authState.mode === "register";
+    app.innerHTML =
+      '<div class="masthead">' +
+        '<div class="brand">' +
+          '<h1>Job Search Deck</h1>' +
+          '<span class="tag">private pipeline · one account per person</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card fade" style="max-width:420px; margin:32px auto 0;">' +
+        '<h2>'+ (isRegister ? "Create account" : "Sign in") +'</h2>' +
+        '<div class="lede">'+ (isRegister
+          ? "Pick a username and password — your pipeline stays private to this account, on this browser."
+          : "Each person signs in to their own private pipeline, saved on this device.") +'</div>' +
+        (authState.error ? '<div class="note" style="border-color:var(--danger); color:var(--danger); background:var(--danger-ghost);">'+esc(authState.error)+'</div>' : "") +
+        '<div class="stack">' +
+          '<div><label for="auth-user">Username</label><input id="auth-user" autocomplete="username" value="'+esc(authState.username||"")+'"></div>' +
+          '<div><label for="auth-pass">Password</label><input id="auth-pass" type="password" autocomplete="'+(isRegister?"new-password":"current-password")+'"></div>' +
+          (isRegister ? '<div><label for="auth-pass2">Confirm password</label><input id="auth-pass2" type="password" autocomplete="new-password"></div>' : "") +
+          '<div class="btn-row"><button class="btn-primary" id="auth-submit">'+ (isRegister ? "Create account" : "Log in") +'</button></div>' +
+          '<div style="font-size:13px; color:var(--muted);">' +
+            (isRegister ? "Already have an account? " : "No account yet? ") +
+            '<a href="#" id="auth-switch">'+ (isRegister ? "Log in" : "Register") +'</a>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    var submit = function(){ isRegister ? handleRegister() : handleLogin(); };
+    $("#auth-submit").onclick = submit;
+    Array.prototype.forEach.call(app.querySelectorAll("#auth-user, #auth-pass, #auth-pass2"), function(el){
+      el.onkeydown = function(e){ if (e.key === "Enter") submit(); };
+    });
+    $("#auth-switch").onclick = function(e){
+      e.preventDefault();
+      authState.mode = isRegister ? "login" : "register";
+      authState.error = "";
+      authState.username = $("#auth-user").value.trim();
+      renderAuth();
+    };
+    $("#auth-user").focus();
+  }
+
+  async function handleLogin(){
+    var u = $("#auth-user").value.trim();
+    var p = $("#auth-pass").value;
+    authState.username = u;
+    if (!u || !p){ authState.error = "Enter a username and password."; renderAuth(); return; }
+    var accounts = loadAccounts();
+    var key = u.toLowerCase();
+    var acct = accounts[key];
+    if (!acct){ authState.error = "No account found for that username."; renderAuth(); return; }
+    var hash = await sha256Hex(acct.salt + ":" + p);
+    if (hash !== acct.hash){ authState.error = "Incorrect password."; renderAuth(); return; }
+    currentUser = key;
+    currentUserDisplay = acct.displayName || u;
+    setSession(key);
+    authState = { mode:"login", error:"", username:"" };
+    await initStore();
+  }
+
+  async function handleRegister(){
+    var u = $("#auth-user").value.trim();
+    var p = $("#auth-pass").value;
+    var p2 = $("#auth-pass2").value;
+    authState.username = u;
+    if (!u || u.length < 2){ authState.error = "Username needs at least 2 characters."; renderAuth(); return; }
+    if (!/^[a-zA-Z0-9 _-]+$/.test(u)){ authState.error = "Use only letters, numbers, spaces, - or _."; renderAuth(); return; }
+    if (!p || p.length < 4){ authState.error = "Password needs at least 4 characters."; renderAuth(); return; }
+    if (p !== p2){ authState.error = "Passwords don’t match."; renderAuth(); return; }
+    var accounts = loadAccounts();
+    var key = u.toLowerCase();
+    if (accounts[key]){ authState.error = "That username is already taken — try logging in instead."; renderAuth(); return; }
+    var salt = uid();
+    var hash = await sha256Hex(salt + ":" + p);
+    accounts[key] = { displayName:u, salt:salt, hash:hash, createdAt:now() };
+    saveAccounts(accounts);
+    currentUser = key;
+    currentUserDisplay = u;
+    setSession(key);
+    authState = { mode:"login", error:"", username:"" };
+    await initStore();
+  }
+
+  function logout(){
+    clearSession();
+    currentUser = null;
+    currentUserDisplay = "";
+    state = { profile:{ links:{} }, activity:[], jobs:[] };
+    activeTab = "today";
+    planCache = { text:"", running:false, ctl:null };
+    authState = { mode:"login", error:"", username:"" };
+    renderAuth();
+  }
+
   function render(){
     var c = counts();
     var unread = unreadCount();
@@ -332,11 +473,12 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       '<div class="masthead">' +
         '<div class="brand">' +
           '<h1>Job Search Deck</h1>' +
-          '<span class="tag">no login · saved on this device</span>' +
+          '<span class="tag">saved on this device</span>' +
         '</div>' +
         '<div class="btn-row">' +
-          (state.profile.name ? '<span class="owner">'+esc(state.profile.name)+'</span>' : '') +
+          '<span class="owner">'+esc(state.profile.name || currentUserDisplay)+'</span>' +
           '<button class="iconbtn" id="theme-btn" title="Toggle light / dark">◐ theme</button>' +
+          '<button class="iconbtn" id="logout-btn" title="Log out">⎋ log out</button>' +
         '</div>' +
       '</div>' +
       strip(c) +
@@ -352,6 +494,7 @@ button:disabled{opacity:.45; cursor:not-allowed;}
       '</div>';
 
     $("#theme-btn").onclick = toggleTheme;
+    $("#logout-btn").onclick = logout;
     Array.prototype.forEach.call(app.querySelectorAll(".tab"), function(b){
       b.onclick = function(){ activeTab = b.dataset.tab; render(); };
     });
@@ -779,8 +922,19 @@ button:disabled{opacity:.45; cursor:not-allowed;}
   } catch(e){}
 
   // ---------- boot ----------
-  render();
-  initStore();
+  (function boot(){
+    var session = getSession();
+    var accounts = loadAccounts();
+    if (session && accounts[session]){
+      currentUser = session;
+      currentUserDisplay = accounts[session].displayName || session;
+      render();
+      initStore();
+    } else {
+      clearSession();
+      renderAuth();
+    }
+  })();
 })();
 </script>
 </body>

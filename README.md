@@ -1,13 +1,19 @@
 # Career Copilot — Job Search Deck
 
-A private, no-login job-search command deck. Single static page, served by GitHub Pages —
-no server, no accounts, no API keys.
+A private, per-person job-search command deck. Single static page, served by GitHub Pages —
+no server, no API keys.
 
 ## Live site
 https://losiconosdelabachata-star.github.io/cindy-career-copilot/
 
 ## What it does
 
+- **Accounts** — sign in with a username + password, or hit **Register** to create a new
+  one. Each account's pipeline and profile are stored separately, so Marino, Cindy, or
+  anyone else sharing this device can each keep their own private data. There's no server,
+  so this is data separation + a password gate (everything still lives in this browser's
+  localStorage) rather than server-verified security — good enough for keeping housemates'
+  job searches apart, not for anything sensitive.
 - **Pipeline** — track roles (title, company, posting URL, description) through
   Saved → Tailored → Applied → Interview → Closed
 - **Profile** — contact info, target roles, platform links, and your master résumé
