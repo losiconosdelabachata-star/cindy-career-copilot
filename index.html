@@ -535,37 +535,85 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     }
   };
 
+  // Legacy (pre-server-accounts) keys — kept read-only so a device that
+  // already had a local-only account can be auto-migrated to the server the
+  // next time that person logs in on this device (see tryMigrateLegacyAccount).
   var ACCOUNTS_KEY = "career-copilot-accounts-v1";
-  var SESSION_KEY = "career-copilot-session-v1";
   var LS_PREFIX = "career-copilot-v1::";
+  var SESSION_KEY = "career-copilot-session-v1"; // now stores a server session token
   var currentUser = null;        // account key (lowercased username)
   var currentUserDisplay = "";   // username as typed at registration
+  var authToken = null;          // Bearer token for /api/account and /api/data
   var authState = { mode:"login", error:"", username:"" };
 
   function loadAccounts(){
     try { var raw = localStorage.getItem(ACCOUNTS_KEY); return raw ? JSON.parse(raw) : {}; } catch(e){ return {}; }
   }
-  function saveAccounts(accts){
-    try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accts)); } catch(e){}
-  }
   function getSession(){ try { return localStorage.getItem(SESSION_KEY) || ""; } catch(e){ return ""; } }
-  function setSession(key){ try { localStorage.setItem(SESSION_KEY, key); } catch(e){} }
+  function setSession(token){ try { localStorage.setItem(SESSION_KEY, token); } catch(e){} }
   function clearSession(){ try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
 
   function userKey(){ return LS_PREFIX + currentUser; }
-  function loadLocal(){
-    try { var raw = localStorage.getItem(userKey()); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
-  }
   function saveLocal(){
     try { localStorage.setItem(userKey(), JSON.stringify({ profile:state.profile, activity:state.activity, jobs:state.jobs, cindy:state.cindy })); } catch(e){}
   }
 
   function stripId(j){ var c = Object.assign({}, j); delete c.id; return c; }
 
-  // ---------- persistence (browser-local; no accounts, no server DB) ----------
-  async function persistMain(){ saveLocal(); }
-  async function persistJob(){ saveLocal(); }
-  async function removeJobRemote(){ saveLocal(); }
+  // ---------- account/data API (Cloudflare Pages Function + KV — accounts
+  // and the pipeline/profile blob now live server-side, so signing in works
+  // from any device, not just the browser an account was created in) ----------
+  async function apiRequest(path, opts){
+    opts = opts || {};
+    var headers = { "content-type": "application/json" };
+    if (opts.token) headers.authorization = "Bearer " + opts.token;
+    var res = await fetch(AI_BASE + path, {
+      method: opts.method || "GET",
+      headers: headers,
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
+    });
+    var data = null;
+    try { data = await res.json(); } catch(e){}
+    if (!res.ok){
+      var err = new Error((data && data.message) || (data && data.error) || ("Request failed (" + res.status + ")"));
+      err.code = data && data.error;
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  // ---------- persistence: local cache (fast, offline-tolerant) + background
+  // sync to the server (source of truth across devices) ----------
+  var pendingSync = null;
+  function queueSync(){
+    saveLocal();
+    if (!authToken) return;
+    var snapshot = { profile:state.profile, activity:state.activity, jobs:state.jobs, cindy:state.cindy };
+    if (pendingSync) clearTimeout(pendingSync);
+    pendingSync = setTimeout(function(){
+      pendingSync = null;
+      apiRequest("/api/data", { method:"PUT", token:authToken, body:snapshot }).catch(function(){ /* offline/hiccup — local cache still has it */ });
+    }, 300);
+  }
+  function flushSyncNow(){
+    if (!authToken) return;
+    if (pendingSync){ clearTimeout(pendingSync); pendingSync = null; }
+    var snapshot = { profile:state.profile, activity:state.activity, jobs:state.jobs, cindy:state.cindy };
+    try {
+      fetch(AI_BASE + "/api/data", {
+        method: "PUT",
+        headers: { "content-type":"application/json", authorization:"Bearer "+authToken },
+        body: JSON.stringify(snapshot),
+        keepalive: true
+      });
+    } catch(e){}
+  }
+  window.addEventListener("pagehide", flushSyncNow);
+
+  async function persistMain(){ queueSync(); }
+  async function persistJob(){ queueSync(); }
+  async function removeJobRemote(){ queueSync(); }
 
   async function pushActivity(message, jobId){
     state.activity.unshift({ id:uid(), message:message, jobId:jobId||null, at:now(), read:false });
@@ -595,36 +643,25 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     return res.json();
   }
 
-  async function initStore(){
-    var local = loadLocal();
-    if (!local){
-      // one-time migration: if this is the very first account ever created on
-      // this device and pre-account data exists (from before accounts were
-      // added), carry it over instead of losing it.
-      try {
-        var accts = loadAccounts();
-        var oldRaw = localStorage.getItem("career-copilot-v1");
-        if (oldRaw && Object.keys(accts).length === 1){
-          localStorage.setItem(userKey(), oldRaw);
-          local = JSON.parse(oldRaw);
-        }
-      } catch(e){}
-    }
+  // Turns a data blob (from the server, or a legacy local one being migrated)
+  // into a well-formed state object — same shape whether it came from
+  // /api/account/login, /api/account/session, or /api/account/register.
+  function normalizeLoadedData(local){
+    var s = { profile:{ links:{} }, activity:[], jobs:[], cindy: cindyDefault() };
     if (local){
-      state.profile = Object.assign({ links:{} }, local.profile || {});
-      state.profile.links = state.profile.links || {};
-      state.activity = Array.isArray(local.activity) ? local.activity : [];
-      state.jobs = Array.isArray(local.jobs) ? local.jobs : [];
+      s.profile = Object.assign({ links:{} }, local.profile || {});
+      s.profile.links = s.profile.links || {};
+      s.activity = Array.isArray(local.activity) ? local.activity : [];
+      s.jobs = Array.isArray(local.jobs) ? local.jobs : [];
       var cd = cindyDefault();
-      state.cindy = Object.assign(cd, local.cindy || {});
-      state.cindy.draft = Object.assign(cd.draft, (local.cindy && local.cindy.draft) || {});
-      state.cindy.draft.contact = Object.assign({name:"",email:"",phone:"",location:"",links:""}, state.cindy.draft.contact || {});
-      state.cindy.draft.experience = Array.isArray(state.cindy.draft.experience) ? state.cindy.draft.experience : [];
-      state.cindy.draft.education = Array.isArray(state.cindy.draft.education) ? state.cindy.draft.education : [];
-      state.cindy.history = Array.isArray(state.cindy.history) ? state.cindy.history : [];
+      s.cindy = Object.assign(cd, local.cindy || {});
+      s.cindy.draft = Object.assign(cd.draft, (local.cindy && local.cindy.draft) || {});
+      s.cindy.draft.contact = Object.assign({name:"",email:"",phone:"",location:"",links:""}, s.cindy.draft.contact || {});
+      s.cindy.draft.experience = Array.isArray(s.cindy.draft.experience) ? s.cindy.draft.experience : [];
+      s.cindy.draft.education = Array.isArray(s.cindy.draft.education) ? s.cindy.draft.education : [];
+      s.cindy.history = Array.isArray(s.cindy.history) ? s.cindy.history : [];
     }
-    storeReady = true;
-    render();
+    return s;
   }
 
   // ---------- derived ----------
@@ -706,22 +743,61 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     $("#auth-user").focus();
   }
 
+  function enterAccount(key, displayName, token, data){
+    currentUser = key;
+    currentUserDisplay = displayName || key;
+    authToken = token;
+    setSession(token);
+    state = normalizeLoadedData(data);
+    storeReady = true;
+    authState = { mode:"login", error:"", username:"" };
+    render();
+  }
+
+  // A device that already had a browser-local-only account (from before
+  // accounts lived on the server) gets migrated up automatically the first
+  // time that person logs in on it — same username + password, plus
+  // whatever pipeline/profile data this browser already had for them.
+  async function tryMigrateLegacyAccount(u, p){
+    var key = u.toLowerCase();
+    var acct = (loadAccounts() || {})[key];
+    if (!acct) return false;
+    var hash = await sha256Hex(acct.salt + ":" + p);
+    if (hash !== acct.hash) return false;
+
+    var localData = null;
+    try {
+      var raw = localStorage.getItem(LS_PREFIX + key);
+      localData = raw ? JSON.parse(raw) : null;
+    } catch(e){}
+
+    try {
+      var res = await apiRequest("/api/account/register", {
+        method: "POST",
+        body: { username: acct.displayName || u, password: p, data: localData }
+      });
+      enterAccount(key, res.username, res.token, res.data);
+      toast("Moved your account to the cloud — it’ll work from any device now.");
+      return true;
+    } catch(e){
+      return false;
+    }
+  }
+
   async function handleLogin(){
     var u = $("#auth-user").value.trim();
     var p = $("#auth-pass").value;
     authState.username = u;
     if (!u || !p){ authState.error = "Enter a username and password."; renderAuth(); return; }
-    var accounts = loadAccounts();
-    var key = u.toLowerCase();
-    var acct = accounts[key];
-    if (!acct){ authState.error = "No account found for that username."; renderAuth(); return; }
-    var hash = await sha256Hex(acct.salt + ":" + p);
-    if (hash !== acct.hash){ authState.error = "Incorrect password."; renderAuth(); return; }
-    currentUser = key;
-    currentUserDisplay = acct.displayName || u;
-    setSession(key);
-    authState = { mode:"login", error:"", username:"" };
-    await initStore();
+
+    try {
+      var res = await apiRequest("/api/account/login", { method:"POST", body:{ username:u, password:p } });
+      enterAccount(u.toLowerCase(), res.username, res.token, res.data);
+    } catch(err){
+      if (err && err.code === "not_found" && await tryMigrateLegacyAccount(u, p)) return;
+      authState.error = (err && err.message) || "Something went wrong logging in.";
+      renderAuth();
+    }
   }
 
   async function handleRegister(){
@@ -733,32 +809,27 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     if (!/^[a-zA-Z0-9 _-]+$/.test(u)){ authState.error = "Use only letters, numbers, spaces, - or _."; renderAuth(); return; }
     if (!p || p.length < 4){ authState.error = "Password needs at least 4 characters."; renderAuth(); return; }
     if (p !== p2){ authState.error = "Passwords don’t match."; renderAuth(); return; }
-    var accounts = loadAccounts();
+
     var key = u.toLowerCase();
-    if (accounts[key]){ authState.error = "That username is already taken — try logging in instead."; renderAuth(); return; }
-    var salt = uid();
-    var hash = await sha256Hex(salt + ":" + p);
-    accounts[key] = { displayName:u, salt:salt, hash:hash, createdAt:now() };
-    saveAccounts(accounts);
-    currentUser = key;
-    currentUserDisplay = u;
-    setSession(key);
-    if (SEED_PROFILES[key]){
-      try {
-        localStorage.setItem(LS_PREFIX + key, JSON.stringify({
-          profile: Object.assign({ links:{} }, SEED_PROFILES[key]),
-          activity: [], jobs: [], cindy: cindyDefault()
-        }));
-      } catch(e){}
+    var initialData = SEED_PROFILES[key]
+      ? { profile: Object.assign({ links:{} }, SEED_PROFILES[key]), activity: [], jobs: [], cindy: cindyDefault() }
+      : null;
+
+    try {
+      var res = await apiRequest("/api/account/register", { method:"POST", body:{ username:u, password:p, data:initialData } });
+      enterAccount(key, res.username, res.token, res.data);
+    } catch(err){
+      authState.error = (err && err.message) || "Something went wrong creating your account.";
+      renderAuth();
     }
-    authState = { mode:"login", error:"", username:"" };
-    await initStore();
   }
 
   function logout(){
+    if (authToken) apiRequest("/api/account/logout", { method:"POST", token:authToken }).catch(function(){});
     clearSession();
     currentUser = null;
     currentUserDisplay = "";
+    authToken = null;
     state = { profile:{ links:{} }, activity:[], jobs:[], cindy:cindyDefault() };
     activeTab = "today";
     planCache = { text:"", running:false, ctl:null };
@@ -2154,17 +2225,16 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
 
   // ---------- boot ----------
   (function boot(){
-    var session = getSession();
-    var accounts = loadAccounts();
-    if (session && accounts[session]){
-      currentUser = session;
-      currentUserDisplay = accounts[session].displayName || session;
-      render();
-      initStore();
-    } else {
+    var token = getSession();
+    if (!token){ renderAuth(); return; }
+    authToken = token;
+    apiRequest("/api/account/session", { method:"GET", token:token }).then(function(res){
+      enterAccount((res.username||"").toLowerCase(), res.username, token, res.data);
+    }).catch(function(){
       clearSession();
+      authToken = null;
       renderAuth();
-    }
+    });
   })();
 })();
 </script>

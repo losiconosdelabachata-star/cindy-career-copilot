@@ -4,3 +4,7 @@ pages_build_output_dir = "."
 
 [ai]
 binding = "AI"
+
+[[kv_namespaces]]
+binding = "ACCOUNTS"
+id = "35fba43d19c44047b6a22b5c9e345804"

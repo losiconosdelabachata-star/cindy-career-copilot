@@ -14,11 +14,13 @@ to the Cloudflare Pages URL regardless of which one you're on (CORS is open for 
 ## What it does
 
 - **Accounts** — sign in with a username + password, or hit **Register** to create a new
-  one. Each account's pipeline and profile are stored separately, so Marino, Cindy, or
-  anyone else sharing this device can each keep their own private data. There's no server,
-  so this is data separation + a password gate (everything still lives in this browser's
-  localStorage) rather than server-verified security — good enough for keeping housemates'
-  job searches apart, not for anything sensitive.
+  one. Accounts and each account's pipeline/profile live server-side (Cloudflare KV, behind
+  `/api/account/*` and `/api/data` — see "Accounts backend" below), so Marino, Cindy, or
+  anyone else can sign in from **any device or browser**, not just the one they registered
+  on, and their data follows them. Passwords are salted + hashed (PBKDF2) on the server —
+  reasonable for keeping people's job searches private from each other, not bank-grade
+  security. A device also keeps a fast local cache (localStorage) so the app still works
+  offline and reloads instantly; it syncs to the server in the background on every change.
 - **Cindy** — a résumé and career-search guide, in a chat-style tab. She walks you through
   building a résumé from scratch (contact → summary → experience → education → skills →
   save to Profile) or uploading an existing one (.txt, .md, or .pdf — text is extracted
@@ -53,8 +55,39 @@ to the Cloudflare Pages URL regardless of which one you're on (CORS is open for 
   are still English-only for now.
 
 Marino's account comes pre-seeded with his résumé and cover letter the first time the
-username `marino` is registered on a given browser (see `SEED_PROFILES` in `index.html`) —
-so it isn't a blank profile no matter which device he signs in from.
+username `marino` is ever registered (see `SEED_PROFILES` in `index.html`) — so it isn't a
+blank profile no matter which device he first signs up from.
+
+## Accounts backend
+
+Accounts and each account's data blob (`profile`/`activity`/`jobs`/`cindy`) live in a
+Cloudflare KV namespace (binding `ACCOUNTS` in `wrangler.toml`), behind these Functions:
+
+- `functions/api/account/register.js` — creates an account (salted PBKDF2 password hash),
+  optionally seeded with an initial data blob, and returns a session token.
+- `functions/api/account/login.js` — verifies the password and returns a fresh session
+  token plus that account's current data.
+- `functions/api/account/session.js` — validates a stored session token on app boot (so a
+  returning device stays signed in) and returns the current data.
+- `functions/api/account/logout.js` — deletes the session token.
+- `functions/api/data.js` — `GET`/`PUT` the signed-in account's data blob, gated by a
+  `Authorization: Bearer <token>` header. `index.html` calls this in the background
+  (debounced ~300ms) after every change, and once more on page hide via `keepalive` fetch
+  so a closed tab doesn't drop the last edit.
+
+A device that already had a browser-local-only account from before this existed gets
+migrated up automatically: the first time that person logs in on that device, if the server
+has no matching account yet, the client checks this browser's old local account, verifies
+the password against it, and if it matches, registers the server account using this
+browser's existing data as the seed. After that one-time migration, the account is fully
+server-side and works the same from any device.
+
+**Setup note:** the KV namespace already exists (`id` in `wrangler.toml`) — creating a new
+one only applies if the project is redeployed under a different Cloudflare account:
+
+```bash
+npx wrangler kv namespace create ACCOUNTS
+```
 
 ## AI backend
 
