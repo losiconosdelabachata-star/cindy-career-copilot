@@ -1,20 +1,31 @@
-# Cindy Career Copilot
+# Career Copilot — Job Search Deck
 
-Fully standalone version — AI-assisted resume tailoring and job pipeline tracker. No Claude branding anywhere.
-
-- Frontend: `index.html` (static, served by GitHub Pages)
-- Backend: Supabase project `cindy-career-copilot` (Postgres + Auth, real per-user private data via Row Level Security)
-- Secure AI calls: `supabase/functions/ai` (Edge Function; calls Anthropic's API server-side so the API key is never exposed to the browser)
-- Email alerts: a scheduled job checks the `notifications` table and emails users when something needs their attention.
+A private, no-login job-search command deck. Single static page, served by GitHub Pages —
+no server, no accounts, no API keys.
 
 ## Live site
 https://losiconosdelabachata-star.github.io/cindy-career-copilot/
 
-## Deploying the AI Edge Function
-```
-supabase login
-supabase link --project-ref ebtmnbqvjbgrktqcnroj
-supabase functions deploy ai
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-```
-Until the function is deployed and the secret is set, resume tailoring/building will show an error but the rest of the app (accounts, resume storage, job tracking, notifications) works fully.
+## What it does
+
+- **Pipeline** — track roles (title, company, posting URL, description) through
+  Saved → Tailored → Applied → Interview → Closed
+- **Profile** — contact info, target roles, platform links, and your master résumé
+- **Needs attention** — auto-flags stalled items (saved with no materials, tailored but
+  not applied after 2 days, applied with no follow-up after 7 days)
+- **Back up & restore** — since there's no server, everything lives in the visitor's own
+  browser (localStorage); Profile → Download backup exports it as JSON, Restore reloads it
+
+## What's intentionally off here
+
+GitHub Pages only serves static files — there's no server to run AI calls, so the
+**"Build my plan" / "Tailor résumé + cover letter"** buttons are disabled on this build,
+with a note explaining why. Everything else works fully.
+
+A sibling build with those AI features wired up (via Cloudflare Workers AI — free,
+no API key) exists outside this repo. Ask if you want it deployed too.
+
+## Editing
+
+It's one file: `index.html`, plain HTML/CSS/JS, no build step. Edit it and push to `main` —
+GitHub Pages redeploys automatically in under a minute.

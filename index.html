@@ -3,552 +3,785 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Career Copilot</title>
+<title>Job Search Deck</title>
+<meta name="description" content="A no-login job-search command deck — pipeline tracker, résumé storage, and stalled-item alerts, saved in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AF%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
+html,body{margin:0;}
+img{max-width:100%;}
+[hidden]{display:none!important;}
 :root{
-  --bg:#faf9f7; --panel:#ffffff; --border:#e4e0da; --text:#2a2620; --muted:#8a8378;
-  --accent:#b5793a; --accent-dark:#8f5f2a; --accent-soft:#f3e4d0; --danger:#b5453a;
-  --ok:#3a7a4a; --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
-  --radius:14px;
+  --ground:#eef1f4; --panel:#ffffff; --panel-2:#f5f8fa; --inset:#eceff2;
+  --ink:#17232e; --muted:#5c6f7f; --faint:#8496a3; --border:#d6dde4;
+  --accent:#256a86; --accent-deep:#1b5470; --accent-ghost:#e1edf1; --on-accent:#ffffff;
+  --amber:#9c5f18; --amber-ghost:#f5e6d3;
+  --green:#2b7a57; --green-ghost:#dbeee4;
+  --violet:#565aa4; --violet-ghost:#e4e4f1;
+  --danger:#a4423a; --danger-ghost:#f4e0de;
+  --shadow:0 1px 2px rgba(20,35,46,.05), 0 6px 20px rgba(20,35,46,.06);
+  --radius:6px;
+  --maxw:940px;
+  --serif:"Barlow Semi Condensed",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --body:"Barlow",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
-@media (prefers-color-scheme: dark){
+@media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#1b1815; --panel:#242019; --border:#3a342c; --text:#efe9df; --muted:#a89e8e;
-    --accent:#e0a25f; --accent-dark:#f0b878; --accent-soft:#3a2e1f; --danger:#e08277;
-    --ok:#7fcf95; --shadow: 0 1px 2px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.25);
+    --ground:#0d151d; --panel:#151f29; --panel-2:#1a2530; --inset:#1f2c38;
+    --ink:#e5edf3; --muted:#8ba0b0; --faint:#6c8090; --border:#273743;
+    --accent:#5bb2d1; --accent-deep:#83c8e0; --accent-ghost:#16303b; --on-accent:#08141b;
+    --amber:#dda355; --amber-ghost:#372a17;
+    --green:#5cc596; --green-ghost:#183025;
+    --violet:#9a9ce4; --violet-ghost:#22233d;
+    --danger:#e2867d; --danger-ghost:#3a221f;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
   }
 }
+:root[data-theme="dark"]{
+  --ground:#0d151d; --panel:#151f29; --panel-2:#1a2530; --inset:#1f2c38;
+  --ink:#e5edf3; --muted:#8ba0b0; --faint:#6c8090; --border:#273743;
+  --accent:#5bb2d1; --accent-deep:#83c8e0; --accent-ghost:#16303b; --on-accent:#08141b;
+  --amber:#dda355; --amber-ghost:#372a17;
+  --green:#5cc596; --green-ghost:#183025;
+  --violet:#9a9ce4; --violet-ghost:#22233d;
+  --danger:#e2867d; --danger-ghost:#3a221f;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+}
 *{box-sizing:border-box;}
-html,body{margin:0; background:var(--bg); color:var(--text);}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
-.wrap{max-width:960px; margin:0 auto; padding:28px 20px 80px;}
-h1,h2,h3{font-weight:650; letter-spacing:-0.01em;}
-h1{font-size:22px; margin:0;}
-.sub{color:var(--muted); font-size:13.5px; margin-top:4px;}
-.card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px; margin-bottom:18px;}
-.row{display:flex; gap:10px; flex-wrap:wrap;}
-label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
-input,textarea,select{width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:9px; padding:9px 11px; font-size:14px; font-family:inherit;}
-textarea{resize:vertical; min-height:90px; line-height:1.5;}
-.field{margin-bottom:14px; flex:1; min-width:180px;}
-button{cursor:pointer; border:none; border-radius:9px; padding:10px 16px; font-size:13.5px; font-weight:600; font-family:inherit; transition:transform .08s ease;}
-button:active{transform:scale(0.98);}
-.btn-primary{background:var(--accent); color:#241b0e;}
-.btn-primary:hover{background:var(--accent-dark);}
-.btn-ghost{background:transparent; color:var(--text); border:1px solid var(--border);}
-.btn-ghost:hover{border-color:var(--accent);}
-.btn-danger{background:transparent; color:var(--danger); border:1px solid var(--danger);}
-button:disabled{opacity:.5; cursor:not-allowed;}
-.tabs{display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;}
-.tab{padding:8px 14px; border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--panel); color:var(--muted);}
-.tab.active{background:var(--accent-soft); color:var(--accent-dark); border-color:var(--accent);}
-.pill{display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.03em;}
-.pill-need{background:#f0d8d5; color:#8a2f22;}
-.pill-tailored{background:#dbe8f5; color:#204a75;}
-.pill-applied{background:#dcefe0; color:#1f6b34;}
-.pill-interview{background:#f5e6c8; color:#7a5817;}
-.job{border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:12px; background:var(--bg);}
-.job h3{margin:0 0 4px 0; font-size:15.5px;}
-.job .meta{color:var(--muted); font-size:12.5px; margin-bottom:8px;}
-.muted{color:var(--muted); font-size:13px;}
-.note{background:var(--accent-soft); border:1px solid var(--accent); color:var(--accent-dark); border-radius:10px; padding:12px 14px; font-size:13px; margin-bottom:16px; line-height:1.5;}
-.notif{display:flex; justify-content:space-between; gap:10px; align-items:flex-start; border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:8px; background:var(--bg);}
-.notif.unread{border-color:var(--accent);}
-.top{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:20px;}
-.hide{display:none!important;}
-pre.out{white-space:pre-wrap; font-family:inherit; font-size:13.5px; line-height:1.55; background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:14px; max-height:420px; overflow:auto;}
-.small{font-size:12px; color:var(--muted);}
-a{color:var(--accent-dark);}
-.avatar{width:34px; height:34px; border-radius:50%; background:var(--accent-soft); color:var(--accent-dark); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;}
-.logoutbtn{font-size:12px; padding:6px 10px;}
+html,body{margin:0;}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:var(--body); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:26px 20px 96px;}
+h1,h2,h3{font-family:var(--serif); font-weight:600; letter-spacing:.005em; margin:0;}
+h1{font-size:24px; letter-spacing:.02em; text-transform:uppercase;}
+h2{font-size:18px;}
+h3{font-size:15.5px;}
+p{margin:0 0 10px;}
+a{color:var(--accent-deep);}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums;}
+
+/* ---- masthead ---- */
+.masthead{display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:18px; flex-wrap:wrap;}
+.brand{display:flex; align-items:baseline; gap:11px;}
+.brand .tag{font-family:var(--mono); font-size:11px; color:var(--faint); letter-spacing:.14em; text-transform:uppercase;}
+.owner{font-family:var(--mono); font-size:12px; color:var(--muted);}
+.iconbtn{background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:var(--radius); padding:5px 9px; font-size:12px; cursor:pointer; font-family:var(--mono);}
+.iconbtn:hover{border-color:var(--accent); color:var(--accent-deep);}
+
+/* ---- flight strip ---- */
+.strip{display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:22px;}
+.cell{background:var(--panel); padding:11px 12px 12px; display:flex; flex-direction:column; gap:3px;}
+.cell .n{font-family:var(--mono); font-size:22px; font-weight:500; line-height:1;}
+.cell .k{font-family:var(--serif); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);}
+.cell.on-saved .n{color:var(--ink);}
+.cell.on-tailored .n{color:var(--accent);}
+.cell.on-applied .n{color:var(--green);}
+.cell.on-interview .n{color:var(--violet);}
+.cell.on-closed .n{color:var(--faint);}
+@media (max-width:560px){
+  .strip{grid-template-columns:repeat(3,1fr);}
+  .cell:nth-child(4),.cell:nth-child(5){border-top:1px solid var(--border);}
+}
+
+/* ---- tabs ---- */
+.tabs{display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:22px;}
+.tab{appearance:none; background:transparent; border:none; border-bottom:2px solid transparent; margin-bottom:-1px;
+  padding:9px 15px; font-family:var(--serif); font-weight:600; font-size:14px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--muted); cursor:pointer;}
+.tab:hover{color:var(--ink);}
+.tab[aria-selected="true"]{color:var(--accent-deep); border-bottom-color:var(--accent);}
+.tab .badge{font-family:var(--mono); font-size:11px; background:var(--amber-ghost); color:var(--amber); padding:1px 5px; border-radius:4px; margin-left:6px; letter-spacing:0;}
+
+/* ---- cards ---- */
+.card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; margin-bottom:16px;}
+.card > h2, .card > h3{margin-bottom:4px;}
+.card .lede{color:var(--muted); font-size:13.5px; margin-bottom:16px;}
+.stack{display:flex; flex-direction:column; gap:14px;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+@media (max-width:560px){ .grid2{grid-template-columns:1fr;} }
+
+label{display:block; font-family:var(--serif); font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:5px;}
+input,textarea,select{
+  width:100%; background:var(--panel-2); border:1px solid var(--border); color:var(--ink);
+  border-radius:var(--radius); padding:9px 11px; font-family:var(--body); font-size:14.5px;
+}
+textarea{resize:vertical; min-height:84px; line-height:1.5;}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
+input::placeholder,textarea::placeholder{color:var(--faint);}
+
+button{font-family:var(--serif); font-weight:600; font-size:13.5px; text-transform:uppercase; letter-spacing:.05em;
+  border:1px solid transparent; border-radius:var(--radius); padding:9px 16px; cursor:pointer;}
+button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.btn-primary{background:var(--accent); color:var(--on-accent); border-color:var(--accent);}
+.btn-primary:hover{background:var(--accent-deep); border-color:var(--accent-deep);}
+.btn-ghost{background:transparent; color:var(--ink); border-color:var(--border);}
+.btn-ghost:hover{border-color:var(--accent); color:var(--accent-deep);}
+.btn-danger{background:transparent; color:var(--danger); border-color:var(--danger);}
+.btn-danger:hover{background:var(--danger-ghost);}
+button:disabled{opacity:.45; cursor:not-allowed;}
+.btn-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+.saveflash{font-family:var(--mono); font-size:12px; color:var(--green);}
+
+/* ---- job cards ---- */
+.job{position:relative; background:var(--panel); border:1px solid var(--border); border-left-width:4px; border-radius:var(--radius); padding:16px 16px 16px 17px; margin-bottom:12px;}
+.job.s-saved{border-left-color:var(--faint);}
+.job.s-tailored{border-left-color:var(--accent);}
+.job.s-applied{border-left-color:var(--green);}
+.job.s-interview{border-left-color:var(--violet);}
+.job.s-closed{border-left-color:var(--border); opacity:.72;}
+.job-head{display:flex; justify-content:space-between; gap:12px; align-items:flex-start;}
+.job-head h3{font-family:var(--serif); font-size:16px;}
+.job-co{font-family:var(--body); font-size:13.5px; color:var(--muted); margin-top:1px;}
+.job-meta{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:9px;}
+.stat{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.04em; padding:2px 7px; border-radius:4px;}
+.stat.s-saved{background:var(--inset); color:var(--muted);}
+.stat.s-tailored{background:var(--accent-ghost); color:var(--accent-deep);}
+.stat.s-applied{background:var(--green-ghost); color:var(--green);}
+.stat.s-interview{background:var(--violet-ghost); color:var(--violet);}
+.stat.s-closed{background:var(--inset); color:var(--faint);}
+.age{font-family:var(--mono); font-size:11px; color:var(--faint);}
+.job details{margin-top:11px;}
+.job details summary{font-family:var(--mono); font-size:12px; color:var(--muted); cursor:pointer;}
+.job details .desc{white-space:pre-wrap; font-size:13px; color:var(--muted); margin-top:8px; max-height:220px; overflow:auto; padding-right:6px;}
+.job-actions{display:flex; gap:9px; align-items:center; flex-wrap:wrap; margin-top:13px;}
+.job-actions select{width:auto; padding:7px 9px; font-size:13px;}
+.out{white-space:pre-wrap; font-family:var(--body); font-size:13px; line-height:1.55; background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius); padding:13px; max-height:340px; overflow:auto; margin-top:8px;}
+.out-h{font-family:var(--serif); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-top:14px;}
+
+/* ---- today ---- */
+.plan{white-space:pre-wrap; font-size:14.5px; line-height:1.6;}
+.thinking{font-family:var(--mono); font-size:13px; color:var(--muted);}
+.stalled li{margin-bottom:6px;}
+.pill{display:inline-block; font-family:var(--mono); font-size:11px; padding:1px 6px; border-radius:4px; background:var(--amber-ghost); color:var(--amber); margin-right:6px;}
+.empty{color:var(--muted); font-size:13.5px; font-family:var(--body);}
+.note{background:var(--accent-ghost); border:1px solid var(--accent); color:var(--accent-deep); border-radius:var(--radius); padding:11px 13px; font-size:13px; margin-bottom:14px;}
+
+/* ---- toast ---- */
+#toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(8px);
+  background:var(--ink); color:var(--ground); font-size:13px; font-family:var(--body);
+  padding:9px 16px; border-radius:var(--radius); box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50; max-width:90vw;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+.foot{margin-top:26px; font-family:var(--mono); font-size:11px; color:var(--faint); text-align:center; line-height:1.7;}
+
+@media (prefers-reduced-motion:no-preference){
+  .fade{animation:fade .4s ease both;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+}
 </style>
 </head>
 <body>
+
 <div class="wrap" id="app"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-// ---- Configuration ----
-const SUPABASE_URL = "https://ebtmnbqvjbgrktqcnroj.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_HbeaJ92AN5TYPBQVlCNLDQ_12WnTZ0W";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+(function(){
+  "use strict";
 
-const $ = (sel, root=document) => root.querySelector(sel);
-const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-const app = $('#app');
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-let session = null, profile = null;
-let jobsCache = [], notifsCache = [];
-let activeTab = 'profile';
-
-async function init(){
-  const { data } = await sb.auth.getSession();
-  session = data?.session || null;
-  if (session) {
-    await loadProfile();
-    if (!profile) {
-      // Session exists but the account behind it is gone (or has no profile row yet
-      // and couldn't be created) — don't render a broken app, start fresh instead.
-      await sb.auth.signOut().catch(()=>{});
-      session = null;
-      renderAuth('Your previous sign-in is no longer valid — please continue below.');
-      return;
-    }
-    renderApp();
-  } else {
-    renderAuth();
+  // ---------- helpers ----------
+  var $ = function(s, r){ return (r||document).querySelector(s); };
+  var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+  var uid = function(){
+    try { return crypto.randomUUID(); } catch(e){}
+    return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8);
+  };
+  var now = function(){ return Date.now(); };
+  var daysAgo = function(ts){ if(!ts) return null; return Math.floor((now()-ts)/86400000); };
+  var agoLabel = function(ts){
+    var d = daysAgo(ts);
+    if (d==null) return "";
+    if (d<=0) return "today";
+    if (d===1) return "1d ago";
+    return d + "d ago";
+  };
+  var toastTimer;
+  function toast(msg){
+    var t = $("#toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 3200);
   }
-}
-
-async function loadProfile(){
-  const { data, error } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-  profile = data;
-}
-
-function initials(name){
-  return (name||'?').trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
-}
-
-// ---------- Auth ----------
-function renderAuth(msgText){
-  app.innerHTML = `
-    <div class="top">
-      <div>
-        <h1>Career Copilot</h1>
-        <div class="sub">Your resume, tailored per job — and a bot that keeps the pipeline moving.</div>
-      </div>
-    </div>
-    <div class="card" style="max-width:440px; margin:0 auto;">
-      <h3 style="margin-top:0">Get started — takes 30 seconds</h3>
-      <div class="small" style="margin-bottom:14px;">Type your name, email, and a password, then tap "Continue." First time, this creates your account automatically.</div>
-      <div class="field"><label>Your name</label><input id="a-name" placeholder="Cindy Santos" autocomplete="name"></div>
-      <div class="field"><label>Email</label><input id="a-email" type="email" placeholder="you@email.com" autocomplete="email"></div>
-      <div class="field"><label>Password (6+ characters)</label><input id="a-pass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
-      <button class="btn-primary" style="width:100%" id="a-continue">Continue</button>
-      <div class="small" style="margin-top:12px">Your info is private to your account — nobody else using this app can see it.</div>
-      <div id="a-msg" class="small" style="color:var(--danger); margin-top:8px;">${esc(msgText||'')}</div>
-    </div>
-  `;
-  $('#a-continue').onclick = onContinue;
-  $('#a-pass').addEventListener('keydown', e => { if (e.key === 'Enter') onContinue(); });
-}
-
-async function onContinue(){
-  const name = $('#a-name').value.trim();
-  const email = $('#a-email').value.trim();
-  const pass = $('#a-pass').value;
-  const msg = $('#a-msg');
-  const btn = $('#a-continue');
-  if (!email || pass.length < 6){ msg.textContent = 'Enter an email and a password of at least 6 characters.'; return; }
-  btn.disabled = true; msg.style.color = 'var(--muted)'; msg.textContent = 'One moment...';
-  try {
-    const signIn = await sb.auth.signInWithPassword({ email, password: pass });
-    if (!signIn.error) {
-      session = signIn.data.session;
-      await loadProfile();
-      if (!profile) {
-        await sb.from('profiles').insert({ id: session.user.id, name: name || email, email }).select().maybeSingle();
-        await loadProfile();
-      }
-      renderApp();
-      return;
+  function sampleErrCopy(code){
+    switch(code){
+      case "not_granted": case "sampling_disabled": case "not_declared":
+        return "Claude isn't available in this view — the tailoring step needs it.";
+      case "rate_limited": return "Too many requests just now. Give it a minute and try again.";
+      case "session_expired": return "Your Claude session expired — reload the page and sign in again.";
+      case "refused": return "Claude declined that request. Try adjusting the job description or résumé.";
+      case "prompt_too_large": return "Résumé + job description are too long together. Trim them and retry.";
+      case "invalid_json": return "The reply came back malformed. Try again.";
+      case "cancelled": return "Stopped.";
+      default: return "That didn't go through. Try again in a moment.";
     }
-    if (!name) { msg.style.color='var(--danger)'; msg.textContent = 'Enter your name to create a new account (or check your password if you already have one).'; btn.disabled=false; return; }
-    const signUp = await sb.auth.signUp({ email, password: pass });
-    if (signUp.error) {
-      msg.style.color = 'var(--danger)';
-      msg.textContent = signUp.error.message || 'Could not create an account with those details.';
-      btn.disabled = false;
-      return;
-    }
-    session = signUp.data.session;
-    if (!session) {
-      msg.style.color = 'var(--danger)';
-      msg.textContent = 'Account created — please check your email to confirm, then come back and sign in.';
-      btn.disabled = false;
-      return;
-    }
-    await sb.from('profiles').insert({ id: session.user.id, name, email });
-    await loadProfile();
-    renderApp();
-  } catch (e) {
-    msg.style.color = 'var(--danger)';
-    msg.textContent = 'Something went wrong — please try again.';
-    btn.disabled = false;
   }
-}
 
-async function logout(){
-  await sb.auth.signOut();
-  session = null; profile = null;
-  renderAuth();
-}
+  var STAGES = [
+    { key:"saved",     label:"Saved" },
+    { key:"tailored",  label:"Tailored" },
+    { key:"applied",   label:"Applied" },
+    { key:"interview", label:"Interview" },
+    { key:"closed",    label:"Closed" }
+  ];
+  var STAGE_LABEL = {}; STAGES.forEach(function(s){ STAGE_LABEL[s.key] = s.label; });
 
-// ---------- Shell ----------
-function renderApp(){
-  app.innerHTML = `
-    <div class="top">
-      <div style="display:flex; gap:12px; align-items:center;">
-        <div class="avatar">${esc(initials(profile?.name))}</div>
-        <div>
-          <h1>Career Copilot</h1>
-          <div class="sub">Signed in as ${esc(profile?.name || session.user.email)}</div>
-        </div>
-      </div>
-      <button class="btn-ghost logoutbtn" id="logout-btn">Sign out</button>
-    </div>
-    <div class="tabs">
-      <div class="tab" data-tab="profile">Profile & Resume</div>
-      <div class="tab" data-tab="builder">Resume Builder</div>
-      <div class="tab" data-tab="jobs">Job Pipeline</div>
-      <div class="tab" data-tab="notifs">Notifications <span id="notif-count"></span></div>
-    </div>
-    <div id="tab-body"></div>
-  `;
-  $('#logout-btn').onclick = logout;
-  $$('.tab').forEach(t => t.onclick = () => { activeTab = t.dataset.tab; renderTabs(); renderTabBody(); });
-  renderTabs();
-  renderTabBody();
-  refreshNotifCount();
-}
+  // ---------- state ----------
+  var state = { profile:{ links:{} }, activity:[], jobs:[] };
+  var activeTab = "today";
+  var storeReady = false;
+  var planCache = { text:"", running:false, ctl:null };
 
-function renderTabs(){
-  $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === activeTab));
-}
-
-async function refreshNotifCount(){
-  const { data } = await sb.from('notifications').select('id, read').eq('profile_id', session.user.id);
-  notifsCache = data || [];
-  const unread = notifsCache.filter(n=>!n.read).length;
-  const badge = $('#notif-count');
-  if (badge) badge.textContent = unread ? `(${unread})` : '';
-}
-
-function renderTabBody(){
-  const body = $('#tab-body');
-  if (activeTab === 'profile') return renderProfileTab(body);
-  if (activeTab === 'builder') return renderBuilderTab(body);
-  if (activeTab === 'jobs') return renderJobsTab(body);
-  if (activeTab === 'notifs') return renderNotifsTab(body);
-}
-
-// ---------- Profile tab ----------
-function renderProfileTab(body){
-  body.innerHTML = `
-    <div class="card">
-      <h3 style="margin-top:0">Contact & preferences</h3>
-      <div class="row">
-        <div class="field"><label>Notification email</label><input id="p-email" value="${esc(profile.email||'')}" placeholder="you@email.com"></div>
-        <div class="field"><label>Target roles / keywords</label><input id="p-roles" value="${esc(profile.target_roles||'')}" placeholder="e.g. Customer Success, Healthcare Ops, Remote"></div>
-      </div>
-      <button class="btn-primary" id="p-save-prefs">Save</button>
-      <span id="p-save-msg" class="small" style="margin-left:10px;"></span>
-    </div>
-    <div class="card">
-      <h3 style="margin-top:0">Job platforms & profile links</h3>
-      <div class="small" style="margin-bottom:14px;">Keep every place she's findable and applying from in one spot.</div>
-      <div class="row">
-        <div class="field"><label>LinkedIn profile</label><input id="pl-linkedin" value="${esc(profile.links?.linkedin||'')}" placeholder="https://linkedin.com/in/..."></div>
-        <div class="field"><label>Indeed profile</label><input id="pl-indeed" value="${esc(profile.links?.indeed||'')}" placeholder="https://indeed.com/r/..."></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>ZipRecruiter</label><input id="pl-zip" value="${esc(profile.links?.ziprecruiter||'')}" placeholder="https://..."></div>
-        <div class="field"><label>Glassdoor</label><input id="pl-glassdoor" value="${esc(profile.links?.glassdoor||'')}" placeholder="https://..."></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Portfolio / personal website</label><input id="pl-portfolio" value="${esc(profile.links?.portfolio||'')}" placeholder="https://..."></div>
-        <div class="field"><label>GitHub (if applicable)</label><input id="pl-github" value="${esc(profile.links?.github||'')}" placeholder="https://github.com/..."></div>
-      </div>
-      <div class="field"><label>Other links (one per line)</label><textarea id="pl-other" rows="3">${esc(profile.links?.other||'')}</textarea></div>
-      <button class="btn-primary" id="pl-save">Save links</button>
-      <span id="pl-save-msg" class="small" style="margin-left:10px;"></span>
-    </div>
-    <div class="card">
-      <h3 style="margin-top:0">Resume</h3>
-      <div class="small" style="margin-bottom:10px;">Paste your resume text below, or upload a .txt / .md file.</div>
-      <input type="file" id="p-file" accept=".txt,.md" style="margin-bottom:10px;">
-      <div class="field"><textarea id="p-resume" rows="14" placeholder="Paste your resume text here...">${esc(profile.resume_text||'')}</textarea></div>
-      <button class="btn-primary" id="p-save-resume">Save resume</button>
-      <span id="p-resume-msg" class="small" style="margin-left:10px;"></span>
-    </div>
-  `;
-  $('#p-save-prefs').onclick = async () => {
-    profile.email = $('#p-email').value.trim();
-    profile.target_roles = $('#p-roles').value.trim();
-    await sb.from('profiles').update({ email: profile.email, target_roles: profile.target_roles }).eq('id', session.user.id);
-    flash('#p-save-msg', 'Saved.');
-  };
-  $('#pl-save').onclick = async () => {
-    profile.links = {
-      linkedin: $('#pl-linkedin').value.trim(), indeed: $('#pl-indeed').value.trim(),
-      ziprecruiter: $('#pl-zip').value.trim(), glassdoor: $('#pl-glassdoor').value.trim(),
-      portfolio: $('#pl-portfolio').value.trim(), github: $('#pl-github').value.trim(),
-      other: $('#pl-other').value.trim()
-    };
-    await sb.from('profiles').update({ links: profile.links }).eq('id', session.user.id);
-    flash('#pl-save-msg', 'Saved.');
-  };
-  $('#p-save-resume').onclick = async () => {
-    profile.resume_text = $('#p-resume').value;
-    await sb.from('profiles').update({ resume_text: profile.resume_text }).eq('id', session.user.id);
-    flash('#p-resume-msg', 'Saved.');
-  };
-  $('#p-file').onchange = (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => { $('#p-resume').value = reader.result; };
-    reader.readAsText(f);
-  };
-}
-
-function flash(sel, text){
-  const el = $(sel);
-  if (!el) return;
-  el.textContent = text;
-  setTimeout(()=>{ if (el) el.textContent=''; }, 2000);
-}
-
-function downloadText(filename, text){
-  const blob = new Blob([text], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-}
-
-async function callAI(mode, payload){
-  const { data, error } = await sb.functions.invoke('ai', { body: { mode, ...payload } });
-  if (error) throw error;
-  return data;
-}
-
-// ---------- Builder tab ----------
-function renderBuilderTab(body){
-  body.innerHTML = `
-    <div class="card">
-      <h3 style="margin-top:0">Build a resume from scratch</h3>
-      <div class="row">
-        <div class="field"><label>Full name</label><input id="b-name" value="${esc(profile.name||'')}"></div>
-        <div class="field"><label>Location</label><input id="b-loc" placeholder="City, State"></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Email</label><input id="b-email" value="${esc(profile.email||'')}"></div>
-        <div class="field"><label>Phone</label><input id="b-phone"></div>
-      </div>
-      <div class="field"><label>Professional summary</label><textarea id="b-summary" rows="3"></textarea></div>
-      <div class="field"><label>Work experience</label><textarea id="b-exp" rows="8" placeholder="Title, Company (dates)&#10;- bullet"></textarea></div>
-      <div class="field"><label>Education</label><textarea id="b-edu" rows="3"></textarea></div>
-      <div class="field"><label>Skills (comma separated)</label><textarea id="b-skills" rows="2"></textarea></div>
-      <div class="row">
-        <button class="btn-primary" id="b-generate">Generate polished resume</button>
-        <button class="btn-ghost" id="b-plain">Just format it plainly (no AI)</button>
-      </div>
-      <div id="b-status" class="small" style="margin-top:8px;"></div>
-    </div>
-    <div class="card hide" id="b-result-card">
-      <h3 style="margin-top:0">Draft resume</h3>
-      <pre class="out" id="b-result"></pre>
-      <div class="row" style="margin-top:12px;">
-        <button class="btn-primary" id="b-use">Set as my active resume</button>
-        <button class="btn-ghost" id="b-download">Download as .txt</button>
-      </div>
-    </div>
-  `;
-  const gatherFields = () => ({
-    name: $('#b-name').value.trim(), loc: $('#b-loc').value.trim(), email: $('#b-email').value.trim(),
-    phone: $('#b-phone').value.trim(), summary: $('#b-summary').value.trim(),
-    exp: $('#b-exp').value.trim(), edu: $('#b-edu').value.trim(), skills: $('#b-skills').value.trim()
-  });
-  function plainFormat(f){
-    let out = `${f.name}\n${[f.loc,f.email,f.phone].filter(Boolean).join(' | ')}\n\n`;
-    if (f.summary) out += `SUMMARY\n${f.summary}\n\n`;
-    if (f.exp) out += `EXPERIENCE\n${f.exp}\n\n`;
-    if (f.edu) out += `EDUCATION\n${f.edu}\n\n`;
-    if (f.skills) out += `SKILLS\n${f.skills}\n`;
-    return out.trim();
+  var LS_KEY = "career-copilot-v1";
+  function loadLocal(){
+    try { var raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
   }
-  $('#b-plain').onclick = () => {
-    $('#b-result').textContent = plainFormat(gatherFields());
-    $('#b-result-card').classList.remove('hide');
-  };
-  $('#b-generate').onclick = async () => {
-    const status = $('#b-status');
-    status.textContent = 'Writing...';
-    $('#b-generate').disabled = true;
-    try {
-      const { text } = await callAI('build', gatherFields());
-      $('#b-result').textContent = text;
-      $('#b-result-card').classList.remove('hide');
-      status.textContent = '';
-    } catch(e){
-      status.textContent = 'Could not generate right now — try the plain formatter instead.';
-    }
-    $('#b-generate').disabled = false;
-  };
-  $('#b-use').onclick = async () => {
-    profile.resume_text = $('#b-result').textContent;
-    await sb.from('profiles').update({ resume_text: profile.resume_text }).eq('id', session.user.id);
-    flash('#b-status', 'Set as your active resume — see the Profile tab.');
-  };
-  $('#b-download').onclick = () => downloadText((profile.name||'resume').replace(/\s+/g,'_') + '_resume.txt', $('#b-result').textContent);
-}
+  function saveLocal(){
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ profile:state.profile, activity:state.activity, jobs:state.jobs })); } catch(e){}
+  }
 
-// ---------- Jobs tab ----------
-async function loadJobs(){
-  const { data } = await sb.from('jobs').select('*').eq('profile_id', session.user.id).order('created_at', { ascending: false });
-  jobsCache = data || [];
-}
+  function stripId(j){ var c = Object.assign({}, j); delete c.id; return c; }
 
-function renderJobsTab(body){
-  body.innerHTML = `
-    ${!profile.resume_text ? '<div class="note">Add your resume in the Profile tab first so Career Copilot can tailor it to jobs.</div>' : ''}
-    <div class="card">
-      <h3 style="margin-top:0">Add a job to track</h3>
-      <div class="row">
-        <div class="field"><label>Job title</label><input id="j-title" placeholder="Customer Success Manager"></div>
-        <div class="field"><label>Company</label><input id="j-company" placeholder="Acme Inc."></div>
-      </div>
-      <div class="field"><label>Job posting URL (optional)</label><input id="j-url" placeholder="https://..."></div>
-      <div class="field"><label>Paste the job description</label><textarea id="j-desc" rows="6"></textarea></div>
-      <button class="btn-primary" id="j-add">Add to pipeline</button>
-    </div>
-    <div id="jobs-list">Loading...</div>
-  `;
-  $('#j-add').onclick = async () => {
-    const title = $('#j-title').value.trim(), company = $('#j-company').value.trim();
-    const url = $('#j-url').value.trim(), description = $('#j-desc').value.trim();
-    if (!title || !company) return;
-    await sb.from('jobs').insert({ profile_id: session.user.id, title, company, url, description, status: 'new' });
-    await sb.from('notifications').insert({ profile_id: session.user.id, message: `New job added to pipeline: ${title} at ${company}.`, action_needed: false });
-    $('#j-title').value=''; $('#j-company').value=''; $('#j-url').value=''; $('#j-desc').value='';
-    await loadJobs(); renderJobsList();
-  };
-  loadJobs().then(renderJobsList);
-}
+  // ---------- persistence (browser-local; no accounts, no server DB) ----------
+  async function persistMain(){ saveLocal(); }
+  async function persistJob(){ saveLocal(); }
+  async function removeJobRemote(){ saveLocal(); }
 
-function statusPill(status){
-  const map = { new: ['pill-need','New'], tailored: ['pill-tailored','Tailored'], applied: ['pill-applied','Applied'], interview: ['pill-interview','Interview'], closed: ['pill-need','Closed'] };
-  const [cls,label] = map[status] || ['pill-need', status];
-  return `<span class="pill ${cls}">${esc(label)}</span>`;
-}
+  async function pushActivity(message, jobId){
+    state.activity.unshift({ id:uid(), message:message, jobId:jobId||null, at:now(), read:false });
+    state.activity = state.activity.slice(0, 80);
+    await persistMain();
+  }
 
-function renderJobsList(){
-  const list = $('#jobs-list');
-  if (!list) return;
-  if (!jobsCache.length){ list.innerHTML = '<div class="muted">No jobs tracked yet.</div>'; return; }
-  list.innerHTML = jobsCache.map(j => `
-    <div class="job" data-id="${j.id}">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <h3>${esc(j.title)} — ${esc(j.company)}</h3>
-          <div class="meta">${statusPill(j.status)} ${j.url ? `· <a href="${esc(j.url)}" target="_blank" rel="noopener">posting link</a>` : ''}</div>
-        </div>
-        <button class="btn-danger job-delete" style="padding:6px 10px; font-size:12px;">Remove</button>
-      </div>
-      <details ${j.tailored_resume ? '' : 'open'}>
-        <summary class="small" style="cursor:pointer;">Job description</summary>
-        <div class="small" style="white-space:pre-wrap; margin-top:8px;">${esc(j.description || '(none provided)')}</div>
-      </details>
-      <div class="row" style="margin-top:10px;">
-        <button class="btn-primary job-tailor" ${profile.resume_text ? '' : 'disabled'}>Tailor resume & cover letter</button>
-        <select class="job-status">
-          <option value="new" ${j.status==='new'?'selected':''}>New</option>
-          <option value="tailored" ${j.status==='tailored'?'selected':''}>Tailored</option>
-          <option value="applied" ${j.status==='applied'?'selected':''}>Applied</option>
-          <option value="interview" ${j.status==='interview'?'selected':''}>Interview</option>
-          <option value="closed" ${j.status==='closed'?'selected':''}>Closed</option>
-        </select>
-      </div>
-      ${j.tailored_resume ? `
-      <div style="margin-top:12px;">
-        <div class="small" style="font-weight:700; margin-bottom:4px;">Tailored resume</div>
-        <pre class="out">${esc(j.tailored_resume)}</pre>
-        <button class="btn-ghost job-dl-resume" style="margin-top:6px;">Download resume</button>
-      </div>` : ''}
-      ${j.cover_letter ? `
-      <div style="margin-top:12px;">
-        <div class="small" style="font-weight:700; margin-bottom:4px;">Cover letter draft</div>
-        <pre class="out">${esc(j.cover_letter)}</pre>
-        <button class="btn-ghost job-dl-cover" style="margin-top:6px;">Download cover letter</button>
-      </div>` : ''}
-    </div>
-  `).join('');
+  // AI runs through this site's own /api endpoints (a Cloudflare Pages Function
+  // backed by Workers AI). If those aren't wired up yet, the AI buttons degrade.
+  // GitHub Pages serves static files only — there's no server to run the AI calls,
+  // so this build ships with AI off. The tracker, résumé storage, downloads and
+  // backup/restore all work fully with zero backend.
+  var AI_ENABLED = false;
 
-  $$('.job-delete', list).forEach(btn => btn.onclick = async (e) => {
-    const id = e.target.closest('.job').dataset.id;
-    await sb.from('jobs').delete().eq('id', id);
-    await loadJobs(); renderJobsList();
-  });
-  $$('.job-status', list).forEach(sel => sel.onchange = async (e) => {
-    const id = e.target.closest('.job').dataset.id;
-    const status = e.target.value;
-    await sb.from('jobs').update({ status }).eq('id', id);
-    if (status === 'applied') await sb.from('notifications').insert({ profile_id: session.user.id, message: 'Marked applied: check the job\'s posting portal in case it needs a follow-up step from you.', action_needed: false });
-    if (status === 'interview') await sb.from('notifications').insert({ profile_id: session.user.id, message: 'Interview stage reached for a tracked job — time to prep!', action_needed: true });
-    await loadJobs(); renderJobsList(); refreshNotifCount();
-  });
-  $$('.job-tailor', list).forEach(btn => btn.onclick = async (e) => {
-    const id = e.target.closest('.job').dataset.id;
-    const job = jobsCache.find(j=>j.id===id);
-    btn.disabled = true; btn.textContent = 'Tailoring...';
-    try {
-      const result = await callAI('tailor', { resume: profile.resume_text, title: job.title, company: job.company, description: job.description });
-      await sb.from('jobs').update({ tailored_resume: result.resume, cover_letter: result.coverLetter, status: 'tailored' }).eq('id', id);
-      await sb.from('notifications').insert({ profile_id: session.user.id, message: `Tailored resume + cover letter ready for ${job.title} at ${job.company}. Review before applying.`, action_needed: true });
-      await loadJobs(); renderJobsList(); refreshNotifCount();
-    } catch(err){
-      alert('Could not tailor right now — the AI service may not be configured yet.');
-      btn.disabled = false; btn.textContent = 'Tailor resume & cover letter';
-    }
-  });
-  $$('.job-dl-resume', list).forEach(btn => btn.onclick = (e) => {
-    const job = jobsCache.find(j=>j.id===e.target.closest('.job').dataset.id);
-    downloadText(`${job.company}_${job.title}_resume.txt`.replace(/\s+/g,'_'), job.tailored_resume);
-  });
-  $$('.job-dl-cover', list).forEach(btn => btn.onclick = (e) => {
-    const job = jobsCache.find(j=>j.id===e.target.closest('.job').dataset.id);
-    downloadText(`${job.company}_${job.title}_cover_letter.txt`.replace(/\s+/g,'_'), job.cover_letter);
-  });
-}
-
-// ---------- Notifications ----------
-async function loadNotifs(){
-  const { data } = await sb.from('notifications').select('*').eq('profile_id', session.user.id).order('created_at', { ascending: false });
-  notifsCache = data || [];
-}
-
-function renderNotifsTab(body){
-  loadNotifs().then(() => {
-    if (!notifsCache.length){
-      body.innerHTML = '<div class="card muted">No notifications yet.</div>';
-      return;
-    }
-    body.innerHTML = `
-      <div class="card">
-        ${notifsCache.map(n => `
-          <div class="notif ${n.read?'':'unread'}" data-id="${n.id}">
-            <div>
-              ${n.action_needed ? '<span class="pill pill-need">Action needed</span> ' : ''}
-              <div style="margin-top:6px;">${esc(n.message)}</div>
-              <div class="small" style="margin-top:4px;">${new Date(n.created_at).toLocaleString()}</div>
-            </div>
-            ${!n.read ? '<button class="btn-ghost notif-read" style="padding:6px 10px; font-size:12px; white-space:nowrap;">Mark read</button>' : ''}
-          </div>
-        `).join('')}
-      </div>
-    `;
-    $$('.notif-read', body).forEach(btn => btn.onclick = async (e) => {
-      const id = e.target.closest('.notif').dataset.id;
-      await sb.from('notifications').update({ read: true }).eq('id', id);
-      await loadNotifs(); renderNotifsTab(body); refreshNotifCount();
+  async function aiRequest(path, payload, signal){
+    var res = await fetch(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: signal
     });
-  });
-}
+    if (!res.ok){
+      var msg = "AI request failed (" + res.status + ")";
+      try { var j = await res.json(); if (j && j.error) msg = j.error; } catch(e){}
+      throw new Error(msg);
+    }
+    return res.json();
+  }
 
-init();
+  async function initStore(){
+    var local = loadLocal();
+    if (local){
+      state.profile = Object.assign({ links:{} }, local.profile || {});
+      state.profile.links = state.profile.links || {};
+      state.activity = Array.isArray(local.activity) ? local.activity : [];
+      state.jobs = Array.isArray(local.jobs) ? local.jobs : [];
+    }
+    storeReady = true;
+    render();
+  }
+
+  // ---------- derived ----------
+  function counts(){
+    var c = { saved:0, tailored:0, applied:0, interview:0, closed:0 };
+    state.jobs.forEach(function(j){ if (c[j.status]!=null) c[j.status]++; });
+    return c;
+  }
+  function sortedJobs(){
+    var order = { interview:0, tailored:1, saved:2, applied:3, closed:4 };
+    return state.jobs.slice().sort(function(a,b){
+      var oa = order[a.status]!=null?order[a.status]:9, ob = order[b.status]!=null?order[b.status]:9;
+      if (oa!==ob) return oa-ob;
+      return (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0);
+    });
+  }
+  function stalledItems(){
+    var out = [];
+    state.jobs.forEach(function(j){
+      if (j.status==="saved" && !j.tailoredResume){
+        out.push({ job:j, why:"no materials", tag:"tailor" });
+      } else if (j.status==="tailored" && !j.appliedAt){
+        var d = daysAgo(j.updatedAt||j.createdAt);
+        if (d!=null && d>=2) out.push({ job:j, why:"ready "+d+"d, not applied", tag:"apply" });
+      } else if (j.status==="applied" && j.appliedAt){
+        var da = daysAgo(j.appliedAt);
+        if (da!=null && da>=7) out.push({ job:j, why:"applied "+da+"d ago — follow up", tag:"follow up" });
+      }
+    });
+    return out;
+  }
+  function unreadCount(){ return state.activity.filter(function(a){ return !a.read; }).length; }
+
+  // ---------- render ----------
+  var app = $("#app");
+
+  function render(){
+    var c = counts();
+    var unread = unreadCount();
+    app.innerHTML =
+      '<div class="masthead">' +
+        '<div class="brand">' +
+          '<h1>Job Search Deck</h1>' +
+          '<span class="tag">no login · saved on this device</span>' +
+        '</div>' +
+        '<div class="btn-row">' +
+          (state.profile.name ? '<span class="owner">'+esc(state.profile.name)+'</span>' : '') +
+          '<button class="iconbtn" id="theme-btn" title="Toggle light / dark">◐ theme</button>' +
+        '</div>' +
+      '</div>' +
+      strip(c) +
+      '<div class="tabs" role="tablist">' +
+        tabBtn("today","Today") +
+        tabBtn("pipeline","Pipeline", state.jobs.length ? String(state.jobs.length) : "") +
+        tabBtn("profile","Profile") +
+        tabBtn("activity","Activity", unread ? String(unread) : "") +
+      '</div>' +
+      '<div id="tab-body" class="fade"></div>' +
+      '<div class="foot">' +
+        "saved in this browser only — use Back up in the Profile tab" +
+      '</div>';
+
+    $("#theme-btn").onclick = toggleTheme;
+    Array.prototype.forEach.call(app.querySelectorAll(".tab"), function(b){
+      b.onclick = function(){ activeTab = b.dataset.tab; render(); };
+    });
+    renderBody();
+  }
+
+  function strip(c){
+    return '<div class="strip">' + STAGES.map(function(s){
+      return '<div class="cell on-'+s.key+'">' +
+        '<span class="n mono">'+ (c[s.key]||0) +'</span>' +
+        '<span class="k">'+ s.label +'</span>' +
+      '</div>';
+    }).join("") + '</div>';
+  }
+  function tabBtn(key,label,badge){
+    return '<button class="tab" role="tab" data-tab="'+key+'" aria-selected="'+(activeTab===key)+'">' +
+      label + (badge ? ' <span class="badge mono">'+esc(badge)+'</span>' : '') + '</button>';
+  }
+
+  function renderBody(){
+    var b = $("#tab-body");
+    if (activeTab==="today") return renderToday(b);
+    if (activeTab==="pipeline") return renderPipeline(b);
+    if (activeTab==="profile") return renderProfile(b);
+    if (activeTab==="activity") return renderActivity(b);
+  }
+
+  // ---------- Today ----------
+  function renderToday(b){
+    var stalled = stalledItems();
+    var hasResume = !!(state.profile.resumeText && state.profile.resumeText.trim());
+    b.innerHTML =
+      '<div class="card">' +
+        '<h2>Today’s plan</h2>' +
+        '<div class="lede">A short, specific list of what moves your search forward right now — built from your live pipeline.</div>' +
+        (!AI_ENABLED ? '<div class="note">This is a static site, so the auto-plan and AI tailoring aren’t available here — the stalled-items list, pipeline, and downloads all still work.</div>' : '') +
+        '<div class="btn-row">' +
+          '<button class="btn-primary" id="plan-btn"'+ (!AI_ENABLED ? " disabled" : "") +'>'+ (planCache.running ? "Working…" : (planCache.text ? "Re-plan" : "Build my plan")) +'</button>' +
+          (planCache.running ? '<button class="btn-ghost" id="plan-stop">Stop</button>' : "") +
+        '</div>' +
+        (planCache.running && !planCache.text ? '<div class="thinking" style="margin-top:12px;">Thinking…</div>' : "") +
+        (planCache.text ? '<div class="plan" style="margin-top:14px;">'+ esc(planCache.text) +'</div>' : "") +
+      '</div>' +
+      '<div class="card">' +
+        '<h3>Needs attention</h3>' +
+        '<div class="lede">Items sitting still in the pipeline.</div>' +
+        (stalled.length
+          ? '<ul class="stalled" style="margin:0; padding-left:2px; list-style:none;">' + stalled.map(function(it){
+              return '<li><span class="pill">'+esc(it.tag)+'</span> ' +
+                '<strong>'+esc(it.job.title)+'</strong> — '+esc(it.job.company)+
+                ' <span class="age">('+esc(it.why)+')</span></li>';
+            }).join("") + '</ul>'
+          : '<div class="empty">Nothing stalled. '+ (state.jobs.length ? "Pipeline’s moving." : "Add a job in the Pipeline tab to get started.") +'</div>') +
+      '</div>' +
+      (!hasResume ? '<div class="card"><div class="empty">Add your résumé in the <strong>Profile</strong> tab so Copilot can tailor it per job.</div></div>' : "");
+
+    var pb = $("#plan-btn");
+    if (pb) pb.onclick = buildPlan;
+    var ps = $("#plan-stop");
+    if (ps) ps.onclick = function(){ if (planCache.ctl) planCache.ctl.abort(); };
+  }
+
+  async function buildPlan(){
+    if (!AI_ENABLED || planCache.running) return;
+    var lines = sortedJobs().map(function(j){
+      var bits = "- " + j.title + " @ " + j.company + " | " + STAGE_LABEL[j.status];
+      if (j.tailoredResume) bits += " | materials ready";
+      var age = agoLabel(j.createdAt); if (age) bits += " | added " + age;
+      if (j.appliedAt) bits += " | applied " + agoLabel(j.appliedAt);
+      return bits;
+    }).join("\n");
+
+    planCache.running = true; planCache.text = ""; planCache.ctl = new AbortController();
+    renderToday($("#tab-body"));
+    try {
+      var res = await aiRequest("/api/plan", {
+        pipeline: lines,
+        targetRoles: state.profile.targetRoles || "",
+        location: state.profile.location || ""
+      }, planCache.ctl.signal);
+      planCache.text = String(res && res.text || "").trim() || "No plan came back — try again.";
+    } catch(e){
+      if (!(e && e.name === "AbortError")) toast((e && e.message) || "That didn’t go through. Try again in a moment.");
+    } finally {
+      planCache.running = false; planCache.ctl = null;
+      renderToday($("#tab-body"));
+    }
+  }
+
+  // ---------- Pipeline ----------
+  function renderPipeline(b){
+    var jobs = sortedJobs();
+    b.innerHTML =
+      '<div class="card">' +
+        '<h3>Add a role to track</h3>' +
+        '<div class="stack">' +
+          '<div class="grid2">' +
+            '<div><label for="j-title">Job title</label><input id="j-title" placeholder="Customer Success Manager"></div>' +
+            '<div><label for="j-company">Company</label><input id="j-company" placeholder="Acme Health"></div>' +
+          '</div>' +
+          '<div><label for="j-url">Posting URL <span style="text-transform:none; font-weight:400;">(optional)</span></label><input id="j-url" placeholder="https://…"></div>' +
+          '<div><label for="j-desc">Job description <span style="text-transform:none; font-weight:400;">(paste it — powers the tailoring)</span></label><textarea id="j-desc" rows="5" placeholder="Paste the full posting text here…"></textarea></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="j-add">Add to pipeline</button></div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="jobs-list">' +
+        (jobs.length ? jobs.map(jobCard).join("") : '<div class="card"><div class="empty">No roles tracked yet. Add one above.</div></div>') +
+      '</div>';
+
+    $("#j-add").onclick = onAddJob;
+    wireJobCards();
+  }
+
+  function jobCard(j){
+    var s = j.status || "saved";
+    return '<div class="job s-'+s+'" data-id="'+esc(j.id)+'">' +
+      '<div class="job-head">' +
+        '<div>' +
+          '<h3>'+esc(j.title)+'</h3>' +
+          '<div class="job-co">'+esc(j.company)+ (j.url ? ' · <a href="'+esc(j.url)+'" target="_blank" rel="noopener noreferrer">posting</a>' : "") +'</div>' +
+        '</div>' +
+        '<button class="btn-danger j-del" style="padding:5px 10px; font-size:12px;">Remove</button>' +
+      '</div>' +
+      '<div class="job-meta">' +
+        '<span class="stat s-'+s+'">'+esc(STAGE_LABEL[s]||s)+'</span>' +
+        (j.createdAt ? '<span class="age">added '+esc(agoLabel(j.createdAt))+'</span>' : "") +
+        (j.appliedAt ? '<span class="age">· applied '+esc(agoLabel(j.appliedAt))+'</span>' : "") +
+      '</div>' +
+      (j.description ? '<details><summary>Job description</summary><div class="desc">'+esc(j.description)+'</div></details>' : "") +
+      '<div class="job-actions">' +
+        '<button class="btn-primary j-tailor"'+ (AI_ENABLED ? "" : " disabled") +'>'+ (j.tailoredResume ? "Re-tailor" : "Tailor résumé + cover letter") +'</button>' +
+        '<select class="j-status" aria-label="Status">' +
+          STAGES.map(function(st){ return '<option value="'+st.key+'"'+(s===st.key?" selected":"")+'>'+st.label+'</option>'; }).join("") +
+        '</select>' +
+      '</div>' +
+      (j.tailoredResume ? (
+        '<div class="out-h">Tailored résumé</div>' +
+        '<div class="out">'+esc(j.tailoredResume)+'</div>' +
+        '<div class="btn-row" style="margin-top:8px;">' +
+          '<button class="btn-ghost j-copy-r" style="font-size:12px; padding:6px 12px;">Copy</button>' +
+          '<button class="btn-ghost j-dl-r" style="font-size:12px; padding:6px 12px;">Download .txt</button>' +
+        '</div>'
+      ) : "") +
+      (j.coverLetter ? (
+        '<div class="out-h">Cover letter</div>' +
+        '<div class="out">'+esc(j.coverLetter)+'</div>' +
+        '<div class="btn-row" style="margin-top:8px;">' +
+          '<button class="btn-ghost j-copy-c" style="font-size:12px; padding:6px 12px;">Copy</button>' +
+          '<button class="btn-ghost j-dl-c" style="font-size:12px; padding:6px 12px;">Download .txt</button>' +
+        '</div>'
+      ) : "") +
+    '</div>';
+  }
+
+  function findJob(id){ return state.jobs.filter(function(j){ return j.id===id; })[0]; }
+
+  function wireJobCards(){
+    Array.prototype.forEach.call(document.querySelectorAll(".job"), function(el){
+      var id = el.dataset.id;
+      var del = $(".j-del", el); if (del) del.onclick = function(){ onDeleteJob(id); };
+      var sel = $(".j-status", el); if (sel) sel.onchange = function(){ onStatusChange(id, sel.value); };
+      var tl = $(".j-tailor", el); if (tl) tl.onclick = function(){ onTailor(id, tl); };
+      var cr = $(".j-copy-r", el); if (cr) cr.onclick = function(){ copyText(findJob(id).tailoredResume); };
+      var cc = $(".j-copy-c", el); if (cc) cc.onclick = function(){ copyText(findJob(id).coverLetter); };
+      var dr = $(".j-dl-r", el); if (dr) dr.onclick = function(){ var j=findJob(id); saveFile(fileName(j,"resume"), j.tailoredResume); };
+      var dc = $(".j-dl-c", el); if (dc) dc.onclick = function(){ var j=findJob(id); saveFile(fileName(j,"cover-letter"), j.coverLetter); };
+    });
+  }
+
+  function fileName(j, kind){
+    var slug = (j.company + "-" + j.title + "-" + kind).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+    return slug.slice(0,80) + ".txt";
+  }
+
+  async function onAddJob(){
+    var title = $("#j-title").value.trim();
+    var company = $("#j-company").value.trim();
+    var url = $("#j-url").value.trim();
+    var description = $("#j-desc").value.trim();
+    if (!title || !company){ toast("Job title and company are required."); return; }
+    var job = { id:uid(), title:title, company:company, url:url, description:description,
+      status:"saved", tailoredResume:"", coverLetter:"", createdAt:now(), updatedAt:now(), appliedAt:null };
+    state.jobs.unshift(job);
+    await persistJob(job);
+    await pushActivity("Added " + title + " at " + company + " to the pipeline.", job.id);
+    render();
+  }
+
+  async function onDeleteJob(id){
+    var j = findJob(id);
+    if (!j) return;
+    if (!confirm("Remove “" + j.title + " — " + j.company + "” from the pipeline?")) return;
+    state.jobs = state.jobs.filter(function(x){ return x.id!==id; });
+    await removeJobRemote(id);
+    render();
+  }
+
+  async function onStatusChange(id, status){
+    var j = findJob(id);
+    if (!j) return;
+    j.status = status;
+    j.updatedAt = now();
+    if (status==="applied" && !j.appliedAt) j.appliedAt = now();
+    await persistJob(j);
+    await pushActivity("Moved " + j.title + " → " + STAGE_LABEL[status] + ".", id);
+    render();
+  }
+
+  async function onTailor(id, btn){
+    var j = findJob(id);
+    if (!j) return;
+    if (!AI_ENABLED){ toast("This static site can’t run AI tailoring — draft it yourself or ask an AI assistant directly."); return; }
+    var resume = state.profile.resumeText || "";
+    if (!resume.trim()){ toast("Add your résumé in the Profile tab first."); activeTab="profile"; render(); return; }
+
+    btn.disabled = true; btn.textContent = "Tailoring…";
+    try {
+      var data = await aiRequest("/api/tailor", {
+        resume: resume.slice(0, 6500),
+        title: j.title,
+        company: j.company,
+        description: (j.description || "").slice(0, 6500)
+      });
+      j.tailoredResume = String(data && data.resume || "").trim();
+      j.coverLetter = String(data && data.coverLetter || "").trim();
+      if (!j.tailoredResume && !j.coverLetter) throw new Error("The reply came back empty. Try again.");
+      j.updatedAt = now();
+      if (j.status==="saved") j.status = "tailored";
+      await persistJob(j);
+      await pushActivity("Tailored résumé + cover letter for " + j.title + " at " + j.company + ".", id);
+      toast("Materials ready — review before you send.");
+      render();
+    } catch(e){
+      toast((e && e.message) || "That didn’t go through. Try again.");
+      btn.disabled = false; btn.textContent = j.tailoredResume ? "Re-tailor" : "Tailor résumé + cover letter";
+    }
+  }
+
+  async function copyText(text){
+    try { await navigator.clipboard.writeText(text||""); toast("Copied."); }
+    catch(e){ toast("Copy failed — select the text manually."); }
+  }
+  async function saveFile(name, text){
+    text = String(text||"");
+    try {
+      var blob = new Blob([text], { type: name.slice(-5) === ".json" ? "application/json" : "text/plain" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      return;
+    } catch(e){}
+    try { await navigator.clipboard.writeText(text); toast("Download blocked — copied to clipboard instead."); return; }
+    catch(e){}
+    showTextFallback(name, text);
+  }
+  function showTextFallback(name, text){
+    var ov = document.createElement("div");
+    ov.style.cssText = "position:fixed; inset:0; background:rgba(10,18,26,.55); z-index:60; display:flex; align-items:center; justify-content:center; padding:20px;";
+    ov.innerHTML = '<div style="background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); max-width:640px; width:100%; padding:18px;">' +
+      '<div style="font-family:var(--serif); font-weight:600; text-transform:uppercase; letter-spacing:.05em; font-size:13px; margin-bottom:8px;">'+esc(name)+'</div>' +
+      '<div style="font-size:12.5px; color:var(--muted); margin-bottom:8px;">Select all and copy — saving files isn’t available in this view.</div>' +
+      '<textarea readonly rows="12" style="width:100%; font-family:var(--mono); font-size:12px;"></textarea>' +
+      '<div class="btn-row" style="margin-top:10px; justify-content:flex-end;"><button class="btn-ghost" data-x>Close</button></div>' +
+    '</div>';
+    ov.querySelector("textarea").value = text;
+    ov.querySelector("[data-x]").onclick = function(){ ov.remove(); };
+    ov.onclick = function(e){ if (e.target===ov) ov.remove(); };
+    document.body.appendChild(ov);
+    var ta = ov.querySelector("textarea"); ta.focus(); ta.select();
+  }
+
+  // ---------- Profile ----------
+  function renderProfile(b){
+    var p = state.profile, L = p.links || {};
+    b.innerHTML =
+      '<div class="card">' +
+        '<h3>Contact &amp; targets</h3>' +
+        '<div class="stack">' +
+          '<div class="grid2">' +
+            '<div><label for="p-name">Name</label><input id="p-name" value="'+esc(p.name||"")+'"></div>' +
+            '<div><label for="p-loc">Location</label><input id="p-loc" value="'+esc(p.location||"")+'" placeholder="City, State · or Remote"></div>' +
+          '</div>' +
+          '<div class="grid2">' +
+            '<div><label for="p-email">Email</label><input id="p-email" value="'+esc(p.email||"")+'"></div>' +
+            '<div><label for="p-phone">Phone</label><input id="p-phone" value="'+esc(p.phone||"")+'"></div>' +
+          '</div>' +
+          '<div><label for="p-roles">Target roles / keywords</label><input id="p-roles" value="'+esc(p.targetRoles||"")+'" placeholder="e.g. Customer Success, Healthcare Ops, Remote"></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="p-save">Save</button><span class="saveflash" id="p-flash"></span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h3>Where you’re applying from</h3>' +
+        '<div class="lede">Keep every profile link in one place.</div>' +
+        '<div class="stack">' +
+          '<div class="grid2">' +
+            '<div><label for="l-linkedin">LinkedIn</label><input id="l-linkedin" value="'+esc(L.linkedin||"")+'" placeholder="https://linkedin.com/in/…"></div>' +
+            '<div><label for="l-indeed">Indeed</label><input id="l-indeed" value="'+esc(L.indeed||"")+'"></div>' +
+          '</div>' +
+          '<div class="grid2">' +
+            '<div><label for="l-portfolio">Portfolio / website</label><input id="l-portfolio" value="'+esc(L.portfolio||"")+'"></div>' +
+            '<div><label for="l-other">Other</label><input id="l-other" value="'+esc(L.other||"")+'"></div>' +
+          '</div>' +
+          '<div class="btn-row"><button class="btn-primary" id="l-save">Save links</button><span class="saveflash" id="l-flash"></span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h3>Résumé</h3>' +
+        '<div class="lede">Paste your résumé text, or load a .txt / .md file. This is the source for every tailored version.</div>' +
+        '<input type="file" id="p-file" accept=".txt,.md,text/plain" style="margin-bottom:10px; font-size:13px;">' +
+        '<textarea id="p-resume" rows="16" placeholder="Paste your résumé here…">'+esc(p.resumeText||"")+'</textarea>' +
+        '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-resume">Save résumé</button><span class="saveflash" id="r-flash"></span></div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h3>Back up &amp; restore</h3>' +
+        '<div class="lede">Everything lives in this browser. Download a backup file to keep it safe or move it to another device.</div>' +
+        '<div class="btn-row">' +
+          '<button class="btn-ghost" id="p-backup">Download backup</button>' +
+          '<button class="btn-ghost" id="p-restore-btn">Restore from file</button>' +
+          '<input type="file" id="p-restore" accept="application/json,.json" hidden>' +
+        '</div>' +
+      '</div>';
+
+    $("#p-save").onclick = async function(){
+      state.profile.name = $("#p-name").value.trim();
+      state.profile.location = $("#p-loc").value.trim();
+      state.profile.email = $("#p-email").value.trim();
+      state.profile.phone = $("#p-phone").value.trim();
+      state.profile.targetRoles = $("#p-roles").value.trim();
+      state.profile.updatedAt = now();
+      await persistMain();
+      flash("#p-flash"); render();
+    };
+    $("#l-save").onclick = async function(){
+      state.profile.links = {
+        linkedin: $("#l-linkedin").value.trim(), indeed: $("#l-indeed").value.trim(),
+        portfolio: $("#l-portfolio").value.trim(), other: $("#l-other").value.trim()
+      };
+      await persistMain();
+      flash("#l-flash");
+    };
+    $("#p-save-resume").onclick = async function(){
+      state.profile.resumeText = $("#p-resume").value;
+      await persistMain();
+      flash("#r-flash");
+    };
+    $("#p-file").onchange = function(e){
+      var f = e.target.files[0]; if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function(){ $("#p-resume").value = String(reader.result||""); toast("Loaded — press Save résumé to keep it."); };
+      reader.readAsText(f);
+    };
+    $("#p-backup").onclick = function(){
+      var stamp = new Date().toISOString().slice(0,10);
+      saveFile("career-copilot-backup-" + stamp + ".json",
+        JSON.stringify({ v:1, exportedAt:now(), profile:state.profile, activity:state.activity, jobs:state.jobs }, null, 2));
+    };
+    $("#p-restore-btn").onclick = function(){ $("#p-restore").click(); };
+    $("#p-restore").onchange = function(e){
+      var f = e.target.files[0]; if (!f) return;
+      var reader = new FileReader();
+      reader.onload = async function(){
+        var data;
+        try { data = JSON.parse(String(reader.result||"")); }
+        catch(err){ toast("That file isn’t a valid backup."); return; }
+        if (!data || (!data.profile && !data.jobs)){ toast("That file isn’t a Career Copilot backup."); return; }
+        if (!confirm("Replace everything currently in this browser with the backup?")) return;
+        state.profile = Object.assign({ links:{} }, data.profile || {});
+        state.profile.links = state.profile.links || {};
+        state.activity = Array.isArray(data.activity) ? data.activity : [];
+        state.jobs = Array.isArray(data.jobs) ? data.jobs : [];
+        saveLocal();
+        toast("Backup restored.");
+        render();
+      };
+      reader.readAsText(f);
+    };
+  }
+  function flash(sel){
+    var el = $(sel); if (!el) return;
+    el.textContent = "Saved " + new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    setTimeout(function(){ if (el) el.textContent = ""; }, 2600);
+  }
+
+  // ---------- Activity ----------
+  function renderActivity(b){
+    if (!state.activity.length){
+      b.innerHTML = '<div class="card"><div class="empty">No activity yet. It logs here as you add and move roles.</div></div>';
+      return;
+    }
+    b.innerHTML = '<div class="card"><div class="btn-row" style="justify-content:space-between; margin-bottom:12px;">' +
+        '<h3>Activity log</h3>' +
+        (unreadCount() ? '<button class="btn-ghost" id="a-read" style="font-size:12px; padding:6px 12px;">Mark all read</button>' : "") +
+      '</div>' +
+      state.activity.map(function(a){
+        return '<div style="display:flex; gap:10px; padding:9px 0; border-top:1px solid var(--border);">' +
+          '<span class="mono" style="font-size:11px; color:var(--faint); white-space:nowrap; padding-top:2px;">'+
+            esc(new Date(a.at).toLocaleDateString([], {month:"short", day:"numeric"})) +'</span>' +
+          '<span style="font-size:13.5px;'+ (a.read ? "" : "font-weight:500;") +'">'+esc(a.message)+'</span>' +
+        '</div>';
+      }).join("") +
+    '</div>';
+    var r = $("#a-read");
+    if (r) r.onclick = async function(){
+      state.activity.forEach(function(a){ a.read = true; });
+      await persistMain(); render();
+    };
+  }
+
+  // ---------- theme ----------
+  function toggleTheme(){
+    var root = document.documentElement;
+    var cur = root.getAttribute("data-theme");
+    var next;
+    if (cur === "dark") next = "light";
+    else if (cur === "light") next = "dark";
+    else next = matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("career-copilot-theme", next); } catch(e){}
+  }
+  try {
+    var savedTheme = localStorage.getItem("career-copilot-theme");
+    if (savedTheme === "light" || savedTheme === "dark") document.documentElement.setAttribute("data-theme", savedTheme);
+  } catch(e){}
+
+  // ---------- boot ----------
+  render();
+  initStore();
+})();
 </script>
 </body>
 </html>
