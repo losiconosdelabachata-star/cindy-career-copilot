@@ -1,10 +1,15 @@
 # Career Copilot — Job Search Deck
 
-A private, per-person job-search command deck. Single static page, served by GitHub Pages —
-no server, no API keys.
+A private, per-person job-search command deck. The page (`index.html`) is a single static
+file with no build step; AI features run through a small Cloudflare Pages Function backend
+(free, no API key — see "AI backend" below).
 
 ## Live site
-https://losiconosdelabachata-star.github.io/cindy-career-copilot/
+- GitHub Pages (the page itself): https://losiconosdelabachata-star.github.io/cindy-career-copilot/
+- Cloudflare Pages (same page + the AI backend): https://cindy-career-copilot.pages.dev/
+
+Either URL works for using the app — both serve the same `index.html`. AI calls always go
+to the Cloudflare Pages URL regardless of which one you're on (CORS is open for that).
 
 ## What it does
 
@@ -19,9 +24,7 @@ https://losiconosdelabachata-star.github.io/cindy-career-copilot/
   save to Profile) or uploading an existing one (.txt, .md, or .pdf — text is extracted
   client-side via pdf.js, shown editable before you save it), reads your pipeline to tell
   you what's stalled and what to do next, and has a stock of career tips and pep talks.
-  She runs on built-in guidance today (no server needed); free-text chat is wired to
-  switch to a real AI backend automatically once one's connected (see "What's
-  intentionally off here").
+  Free-text chat runs on a real AI backend (see "AI backend" below).
 - **Pipeline** — track roles (title, company, posting URL, description) through
   Saved → Tailored → Applied → Interview → Closed
 - **Profile** — contact info (including date of birth — stored locally only, for
@@ -41,14 +44,24 @@ Marino's account comes pre-seeded with his résumé and cover letter the first t
 username `marino` is registered on a given browser (see `SEED_PROFILES` in `index.html`) —
 so it isn't a blank profile no matter which device he signs in from.
 
-## What's intentionally off here
+## AI backend
 
-GitHub Pages only serves static files — there's no server to run AI calls, so the
-**"Build my plan" / "Tailor résumé + cover letter"** buttons are disabled on this build,
-with a note explaining why. Everything else works fully.
+`functions/api/plan.js`, `functions/api/tailor.js`, and `functions/api/cindy.js` are
+Cloudflare Pages Functions that call Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`)
+via the `[ai]` binding in `wrangler.toml` — free, billed to the Cloudflare account, no
+separate API key. They power "Build my plan", "Tailor résumé + cover letter", and Cindy's
+free-text chat (`AI_ENABLED = true` in `index.html`).
 
-A sibling build with those AI features wired up (via Cloudflare Workers AI — free,
-no API key) exists outside this repo. Ask if you want it deployed too.
+To redeploy the backend after editing anything under `functions/` or `wrangler.toml`:
+
+```bash
+npx wrangler pages deploy --project-name=cindy-career-copilot --commit-dirty=true
+```
+
+This deploys `index.html` too, so the Cloudflare Pages URL always mirrors this repo. GitHub
+Pages keeps serving the same `index.html` independently (push to `main` to update it) — it
+just can't run the Functions itself, which is why `aiRequest()` always targets the
+Cloudflare Pages URL explicitly rather than a relative path.
 
 ## Editing
 

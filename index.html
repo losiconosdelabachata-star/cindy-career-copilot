@@ -503,15 +503,15 @@ button:disabled{opacity:.45; cursor:not-allowed;}
     await persistMain();
   }
 
-  // AI runs through this site's own /api endpoints (a Cloudflare Pages Function
-  // backed by Workers AI). If those aren't wired up yet, the AI buttons degrade.
-  // GitHub Pages serves static files only — there's no server to run the AI calls,
-  // so this build ships with AI off. The tracker, résumé storage, downloads and
-  // backup/restore all work fully with zero backend.
-  var AI_ENABLED = false;
+  // AI runs through a Cloudflare Pages Function backed by Workers AI (free,
+  // no API key — billed to the Cloudflare account). This page can be served
+  // from GitHub Pages or anywhere else; the AI calls always go to the
+  // Cloudflare Pages deployment, which has CORS open for that purpose.
+  var AI_ENABLED = true;
+  var AI_BASE = "https://cindy-career-copilot.pages.dev";
 
   async function aiRequest(path, payload, signal){
-    var res = await fetch(path, {
+    var res = await fetch(AI_BASE + path, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
