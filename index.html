@@ -267,10 +267,21 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       cindyGreeting: "Hi, I’m Cindy 👋 — your résumé and career-search guide. I can help you build a résumé from scratch, or look at your pipeline and tell you what to do next. What do you want to do?",
       chipBuildResume: "Build my résumé", chipUploadResume: "Upload my résumé", chipConnect: "Organize my LinkedIn/Indeed",
       chipNext: "What should I do next?", chipPep: "Give me a pep talk", chipTips: "Tips for today",
+      chipAnalyze: "Analyze my résumé/cover letter",
       cindyAskPlaceholder: "Ask Cindy something…", sendBtn: "Send",
       connectLede: "Drop in your profile links so I can point tailored materials at them — then I’ll give you a quick checklist for each.",
       linkedinUrlLabel: "LinkedIn URL", indeedUrlLabel: "Indeed URL",
       saveGetTips: "Save & get tips", justTips: "Just give me tips",
+
+      analyzeIntroMsg: "Sure — attach a file or paste the text below, tell me which one it is, and I’ll break it down for you.",
+      analyzeLede: "I’ll give you specific, actionable feedback — what’s strong, what’s weak or missing, and how to fix it.",
+      pasteOrAttachLabel: "Paste the text, or attach a file below",
+      pasteHerePlaceholder: "Paste your résumé or cover letter text here…",
+      attachFileBtn: "Attach file (.txt/.md/.pdf)", analyzeBtn: "Analyze it", cancelBtn: "Cancel",
+      analyzeNoTextToast: "Paste some text or attach a file first.",
+      analyzeCancelledMsg: "No problem — nothing was analyzed. Anything else?",
+      analyzeStaticNote: "This static site can’t run AI analysis — paste it into an AI assistant directly, or connect the AI backend.",
+      analyzingNote: "Reading it over…",
 
       tabMatches: "Job Matches",
       matchesTitle: "Job Matches", matchesLede: "Real, live openings pulled from thousands of job boards — you review and apply yourself, nothing here applies for you.",
@@ -346,10 +357,21 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       cindyGreeting: "Hola, soy Cindy 👋 — tu guía de currículum y búsqueda de empleo. Puedo ayudarte a crear un currículum desde cero, o revisar tus postulaciones y decirte qué hacer después. ¿Qué quieres hacer?",
       chipBuildResume: "Crear mi currículum", chipUploadResume: "Subir mi currículum", chipConnect: "Organizar mi LinkedIn/Indeed",
       chipNext: "¿Qué debo hacer ahora?", chipPep: "Dame un ánimo", chipTips: "Consejos de hoy",
+      chipAnalyze: "Analizar mi currículum/carta",
       cindyAskPlaceholder: "Pregúntale algo a Cindy…", sendBtn: "Enviar",
       connectLede: "Agrega tus enlaces de perfil para que pueda usarlos en tus materiales adaptados — luego te doy una lista rápida de mejoras para cada uno.",
       linkedinUrlLabel: "URL de LinkedIn", indeedUrlLabel: "URL de Indeed",
       saveGetTips: "Guardar y ver consejos", justTips: "Solo dame los consejos",
+
+      analyzeIntroMsg: "Claro — adjunta un archivo o pega el texto abajo, dime cuál de los dos es, y te lo analizo.",
+      analyzeLede: "Te doy comentarios específicos y prácticos — qué está bien, qué falta o es débil, y cómo mejorarlo.",
+      pasteOrAttachLabel: "Pega el texto, o adjunta un archivo abajo",
+      pasteHerePlaceholder: "Pega aquí el texto de tu currículum o carta de presentación…",
+      attachFileBtn: "Adjuntar archivo (.txt/.md/.pdf)", analyzeBtn: "Analizarlo", cancelBtn: "Cancelar",
+      analyzeNoTextToast: "Pega texto o adjunta un archivo primero.",
+      analyzeCancelledMsg: "No hay problema — no se analizó nada. ¿Algo más?",
+      analyzeStaticNote: "Este sitio estático no puede ejecutar el análisis con IA — pégalo directamente en un asistente de IA, o conecta el backend de IA.",
+      analyzingNote: "Revisándolo…",
 
       tabMatches: "Empleos",
       matchesTitle: "Empleos sugeridos", matchesLede: "Vacantes reales, en vivo, de miles de bolsas de trabajo — tú revisas y aplicas, esto no aplica por ti.",
@@ -442,13 +464,14 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       history: [],
       step: "idle",
       tipIdx: 0,
-      draft: { contact:{name:"",email:"",phone:"",location:"",links:""}, summary:"", experience:[], education:[], skills:"" }
+      draft: { contact:{name:"",email:"",phone:"",location:"",links:""}, summary:"", experience:[], education:[], skills:"", analyze:{kind:"resume",text:""} }
     };
   }
 
   // ---------- state ----------
   var state = { profile:{ links:{} }, activity:[], jobs:[], cindy: cindyDefault() };
   var activeTab = "today";
+  var cindyBusy = false;
   var storeReady = false;
   var planCache = { text:"", running:false, ctl:null };
   var matchesCache = { what:"", where:"", easyApply:false, running:false, error:"", results:null };
@@ -740,6 +763,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     activeTab = "today";
     planCache = { text:"", running:false, ctl:null };
     matchesCache = { what:"", where:"", easyApply:false, running:false, error:"", results:null };
+    cindyBusy = false;
     authState = { mode:"login", error:"", username:"" };
     renderAuth();
   }
@@ -891,18 +915,20 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
           '<button class="btn-primary" id="cindy-send">'+esc(t("sendBtn"))+'</button>' +
         '</div>' +
         '<input type="file" id="cindy-resume-file" accept=".txt,.md,.pdf,text/plain,application/pdf" hidden>' +
+        '<input type="file" id="cindy-analyze-file" accept=".txt,.md,.pdf,text/plain,application/pdf" hidden>' +
       '</div>';
 
     $("#cindy-log").innerHTML = state.cindy.history.map(function(m){
       return '<div class="cindy-row from-'+(m.who==="cindy"?"cindy":"user")+'">' +
         '<div class="cindy-bubble '+(m.who==="cindy"?"cindy":"user")+'">'+esc(m.text)+'</div>' +
       '</div>';
-    }).join("");
+    }).join("") + (cindyBusy ? '<div class="cindy-row from-cindy"><div class="cindy-bubble cindy">'+esc(t("thinking"))+'</div></div>' : "");
 
     wireCindyStep();
     $("#cindy-send").onclick = onCindySend;
     $("#cindy-input").onkeydown = function(e){ if (e.key==="Enter" || e.keyCode===13){ e.preventDefault(); onCindySend(); } };
     $("#cindy-resume-file").onchange = onCindyResumeUpload;
+    $("#cindy-analyze-file").onchange = onCindyAnalyzeFile;
     var log = $("#cindy-log"); if (log) log.scrollTop = log.scrollHeight;
   }
 
@@ -922,6 +948,56 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     persistMain(); render();
   }
 
+  async function onCindyAnalyzeFile(e){
+    var f = e.target.files[0]; if (!f) return;
+    var isPdf = /\.pdf$/i.test(f.name || "");
+    if (isPdf) toast("Reading PDF…");
+    var d = state.cindy.draft;
+    if (!d.analyze) d.analyze = { kind:"resume", text:"" };
+    try {
+      var text = await extractResumeFile(f);
+      d.analyze.text = text;
+      toast("Attached “" + f.name + "”. Review it below, then hit Analyze.");
+    } catch(err){
+      toast((err && err.message) || "Couldn’t read that file — try a .txt, .md, or text-based .pdf.");
+    }
+    e.target.value = "";
+    render();
+  }
+
+  async function onCindyAnalyzeGo(){
+    var d = state.cindy.draft;
+    var a = d.analyze || (d.analyze = { kind:"resume", text:"" });
+    var textEl = $("#cf-analyze-text");
+    var text = ((textEl ? textEl.value : a.text) || "").trim();
+    var kindEl = document.querySelector('input[name="cf-analyze-kind"]:checked');
+    var kind = kindEl ? kindEl.value : (a.kind || "resume");
+    a.kind = kind; a.text = text;
+    if (!text){ toast(t("analyzeNoTextToast")); return; }
+
+    var label = (kind === "cover" ? t("coverLetterCardH") : t("resumeH"));
+    cindyPush("user", label + " — " + (text.length > 80 ? text.slice(0,80) + "…" : text));
+    state.cindy.step = "idle";
+
+    if (!AI_ENABLED){
+      cindyPush("cindy", t("analyzeStaticNote"));
+      persistMain(); render();
+      return;
+    }
+
+    cindyBusy = true; render();
+    try {
+      var res = await aiRequest("/api/analyze", { text: text.slice(0, 6500), kind: kind });
+      cindyPush("cindy", String(res && res.text || "").trim() || "Hmm, nothing came back — try again?");
+    } catch(err){
+      cindyPush("cindy", (err && err.message) || "That didn’t go through. Try again in a moment.");
+    } finally {
+      cindyBusy = false;
+      d.analyze = { kind:"resume", text:"" };
+      persistMain(); render();
+    }
+  }
+
   function chip(label, id){ return '<button type="button" class="chip" id="'+id+'">'+esc(label)+'</button>'; }
 
   function cindyStepHtml(){
@@ -930,11 +1006,28 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       return '<div class="cindy-quick">' +
         chip(t("chipBuildResume"),"cq-resume") +
         chip(t("chipUploadResume"),"cq-upload") +
+        chip(t("chipAnalyze"),"cq-analyze") +
         chip(t("chipConnect"),"cq-connect") +
         chip(t("chipNext"),"cq-next") +
         chip(t("chipPep"),"cq-pep") +
         chip(t("chipTips"),"cq-tips") +
       '</div>';
+    }
+    if (step === "analyze:input"){
+      var a = d.analyze || (d.analyze = { kind:"resume", text:"" });
+      return '<div class="cindy-form"><div class="stack">' +
+        '<div class="lede" style="margin-bottom:0;">'+esc(t("analyzeLede"))+'</div>' +
+        '<div class="btn-row">' +
+          '<label style="display:flex; align-items:center; gap:6px; text-transform:none; font-weight:400;"><input type="radio" name="cf-analyze-kind" value="resume" style="width:auto;"'+(a.kind!=="cover"?" checked":"")+'> '+esc(t("resumeH"))+'</label>' +
+          '<label style="display:flex; align-items:center; gap:6px; text-transform:none; font-weight:400;"><input type="radio" name="cf-analyze-kind" value="cover" style="width:auto;"'+(a.kind==="cover"?" checked":"")+'> '+esc(t("coverLetterCardH"))+'</label>' +
+        '</div>' +
+        '<div><label for="cf-analyze-text">'+esc(t("pasteOrAttachLabel"))+'</label><textarea id="cf-analyze-text" rows="10" placeholder="'+esc(t("pasteHerePlaceholder"))+'">'+esc(a.text||"")+'</textarea></div>' +
+        '<div class="btn-row">' +
+          '<button class="btn-ghost" id="cf-analyze-attach">'+esc(t("attachFileBtn"))+'</button>' +
+          '<button class="btn-primary" id="cf-analyze-go">'+esc(t("analyzeBtn"))+'</button>' +
+          '<button class="btn-ghost" id="cf-analyze-cancel">'+esc(t("cancelBtn"))+'</button>' +
+        '</div>' +
+      '</div></div>';
     }
     if (step === "connect:accounts"){
       var L = (state.profile.links || {});
@@ -1135,6 +1228,13 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     if (step === "idle"){
       $("#cq-resume").onclick = function(){ cindyPush("user",t("chipBuildResume")); startResumeBuilder(); };
       $("#cq-upload").onclick = function(){ cindyPush("user",t("chipUploadResume")); $("#cindy-resume-file").click(); };
+      $("#cq-analyze").onclick = function(){
+        cindyPush("user", t("chipAnalyze"));
+        cindyPush("cindy", t("analyzeIntroMsg"));
+        if (!d.analyze) d.analyze = { kind:"resume", text:"" };
+        state.cindy.step = "analyze:input";
+        persistMain(); render();
+      };
       $("#cq-connect").onclick = function(){
         cindyPush("user",t("chipConnect"));
         cindyPush("cindy", LANG==="es" ? "Claro — vamos a conectarlas y ordenarlas." : "Sure — let’s connect them and clean them up.");
@@ -1277,6 +1377,24 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       };
       return;
     }
+    if (step === "analyze:input"){
+      if (!d.analyze) d.analyze = { kind:"resume", text:"" };
+      Array.prototype.forEach.call(document.querySelectorAll('input[name="cf-analyze-kind"]'), function(r){
+        r.onchange = function(){ d.analyze.kind = r.value; };
+      });
+      var atxt = $("#cf-analyze-text");
+      if (atxt) atxt.oninput = function(){ d.analyze.text = atxt.value; };
+      $("#cf-analyze-attach").onclick = function(){ $("#cindy-analyze-file").click(); };
+      $("#cf-analyze-go").onclick = onCindyAnalyzeGo;
+      $("#cf-analyze-cancel").onclick = function(){
+        cindyPush("user", t("cancelBtn"));
+        cindyPush("cindy", t("analyzeCancelledMsg"));
+        state.cindy.step = "idle";
+        d.analyze = { kind:"resume", text:"" };
+        persistMain(); render();
+      };
+      return;
+    }
   }
 
   async function onCindySend(){
@@ -1287,12 +1405,14 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     input.value = "";
 
     if (AI_ENABLED){
-      render();
+      cindyBusy = true; render();
       try {
         var res = await aiRequest("/api/cindy", { message:text, history: state.cindy.history.slice(-20) });
         cindyPush("cindy", String(res && res.text || "").trim() || "Hmm, nothing came back — try again?");
       } catch(e){
         cindyPush("cindy", (e && e.message) || "That didn’t go through. Try again in a moment.");
+      } finally {
+        cindyBusy = false;
       }
       persistMain(); render();
       return;

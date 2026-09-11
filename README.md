@@ -24,7 +24,10 @@ to the Cloudflare Pages URL regardless of which one you're on (CORS is open for 
   save to Profile) or uploading an existing one (.txt, .md, or .pdf — text is extracted
   client-side via pdf.js, shown editable before you save it), reads your pipeline to tell
   you what's stalled and what to do next, and has a stock of career tips and pep talks.
-  Free-text chat runs on a real AI backend (see "AI backend" below).
+  She can also **analyze a résumé or cover letter** — attach a file or paste the text, say
+  which one it is, and she returns specific, actionable feedback (strengths, gaps, and
+  rewrite suggestions) without changing anything on your behalf. Free-text chat and
+  analysis both run on a real AI backend (see "AI backend" below).
 - **Pipeline** — track roles (title, company, posting URL, description) through
   Saved → Tailored → Applied → Interview → Denied → Closed
 - **Job Matches** — real, live openings pulled from Adzuna (aggregates thousands of job
@@ -55,11 +58,12 @@ so it isn't a blank profile no matter which device he signs in from.
 
 ## AI backend
 
-`functions/api/plan.js`, `functions/api/tailor.js`, and `functions/api/cindy.js` are
-Cloudflare Pages Functions that call Cloudflare Workers AI (`@cf/meta/llama-3.3-70b-instruct-fp8-fast`)
-via the `[ai]` binding in `wrangler.toml` — free, billed to the Cloudflare account, no
-separate API key. They power "Build my plan", "Tailor résumé + cover letter", and Cindy's
-free-text chat (`AI_ENABLED = true` in `index.html`).
+`functions/api/plan.js`, `functions/api/tailor.js`, `functions/api/cindy.js`, and
+`functions/api/analyze.js` are Cloudflare Pages Functions that call Cloudflare Workers AI
+(`@cf/meta/llama-3.3-70b-instruct-fp8-fast`) via the `[ai]` binding in `wrangler.toml` —
+free, billed to the Cloudflare account, no separate API key. They power "Build my plan",
+"Tailor résumé + cover letter", Cindy's free-text chat, and Cindy's résumé/cover-letter
+analysis (`AI_ENABLED = true` in `index.html`).
 
 `functions/api/jobs.js` proxies the [Adzuna Jobs API](https://developer.adzuna.com/) (a
 free, self-serve job-search API — neither LinkedIn nor Indeed offer one) to power the "Job
