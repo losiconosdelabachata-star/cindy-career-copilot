@@ -119,6 +119,13 @@ input::placeholder,textarea::placeholder{color:var(--faint);}
 button{font-family:var(--serif); font-weight:600; font-size:13.5px; text-transform:uppercase; letter-spacing:.05em;
   border:1px solid transparent; border-radius:var(--radius); padding:9px 16px; cursor:pointer;}
 button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.apply-backdrop{position:fixed; inset:0; background:rgba(10,18,26,.6); z-index:50; display:flex; align-items:flex-start; justify-content:center; overflow:auto; padding:24px 12px;}
+.apply-modal{background:var(--panel-2); color:var(--ink); border:1px solid var(--border); border-radius:10px; max-width:720px; width:100%; padding:20px;}
+.apply-modal h2{margin:0 0 4px; font-size:20px;}
+.apply-row{display:flex; gap:8px; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); padding:7px 0; font-size:14px;}
+.apply-row span.k{color:var(--muted); min-width:90px;}
+.apply-row span.v{flex:1; word-break:break-word;}
+.apply-steps{margin:10px 0; padding-left:20px; color:var(--muted); font-size:14px;}
 .btn-primary{background:var(--accent); color:var(--on-accent); border-color:var(--accent);}
 .btn-primary:hover{background:var(--accent-deep); border-color:var(--accent-deep);}
 .btn-ghost{background:transparent; color:var(--ink); border-color:var(--border);}
@@ -1545,6 +1552,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       (j.description ? '<details><summary>'+esc(t("jobDescSummary"))+'</summary><div class="desc">'+esc(j.description)+'</div></details>' : "") +
       '<div class="job-actions">' +
         '<button class="btn-primary j-tailor"'+ (AI_ENABLED ? "" : " disabled") +'>'+ esc(j.tailoredResume ? t("retailorBtn") : t("tailorBtn")) +'</button>' +
+        '<button class="btn-primary j-apply"'+ (AI_ENABLED ? "" : " disabled") +'>Apply →</button>' +
         '<select class="j-status" aria-label="'+esc(t("statusAria"))+'">' +
           STAGES.map(function(st){ return '<option value="'+st.key+'"'+(s===st.key?" selected":"")+'>'+esc(stageLabel(st.key))+'</option>'; }).join("") +
         '</select>' +
@@ -1575,6 +1583,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       var id = el.dataset.id;
       var del = $(".j-del", el); if (del) del.onclick = function(){ onDeleteJob(id); };
       var sel = $(".j-status", el); if (sel) sel.onchange = function(){ onStatusChange(id, sel.value); };
+      var ap = $(".j-apply", el); if (ap) ap.onclick = function(){ onApply(id, ap); };
       var tl = $(".j-tailor", el); if (tl) tl.onclick = function(){ onTailor(id, tl); };
       var cr = $(".j-copy-r", el); if (cr) cr.onclick = function(){ copyText(findJob(id).tailoredResume); };
       var cc = $(".j-copy-c", el); if (cc) cc.onclick = function(){ copyText(findJob(id).coverLetter); };
@@ -1653,7 +1662,63 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     }
   }
 
-  // ---------- Job Matches (real listings via Adzuna proxy — search + link only, never auto-apply) ----------
+  // ---------- Apply assistant: tailor if needed, show a ready packet, open the posting; the user submits ----------
+  async function onApply(id, btn){
+    var j = findJob(id);
+    if (!j) return;
+    if (!j.tailoredResume || !j.coverLetter){
+      var old = btn.textContent; btn.disabled = true; btn.textContent = "Preparing…";
+      await onTailor(id, btn);
+      j = findJob(id);
+      if (!j.tailoredResume){ btn.disabled = false; btn.textContent = old; return; }
+    }
+    openApplyModal(j);
+  }
+
+  function openApplyModal(j){
+    var p = state.profile || {}, L = p.links || {};
+    var rows = [["Name", p.name], ["Email", p.email], ["Phone", p.phone], ["Location", p.location],
+      ["LinkedIn", L.linkedin], ["Website", L.portfolio]].filter(function(r){ return r[1]; });
+    var bd = document.createElement("div");
+    bd.className = "apply-backdrop";
+    bd.innerHTML =
+      '<div class="apply-modal" role="dialog" aria-modal="true">' +
+        '<h2>Apply: '+esc(j.title)+' · '+esc(j.company)+'</h2>' +
+        '<ol class="apply-steps"><li>Open the posting and start the application.</li>' +
+        '<li>Copy each item below into the form (or attach the downloaded files).</li>' +
+        '<li>Submit it there, then come back and click “I submitted it”.</li></ol>' +
+        '<div class="btn-row" style="margin-bottom:10px;">' +
+          (j.url ? '<a class="btn-primary" style="text-decoration:none; padding:9px 14px; border-radius:6px;" href="'+esc(j.url)+'" target="_blank" rel="noopener noreferrer">Open posting ↗</a>'
+                 : '<span class="age">No posting URL saved — add one or search for the role.</span>') +
+        '</div>' +
+        rows.map(function(r,i){ return '<div class="apply-row"><span class="k">'+esc(r[0])+'</span><span class="v">'+esc(r[1])+'</span><button class="btn-ghost" data-copy="'+i+'" style="font-size:12px; padding:5px 10px;">Copy</button></div>'; }).join("") +
+        (rows.length < 3 ? '<div class="age" style="margin:6px 0;">Fill in your contact info in the Profile tab so it shows up here.</div>' : "") +
+        '<div class="out-h">Tailored résumé</div><div class="out">'+esc(j.tailoredResume)+'</div>' +
+        '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="ap-cr">Copy</button><button class="btn-ghost" id="ap-dr">Download .txt</button></div>' +
+        '<div class="out-h">Cover letter</div><div class="out">'+esc(j.coverLetter)+'</div>' +
+        '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="ap-cc">Copy</button><button class="btn-ghost" id="ap-dc">Download .txt</button></div>' +
+        '<div class="btn-row" style="margin-top:18px; justify-content:space-between;">' +
+          '<button class="btn-ghost" id="ap-close">Close</button>' +
+          '<button class="btn-primary" id="ap-done">I submitted it ✓</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(bd);
+    function close(){ if (bd.parentNode) bd.parentNode.removeChild(bd); }
+    bd.onclick = function(e){ if (e.target === bd) close(); };
+    Array.prototype.forEach.call(bd.querySelectorAll("[data-copy]"), function(b){ b.onclick = function(){ copyText(rows[+b.dataset.copy][1]); }; });
+    bd.querySelector("#ap-cr").onclick = function(){ copyText(j.tailoredResume); };
+    bd.querySelector("#ap-cc").onclick = function(){ copyText(j.coverLetter); };
+    bd.querySelector("#ap-dr").onclick = function(){ saveFile(fileName(j,"resume"), j.tailoredResume); };
+    bd.querySelector("#ap-dc").onclick = function(){ saveFile(fileName(j,"cover-letter"), j.coverLetter); };
+    bd.querySelector("#ap-close").onclick = close;
+    bd.querySelector("#ap-done").onclick = async function(){
+      close();
+      await onStatusChange(j.id, "applied");
+      toast("Marked as applied — it's in your work-search log.");
+    };
+  }
+
+  // ---------- Job Matches (real listings via Adzuna proxy) ----------
   function renderMatches(b){
     var m = matchesCache;
     if (!m.what) m.what = state.profile.targetRoles || "";
