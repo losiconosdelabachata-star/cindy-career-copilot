@@ -1513,6 +1513,19 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
   function renderPipeline(b){
     var jobs = sortedJobs();
     b.innerHTML =
+      queueCardHtml() +
+      '<div class="card">' +
+        '<h3>Import a job from LinkedIn, Indeed or an email alert</h3>' +
+        '<div class="lede">Paste the posting text. If the posting sends you to the company’s own site, paste that link too — that’s the only kind the bot can apply to.</div>' +
+        '<div class="stack">' +
+          '<textarea id="imp-text" rows="5" placeholder="Paste the job posting here…"></textarea>' +
+          '<div class="grid2">' +
+            '<div><label for="imp-url">Posting link</label><input id="imp-url" placeholder="https://www.linkedin.com/jobs/…"></div>' +
+            '<div><label for="imp-apply">Company’s apply link <span style="text-transform:none; font-weight:400;">(optional)</span></label><input id="imp-apply" placeholder="https://boards.greenhouse.io/…"></div>' +
+          '</div>' +
+          '<div class="btn-row"><button class="btn-primary" id="imp-go"'+ (AI_ENABLED ? "" : " disabled") +'>Import job</button></div>' +
+        '</div>' +
+      '</div>' +
       '<div class="card">' +
         '<h3>'+esc(t("addRoleTitle"))+'</h3>' +
         '<div class="stack">' +
@@ -1530,6 +1543,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       '</div>';
 
     $("#j-add").onclick = onAddJob;
+    $("#imp-go").onclick = onImportJob;
+    var qb = $("#q-submit"); if (qb) qb.onclick = onSubmitApproved;
     wireJobCards();
   }
 
@@ -1554,6 +1569,9 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<button class="btn-primary j-tailor"'+ (AI_ENABLED ? "" : " disabled") +'>'+ esc(j.tailoredResume ? t("retailorBtn") : t("tailorBtn")) +'</button>' +
         '<select class="j-tone" aria-label="Cover letter tone"><option value="warm">Warm</option><option value="formal">Formal</option><option value="concise">Concise</option><option value="confident">Confident</option></select>' +
         '<button class="btn-ghost j-cover"'+ (AI_ENABLED ? "" : " disabled") +'>Write cover letter</button>' +
+        (botUrl(j)
+          ? '<label style="display:flex; align-items:center; gap:6px; font-size:13px;"><input type="checkbox" class="j-approve"'+(j.approved ? " checked" : "")+(s==="applied" ? " disabled" : "")+'> Approved for auto-apply</label>'
+          : '<span class="age">Apply by hand (no company link)</span>') +
         '<button class="btn-primary j-apply"'+ (AI_ENABLED ? "" : " disabled") +'>Apply →</button>' +
         '<select class="j-status" aria-label="'+esc(t("statusAria"))+'">' +
           STAGES.map(function(st){ return '<option value="'+st.key+'"'+(s===st.key?" selected":"")+'>'+esc(stageLabel(st.key))+'</option>'; }).join("") +
@@ -1585,6 +1603,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       var id = el.dataset.id;
       var del = $(".j-del", el); if (del) del.onclick = function(){ onDeleteJob(id); };
       var sel = $(".j-status", el); if (sel) sel.onchange = function(){ onStatusChange(id, sel.value); };
+      var apv = $(".j-approve", el); if (apv) apv.onchange = function(){ onApprove(id, apv.checked); };
       var cv = $(".j-cover", el); if (cv) cv.onclick = function(){ onCoverLetter(id, cv, $(".j-tone", el).value); };
       var ap = $(".j-apply", el); if (ap) ap.onclick = function(){ onApply(id, ap); };
       var tl = $(".j-tailor", el); if (tl) tl.onclick = function(){ onTailor(id, tl); };
@@ -1725,7 +1744,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="ap-cr">Copy</button><button class="btn-ghost" id="ap-dr">Download .txt</button></div>' +
         '<div class="out-h">Cover letter</div><div class="out">'+esc(j.coverLetter)+'</div>' +
         '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="ap-cc">Copy</button><button class="btn-ghost" id="ap-dc">Download .txt</button></div>' +
-        (/^https:\/\//i.test(j.url||"") ? (
+        (botUrl(j) ? (
           '<div class="out-h">Auto-apply (beta)</div>' +
           '<div class="age" style="margin:4px 0 8px;">The bot fills the employer’s own form with the info above. It stops and tells you if there’s a CAPTCHA or a question it can’t answer, and it doesn’t work on LinkedIn or Indeed.</div>' +
           '<div class="btn-row"><button class="btn-ghost" id="ap-dry">Practice run (won’t submit)</button>' +
@@ -1755,7 +1774,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       stEl.textContent = "Starting the bot…";
       try {
         var r = await apiRequest("/api/autoapply", { method:"POST", token:authToken, body:{
-          url:j.url, title:j.title, company:j.company, mode:mode, resume:j.tailoredResume, coverLetter:j.coverLetter,
+          url:botUrl(j), title:j.title, company:j.company, mode:mode, resume:j.tailoredResume, coverLetter:j.coverLetter,
           profile:{ name:p.name, email:p.email, phone:p.phone, location:p.location, linkedin:L.linkedin, website:L.portfolio } } });
         var tries = 0;
         var iv = setInterval(async function(){
@@ -1782,6 +1801,121 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       await onStatusChange(j.id, "applied");
       toast("Marked as applied — it's in your work-search log.");
     };
+  }
+
+  // ---------- Import + green-light queue ----------
+  function isBlockedHost(u){
+    try { return /(^|\.)(linkedin|indeed)\.com$/i.test(new URL(u).hostname); } catch(e){ return true; }
+  }
+  // the page the bot is allowed to apply on: the company's own link, never LinkedIn/Indeed
+  function botUrl(j){
+    var cands = [j.applyUrl, j.url];
+    for (var i=0; i<cands.length; i++){
+      var u = cands[i];
+      if (u && /^https:\/\//i.test(u) && !isBlockedHost(u)) return u;
+    }
+    return "";
+  }
+
+  async function onImportJob(){
+    var text = ($("#imp-text").value || "").trim();
+    var url = ($("#imp-url").value || "").trim();
+    var applyUrl = ($("#imp-apply").value || "").trim();
+    if (text.length < 40){ toast("Paste the job posting text first."); return; }
+    var btn = $("#imp-go"); btn.disabled = true; btn.textContent = "Reading it…";
+    try {
+      var d = await aiRequest("/api/importjob", { text:text.slice(0, 8000), url:url });
+      var job = { id:uid(), title:d.title || "Untitled role", company:d.company || "Unknown company", url:url, applyUrl:applyUrl,
+        description:(d.description || text).slice(0, 6000), approved:false,
+        status:"saved", tailoredResume:"", coverLetter:"", createdAt:now(), updatedAt:now(), appliedAt:null };
+      state.jobs.unshift(job);
+      await persistJob(job);
+      await pushActivity("Imported " + job.title + " at " + job.company + ".", job.id);
+      toast(applyUrl ? "Imported — approve it when you’re ready." : "Imported. Add the company’s apply link to let the bot apply.");
+      render();
+    } catch(e){
+      toast((e && e.message) || "Couldn’t read that posting. Try again.");
+      btn.disabled = false; btn.textContent = "Import job";
+    }
+  }
+
+  async function onApprove(id, on){
+    var j = findJob(id); if (!j) return;
+    j.approved = !!on; j.updatedAt = now();
+    await persistJob(j);
+    render();
+  }
+
+  function approvedJobs(){
+    return state.jobs.filter(function(j){ return j.approved && j.status !== "applied" && botUrl(j); });
+  }
+
+  var queueRunning = false;
+  function queueCardHtml(){
+    var q = approvedJobs();
+    if (!q.length && !queueRunning) return "";
+    return '<div class="card"><h3>Auto-apply queue ('+q.length+')</h3>' +
+      '<div class="lede">Jobs you’ve approved. The bot applies to these on the company’s own site — it stops and tells you if a form has a CAPTCHA or a question it can’t answer.</div>' +
+      q.map(function(j){ return '<div class="apply-row"><span class="v"><b>'+esc(j.title)+'</b> · '+esc(j.company)+'</span><span class="age">'+esc(j.botNote || "Waiting")+'</span></div>'; }).join("") +
+      '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="q-submit"'+(queueRunning ? " disabled" : "")+'>'+(queueRunning ? "Working…" : "Submit all approved")+'</button></div></div>';
+  }
+
+  async function ensureMaterials(j){
+    if (j.tailoredResume && j.coverLetter) return true;
+    var resume = state.profile.resumeText || "";
+    if (!resume.trim()) return false;
+    var d = await aiRequest("/api/tailor", { resume:resume.slice(0, 6500), title:j.title, company:j.company, description:(j.description || "").slice(0, 6500) });
+    j.tailoredResume = String(d && d.resume || "").trim();
+    j.coverLetter = String(d && d.coverLetter || "").trim();
+    j.updatedAt = now();
+    return !!j.tailoredResume;
+  }
+
+  async function runBotJob(j, mode, onProgress){
+    var p = state.profile || {}, L = p.links || {};
+    var r = await apiRequest("/api/autoapply", { method:"POST", token:authToken, body:{
+      url:botUrl(j), title:j.title, company:j.company, mode:mode, resume:j.tailoredResume, coverLetter:j.coverLetter,
+      profile:{ name:p.name, email:p.email, phone:p.phone, location:p.location, linkedin:L.linkedin, website:L.portfolio } } });
+    for (var i=0; i<90; i++){
+      await new Promise(function(res){ setTimeout(res, 4000); });
+      var s2 = await apiRequest("/api/autoapply?id=" + r.id, { token:authToken }).catch(function(){ return null; });
+      if (!s2) continue;
+      if (onProgress) onProgress(s2);
+      if (["submitted","dry_run_ok","needs_you","failed"].indexOf(s2.status) !== -1) return s2;
+    }
+    return { status:"failed", message:"Timed out waiting for the bot." };
+  }
+
+  async function onSubmitApproved(){
+    var q = approvedJobs();
+    if (!q.length || queueRunning) return;
+    if (!(state.profile.name && state.profile.email)){ toast("Add your name and email in Profile first."); activeTab="profile"; render(); return; }
+    if (!confirm("The bot will SUBMIT applications to "+q.length+" job(s): " + q.map(function(j){ return j.company; }).join(", ") + ". Submissions can’t be undone. Continue?")) return;
+    queueRunning = true; render();
+    var done = 0;
+    for (var i=0; i<q.length; i++){
+      var j = q[i];
+      try {
+        j.botNote = "Preparing materials…"; render();
+        if (!(await ensureMaterials(j))){ j.botNote = "Add your résumé in Profile"; continue; }
+        j.botNote = "Bot is applying…"; render();
+        var res = await runBotJob(j, "submit", function(st){ j.botNote = st.message; });
+        j.botNote = res.message;
+        if (res.status === "submitted"){
+          j.approved = false; j.status = "applied"; j.appliedAt = j.appliedAt || now(); j.updatedAt = now();
+          await pushActivity("Auto-applied to " + j.title + " at " + j.company + ".", j.id);
+          done++;
+        } else {
+          j.approved = false; // needs a human now — take it out of the queue
+          await pushActivity("Auto-apply paused on " + j.title + " at " + j.company + ": " + res.message, j.id);
+        }
+      } catch(e){
+        j.botNote = (e && e.message) || "Error"; j.approved = false;
+      }
+      await persistJob(j); render();
+    }
+    queueRunning = false; render();
+    toast(done + " of " + q.length + " submitted. Anything else is waiting for you in the pipeline.");
   }
 
   // ---------- Job Matches (real listings via Adzuna proxy) ----------
@@ -1875,7 +2009,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<a class="btn-ghost m-view" href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none; text-align:center;">'+esc(t("matchesViewBtn"))+'</a>' +
         (tracked
           ? '<button class="btn-ghost" disabled>'+esc(t("matchesAlreadyTracked"))+'</button>'
-          : '<button class="btn-primary m-save">'+esc(t("matchesSaveBtn"))+'</button>') +
+          : '<button class="btn-ghost m-save">'+esc(t("matchesSaveBtn"))+'</button>' +
+            (isBlockedHost(r.url) ? "" : '<button class="btn-primary m-approve">Approve for auto-apply</button>')) +
       '</div>' +
     '</div>';
   }
@@ -1884,7 +2019,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     Array.prototype.forEach.call(document.querySelectorAll("#m-results .job"), function(el){
       var idx = parseInt(el.dataset.idx, 10);
       var save = $(".m-save", el);
-      if (save) save.onclick = function(){ onSaveMatch(idx, save); };
+      if (save) save.onclick = function(){ onSaveMatch(idx, save, false); };
+      var apr = $(".m-approve", el); if (apr) apr.onclick = function(){ onSaveMatch(idx, apr, true); };
     });
   }
 
@@ -1914,18 +2050,19 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     }
   }
 
-  async function onSaveMatch(idx, btn){
+  async function onSaveMatch(idx, btn, approve){
     var r = matchesCache.results && matchesCache.results[idx];
     if (!r) return;
     if (alreadyTracked(r.url)) return;
     btn.disabled = true; btn.textContent = t("matchesSavedBtn");
     var job = { id:uid(), title:r.title, company:r.company, url:r.url,
       description:(r.description || "").slice(0, 1500),
+      approved: !!approve,
       status:"saved", tailoredResume:"", coverLetter:"", createdAt:now(), updatedAt:now(), appliedAt:null };
     state.jobs.unshift(job);
     await persistJob(job);
-    await pushActivity("Added " + r.title + " at " + r.company + " to the pipeline.", job.id);
-    toast("Saved to pipeline.");
+    await pushActivity("Added " + r.title + " at " + r.company + " to the pipeline" + (approve ? " (approved for auto-apply)." : "."), job.id);
+    toast(approve ? "Approved — it’s in your auto-apply queue." : "Saved to pipeline.");
     render();
   }
 
