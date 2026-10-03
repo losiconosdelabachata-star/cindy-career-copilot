@@ -1552,6 +1552,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       (j.description ? '<details><summary>'+esc(t("jobDescSummary"))+'</summary><div class="desc">'+esc(j.description)+'</div></details>' : "") +
       '<div class="job-actions">' +
         '<button class="btn-primary j-tailor"'+ (AI_ENABLED ? "" : " disabled") +'>'+ esc(j.tailoredResume ? t("retailorBtn") : t("tailorBtn")) +'</button>' +
+        '<select class="j-tone" aria-label="Cover letter tone"><option value="warm">Warm</option><option value="formal">Formal</option><option value="concise">Concise</option><option value="confident">Confident</option></select>' +
+        '<button class="btn-ghost j-cover"'+ (AI_ENABLED ? "" : " disabled") +'>Write cover letter</button>' +
         '<button class="btn-primary j-apply"'+ (AI_ENABLED ? "" : " disabled") +'>Apply →</button>' +
         '<select class="j-status" aria-label="'+esc(t("statusAria"))+'">' +
           STAGES.map(function(st){ return '<option value="'+st.key+'"'+(s===st.key?" selected":"")+'>'+esc(stageLabel(st.key))+'</option>'; }).join("") +
@@ -1583,6 +1585,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       var id = el.dataset.id;
       var del = $(".j-del", el); if (del) del.onclick = function(){ onDeleteJob(id); };
       var sel = $(".j-status", el); if (sel) sel.onchange = function(){ onStatusChange(id, sel.value); };
+      var cv = $(".j-cover", el); if (cv) cv.onclick = function(){ onCoverLetter(id, cv, $(".j-tone", el).value); };
       var ap = $(".j-apply", el); if (ap) ap.onclick = function(){ onApply(id, ap); };
       var tl = $(".j-tailor", el); if (tl) tl.onclick = function(){ onTailor(id, tl); };
       var cr = $(".j-copy-r", el); if (cr) cr.onclick = function(){ copyText(findJob(id).tailoredResume); };
@@ -1663,6 +1666,31 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
   }
 
   // ---------- Apply assistant: tailor if needed, show a ready packet, open the posting; the user submits ----------
+  async function onCoverLetter(id, btn, tone){
+    var j = findJob(id);
+    if (!j) return;
+    var resume = state.profile.resumeText || "";
+    if (!resume.trim()){ toast("Add your résumé in the Profile tab first."); activeTab="profile"; render(); return; }
+    btn.disabled = true; btn.textContent = "Writing…";
+    try {
+      var data = await aiRequest("/api/coverletter", {
+        resume: resume.slice(0, 6500), template: (state.profile.coverLetterText || "").slice(0, 3000),
+        title: j.title, company: j.company, description: (j.description || "").slice(0, 6000),
+        name: state.profile.name || "", tone: tone
+      });
+      var text = String(data && data.coverLetter || "").trim();
+      if (!text) throw new Error("The reply came back empty. Try again.");
+      j.coverLetter = text; j.updatedAt = now();
+      await persistJob(j);
+      await pushActivity("Wrote a cover letter for " + j.title + " at " + j.company + ".", id);
+      toast("Cover letter ready — review it before you send.");
+      render();
+    } catch(e){
+      toast((e && e.message) || "That didn’t go through. Try again.");
+      btn.disabled = false; btn.textContent = "Write cover letter";
+    }
+  }
+
   async function onApply(id, btn){
     var j = findJob(id);
     if (!j) return;
@@ -1697,6 +1725,13 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="ap-cr">Copy</button><button class="btn-ghost" id="ap-dr">Download .txt</button></div>' +
         '<div class="out-h">Cover letter</div><div class="out">'+esc(j.coverLetter)+'</div>' +
         '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="ap-cc">Copy</button><button class="btn-ghost" id="ap-dc">Download .txt</button></div>' +
+        (/^https:\/\//i.test(j.url||"") ? (
+          '<div class="out-h">Auto-apply (beta)</div>' +
+          '<div class="age" style="margin:4px 0 8px;">The bot fills the employer’s own form with the info above. It stops and tells you if there’s a CAPTCHA or a question it can’t answer, and it doesn’t work on LinkedIn or Indeed.</div>' +
+          '<div class="btn-row"><button class="btn-ghost" id="ap-dry">Practice run (won’t submit)</button>' +
+          '<button class="btn-primary" id="ap-auto">Auto-apply for me</button></div>' +
+          '<div class="age" id="ap-status" style="margin-top:8px;"></div>'
+        ) : "") +
         '<div class="btn-row" style="margin-top:18px; justify-content:space-between;">' +
           '<button class="btn-ghost" id="ap-close">Close</button>' +
           '<button class="btn-primary" id="ap-done">I submitted it ✓</button>' +
@@ -1711,6 +1746,37 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     bd.querySelector("#ap-dr").onclick = function(){ saveFile(fileName(j,"resume"), j.tailoredResume); };
     bd.querySelector("#ap-dc").onclick = function(){ saveFile(fileName(j,"cover-letter"), j.coverLetter); };
     bd.querySelector("#ap-close").onclick = close;
+    var stEl = bd.querySelector("#ap-status");
+    async function runBot(mode){
+      if (mode === "submit" && !confirm("The bot will SUBMIT your application to " + j.company + " for “" + j.title + "”. This can’t be undone. Continue?")) return;
+      var btns = bd.querySelectorAll("#ap-dry,#ap-auto");
+      function setBtns(d){ Array.prototype.forEach.call(btns, function(x){ x.disabled = d; }); }
+      setBtns(true);
+      stEl.textContent = "Starting the bot…";
+      try {
+        var r = await apiRequest("/api/autoapply", { method:"POST", token:authToken, body:{
+          url:j.url, title:j.title, company:j.company, mode:mode, resume:j.tailoredResume, coverLetter:j.coverLetter,
+          profile:{ name:p.name, email:p.email, phone:p.phone, location:p.location, linkedin:L.linkedin, website:L.portfolio } } });
+        var tries = 0;
+        var iv = setInterval(async function(){
+          tries++;
+          try {
+            var s2 = await apiRequest("/api/autoapply?id=" + r.id, { token:authToken });
+            var done = ["submitted","dry_run_ok","needs_you","failed"].indexOf(s2.status) !== -1;
+            stEl.textContent = s2.message + (s2.missing && s2.missing.length ? " Needs you: " + s2.missing.join("; ") : "");
+            if (done || tries > 90){
+              clearInterval(iv); setBtns(false);
+              if (s2.status === "submitted"){ await onStatusChange(j.id, "applied"); toast("Submitted — logged as applied."); }
+            }
+          } catch(e){ /* keep polling */ }
+        }, 4000);
+      } catch(e){
+        stEl.textContent = (e && e.message) || "Couldn’t start the bot.";
+        setBtns(false);
+      }
+    }
+    var dry = bd.querySelector("#ap-dry"); if (dry) dry.onclick = function(){ runBot("dry"); };
+    var au = bd.querySelector("#ap-auto"); if (au) au.onclick = function(){ runBot("submit"); };
     bd.querySelector("#ap-done").onclick = async function(){
       close();
       await onStatusChange(j.id, "applied");

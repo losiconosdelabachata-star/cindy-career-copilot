@@ -1,0 +1,24 @@
+name: auto-apply
+on:
+  repository_dispatch:
+    types: [auto-apply]
+concurrency:
+  group: auto-apply
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-save playwright@1.49.0 && npx playwright install --with-deps chromium
+      - run: node bot/apply.mjs
+        env:
+          RUN_ID: ${{ github.event.client_payload.id }}
+          BOT_SECRET: ${{ secrets.BOT_SECRET }}
+          API_BASE: https://cindy-career-copilot.pages.dev
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: apply-shot, path: bot/out/*.png, if-no-files-found: ignore, retention-days: 3 }
