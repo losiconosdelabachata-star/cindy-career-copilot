@@ -871,6 +871,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         tabBtn("cindy",t("tabCindy")) +
         tabBtn("pipeline",t("tabPipeline"), state.jobs.length ? String(state.jobs.length) : "") +
         tabBtn("matches",t("tabMatches")) +
+        tabBtn("credit","Credit") +
+        tabBtn("grants","Grants") +
         tabBtn("profile",t("tabProfile")) +
         tabBtn("activity",t("tabActivity"), unread ? String(unread) : "") +
       '</div>' +
@@ -907,6 +909,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     if (activeTab==="cindy") return renderCindy(b);
     if (activeTab==="pipeline") return renderPipeline(b);
     if (activeTab==="matches") return renderMatches(b);
+    if (activeTab==="credit") return renderCredit(b);
+    if (activeTab==="grants") return renderGrants(b);
     if (activeTab==="profile") return renderProfile(b);
     if (activeTab==="activity") return renderActivity(b);
   }
@@ -1916,6 +1920,170 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     }
     queueRunning = false; render();
     toast(done + " of " + q.length + " submitted. Anything else is waiting for you in the pipeline.");
+  }
+
+  // ---------- Credit repair plan + Grants finder ----------
+  var STATES = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
+  var CREDIT_ISSUES = ["Collections","Late payments","High card balances","Charge-offs","Errors on my report","Few or no accounts (thin file)","Recent bankruptcy","Too many inquiries","Student loans in default"];
+  var CREDIT_SCORES = ["Below 500","500-579","580-669","670-739","740+","Don't know"];
+  var creditBusy = false;
+
+  function creditData(){
+    state.profile.credit = state.profile.credit || { inputs:{ score:"Don't know", issues:[], goal:"", income:"" }, plan:null, done:{} };
+    return state.profile.credit;
+  }
+
+  function renderCredit(b){
+    var c = creditData(), inp = c.inputs, plan = c.plan;
+    b.innerHTML =
+      '<div class="card"><h3>Credit repair plan</h3>' +
+        '<div class="lede">A step-by-step plan using the free methods the law gives you — you never need to pay a “credit repair” company. This is education, not legal or financial advice, and no one can promise a score.</div>' +
+        '<div class="stack">' +
+          '<div><label for="cr-score">Where’s your score now?</label><select id="cr-score">' + CREDIT_SCORES.map(function(x){ return '<option'+(inp.score===x?" selected":"")+'>'+esc(x)+'</option>'; }).join("") + '</select></div>' +
+          '<div><label>What’s on your report? <span style="text-transform:none; font-weight:400;">(check all that apply)</span></label>' +
+            CREDIT_ISSUES.map(function(x,i){ return '<label style="display:flex; gap:8px; align-items:center; font-size:14px; text-transform:none; font-weight:400;"><input type="checkbox" class="cr-issue" value="'+esc(x)+'"'+(inp.issues.indexOf(x)!==-1?" checked":"")+'> '+esc(x)+'</label>'; }).join("") + '</div>' +
+          '<div class="grid2">' +
+            '<div><label for="cr-goal">Your goal</label><input id="cr-goal" value="'+esc(inp.goal)+'" placeholder="Buy a car, rent an apartment, 700+…"></div>' +
+            '<div><label for="cr-money">Monthly $ you can put toward this</label><input id="cr-money" value="'+esc(inp.income)+'" placeholder="$100"></div>' +
+          '</div>' +
+          '<div class="btn-row"><button class="btn-primary" id="cr-go"'+(AI_ENABLED?"":" disabled")+'>'+(plan ? "Rebuild my plan" : "Build my plan")+'</button>' +
+          '<a class="btn-ghost" style="text-decoration:none; padding:9px 14px; border-radius:6px;" href="https://www.annualcreditreport.com" target="_blank" rel="noopener noreferrer">Get my free reports ↗</a></div>' +
+        '</div></div>' +
+      (plan ? (
+        '<div class="card"><h3>Your plan</h3><div class="lede">'+esc(plan.summary || "")+'</div>' +
+        plan.steps.map(function(st,i){
+          var done = !!c.done[i];
+          return '<div class="apply-row" style="align-items:flex-start;"><input type="checkbox" class="cr-done" data-i="'+i+'"'+(done?" checked":"")+' style="margin-top:4px;">' +
+            '<span class="v"'+(done?' style="opacity:.55; text-decoration:line-through;"':"")+'><b>'+esc(st.title)+'</b><br>'+esc(st.detail)+'</span><span class="age">'+esc(st.when)+'</span></div>';
+        }).join("") +
+        '<div class="age" style="margin-top:10px;">Free tools: annualcreditreport.com (reports), consumerfinance.gov/complaint (if a bureau won’t fix an error), and your state’s free credit counseling via nfcc.org.</div></div>'
+      ) : "");
+    $("#cr-go").onclick = onBuildCredit;
+    Array.prototype.forEach.call(b.querySelectorAll(".cr-done"), function(cb){
+      cb.onchange = async function(){ creditData().done[cb.dataset.i] = cb.checked; await persistMain(); renderCredit(b); };
+    });
+  }
+
+  async function onBuildCredit(){
+    if (creditBusy) return;
+    var c = creditData();
+    c.inputs = { score:$("#cr-score").value,
+      issues:Array.prototype.map.call(document.querySelectorAll(".cr-issue:checked"), function(x){ return x.value; }),
+      goal:$("#cr-goal").value.trim(), income:$("#cr-money").value.trim() };
+    creditBusy = true;
+    var btn = $("#cr-go"); btn.disabled = true; btn.textContent = "Building…";
+    try {
+      var d = await aiRequest("/api/money", Object.assign({ kind:"credit" }, c.inputs));
+      c.plan = { summary:d.summary, steps:d.steps || [] }; c.done = {};
+      await persistMain();
+      await pushActivity("Built a credit repair plan.", null);
+    } catch(e){
+      toast((e && e.message) || "That didn’t go through. Try again.");
+    }
+    creditBusy = false;
+    renderCredit($("#tab-body"));
+  }
+
+  var GRANT_CATS = [
+    { key:"household", label:"Household bills & basic needs" },
+    { key:"housing",   label:"Rent / housing / home repair" },
+    { key:"utilities", label:"Utility & energy bills" },
+    { key:"business",  label:"Starting or growing a small business" },
+    { key:"education", label:"School / training" }
+  ];
+  var grantsCache = { state:"", cats:[], situation:"", result:null, statement:"", busy:false };
+
+  function grantLinks(st, cats){
+    var q = function(t){ return "https://www.google.com/search?q=" + encodeURIComponent(st + " " + t + " site:.gov"); };
+    var L = [
+      { t:"Benefits.gov — benefit finder (answer a few questions, see what you may qualify for)", u:"https://www.benefits.gov/benefit-finder" },
+      { t:"211.org — call or search for local help with bills, food, housing in " + st, u:"https://www.211.org/" },
+      { t:st + " state benefits and assistance programs", u:q("state assistance programs apply") }
+    ];
+    if (cats.indexOf("household") !== -1) L.push({ t:st + " cash & food assistance (TANF / SNAP)", u:q("SNAP TANF apply online") });
+    if (cats.indexOf("housing") !== -1){
+      L.push({ t:"HUD — rental and housing help by state", u:"https://www.hud.gov/states" });
+      L.push({ t:st + " housing finance agency & down-payment help", u:q("housing finance agency down payment assistance") });
+      L.push({ t:"USDA home repair loans & grants (rural)", u:"https://www.rd.usda.gov/programs-services/single-family-housing-programs/single-family-housing-repair-loans-grants" });
+    }
+    if (cats.indexOf("utilities") !== -1){
+      L.push({ t:"LIHEAP — help paying heating/cooling bills (federal)", u:"https://www.acf.hhs.gov/ocs/low-income-home-energy-assistance-program-liheap" });
+      L.push({ t:st + " utility assistance", u:q("utility bill assistance LIHEAP apply") });
+    }
+    if (cats.indexOf("business") !== -1){
+      L.push({ t:"SBA — funding programs and grants", u:"https://www.sba.gov/funding-programs/grants" });
+      L.push({ t:"Free small-business advising near you (SBDC)", u:"https://americassbdc.org/small-business-consulting-and-training/find-your-sbdc/" });
+      L.push({ t:st + " small business grants", u:q("small business grants") });
+    }
+    if (cats.indexOf("education") !== -1){
+      L.push({ t:"FAFSA — federal student aid and grants", u:"https://studentaid.gov/h/apply-for-aid/fafsa" });
+      L.push({ t:st + " state student grants", u:q("state grant financial aid students") });
+    }
+    L.push({ t:"Grants.gov — federal grants (mostly for organizations; individuals rarely qualify directly)", u:"https://www.grants.gov/search-grants" });
+    return L;
+  }
+
+  function renderGrants(b){
+    var g = grantsCache;
+    if (!g.state) g.state = (state.profile.stateName || "");
+    var res = g.result;
+    b.innerHTML =
+      '<div class="card"><h3>Grants &amp; assistance by state</h3>' +
+        '<div class="lede">Pick your state and what you need. You’ll get official places to look and apply, a prep checklist, and a drafted statement of need. Applications ask for private details (SSN, bank, income), so you submit those yourself — Cindy never enters them for you.</div>' +
+        '<div class="stack">' +
+          '<div><label for="g-state">Your state</label><select id="g-state"><option value="">Choose…</option>' + STATES.map(function(x){ return '<option'+(g.state===x?" selected":"")+'>'+esc(x)+'</option>'; }).join("") + '</select></div>' +
+          '<div><label>What do you need help with?</label>' +
+            GRANT_CATS.map(function(c){ return '<label style="display:flex; gap:8px; align-items:center; font-size:14px; text-transform:none; font-weight:400;"><input type="checkbox" class="g-cat" value="'+c.key+'"'+(g.cats.indexOf(c.key)!==-1?" checked":"")+'> '+esc(c.label)+'</label>'; }).join("") + '</div>' +
+          '<div><label for="g-sit">Your situation <span style="text-transform:none; font-weight:400;">(in your own words — used for the statement)</span></label><textarea id="g-sit" rows="4" placeholder="Household size, income change, what happened, what you need…">'+esc(g.situation)+'</textarea></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="g-go"'+(AI_ENABLED?"":" disabled")+'>Find my options</button></div>' +
+        '</div></div>' +
+      (res ? (
+        '<div class="card"><h3>Where to look and apply — '+esc(g.state)+'</h3>' +
+          res.links.map(function(l){ return '<div class="apply-row"><span class="v">'+esc(l.t)+'</span><a class="btn-ghost" style="text-decoration:none; font-size:12px; padding:5px 10px; border-radius:6px;" href="'+esc(l.u)+'" target="_blank" rel="noopener noreferrer">Open ↗</a></div>'; }).join("") +
+        '</div>' +
+        (res.prep.length ? '<div class="card"><h3>Get ready to apply</h3><ul class="apply-steps">'+res.prep.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' +
+          (res.tips.length ? '<div class="out-h">Tips</div><ul class="apply-steps">'+res.tips.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' : "") +
+          (res.scams.length ? '<div class="out-h">Avoid scams</div><ul class="apply-steps">'+res.scams.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' : "") + '</div>' : "") +
+        '<div class="card"><h3>Statement of need</h3><div class="lede">A short draft built only from what you wrote above. Edit it so it’s true and in your voice before using it.</div>' +
+          (g.statement ? '<div class="out">'+esc(g.statement)+'</div><div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="g-copy">Copy</button></div>' : "") +
+          '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="g-stmt"'+(AI_ENABLED?"":" disabled")+'>'+(g.statement ? "Rewrite" : "Draft my statement")+'</button></div></div>'
+      ) : "");
+    $("#g-go").onclick = onFindGrants;
+    var stb = $("#g-stmt"); if (stb) stb.onclick = onGrantStatement;
+    var cp = $("#g-copy"); if (cp) cp.onclick = function(){ copyText(g.statement); };
+  }
+
+  function readGrantForm(){
+    var g = grantsCache;
+    g.state = $("#g-state").value;
+    g.cats = Array.prototype.map.call(document.querySelectorAll(".g-cat:checked"), function(x){ return x.value; });
+    g.situation = $("#g-sit").value.trim();
+    if (g.state){ state.profile.stateName = g.state; persistMain(); }
+  }
+
+  async function onFindGrants(){
+    var g = grantsCache; readGrantForm();
+    if (!g.state){ toast("Choose your state first."); return; }
+    if (!g.cats.length){ toast("Pick at least one thing you need help with."); return; }
+    var btn = $("#g-go"); btn.disabled = true; btn.textContent = "Looking…";
+    var prep = { prep:[], tips:[], scams:[] };
+    try {
+      prep = await aiRequest("/api/money", { kind:"grants", state:g.state, categories:g.cats, situation:g.situation });
+    } catch(e){ toast("Links are ready; the checklist didn’t load — try again for tips."); }
+    g.result = { links:grantLinks(g.state, g.cats), prep:prep.prep || [], tips:prep.tips || [], scams:prep.scams || [] };
+    renderGrants($("#tab-body"));
+  }
+
+  async function onGrantStatement(){
+    var g = grantsCache; readGrantForm();
+    if (g.situation.length < 20){ toast("Tell me a bit more about your situation first."); return; }
+    var btn = $("#g-stmt"); btn.disabled = true; btn.textContent = "Writing…";
+    try {
+      var d = await aiRequest("/api/money", { kind:"statement", state:g.state, name:state.profile.name || "",
+        category:g.cats.map(function(k){ return (GRANT_CATS.filter(function(c){ return c.key===k; })[0] || {}).label; }).join("; "), situation:g.situation });
+      g.statement = String(d.statement || "").trim();
+    } catch(e){ toast((e && e.message) || "That didn’t go through. Try again."); }
+    renderGrants($("#tab-body"));
   }
 
   // ---------- Job Matches (real listings via Adzuna proxy) ----------
