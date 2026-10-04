@@ -122,6 +122,9 @@ button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
 .chk-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px;}
 .chk{display:flex !important; align-items:center; gap:10px; margin:0 !important; padding:9px 12px; border:1px solid var(--border); border-radius:8px; background:var(--panel-2); font-size:14px; text-transform:none !important; font-weight:400 !important; letter-spacing:0 !important; cursor:pointer; text-align:left;}
 .chk input{width:auto !important; flex:none; margin:0;}
+.apply-row input[type=checkbox]{width:auto !important; flex:none; margin:3px 4px 0 0;}
+.apply-row .v{min-width:0;}
+.apply-row .age{flex:none; max-width:35%; text-align:right;}
 .chk:has(input:checked){border-color:var(--accent); background:var(--accent-ghost);}
 .apply-backdrop{position:fixed; inset:0; background:rgba(10,18,26,.6); z-index:50; display:flex; align-items:flex-start; justify-content:center; overflow:auto; padding:24px 12px;}
 .apply-modal{background:var(--panel-2); color:var(--ink); border:1px solid var(--border); border-radius:10px; max-width:720px; width:100%; padding:20px;}
