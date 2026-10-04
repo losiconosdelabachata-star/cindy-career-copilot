@@ -25,8 +25,8 @@ const P = packet.profile;
 const [first, ...rest] = P.name.trim().split(/\s+/);
 const last = rest.join(" ") || first;
 
-if (/(^|\.)(linkedin|indeed)\.com/i.test(new URL(packet.url).hostname)) {
-  await report("needs_you", "LinkedIn and Indeed don't allow bots — use the Apply assistant there.");
+if (/(^|\.)(linkedin|indeed|adzuna|ziprecruiter|glassdoor|monster|simplyhired)\.(com|co\.uk)$/i.test(new URL(packet.url).hostname)) {
+  await report("needs_you", "Job boards like LinkedIn, Indeed and Adzuna don't allow bots. Open the job, click Apply there, and save the company's own apply link on the job instead.");
   process.exit(0);
 }
 
@@ -65,6 +65,11 @@ try {
     if (!(await btn.count())) break;
     await btn.click({ timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(4000);
+  }
+  const bodyText = (await page.locator("body").innerText().catch(() => "")).toLowerCase();
+  if (/suspicious (behaviou?r|activity)|unusual (traffic|behaviou?r)|verify you are (a )?human|access denied|are you a robot/.test(bodyText)) {
+    await report("needs_you", "That site blocks automated visits, so I stopped. Apply by hand — your materials are ready in the Apply window.");
+    process.exit(0);
   }
   if (await page.locator("iframe[src*=recaptcha], iframe[src*=hcaptcha], .g-recaptcha, .h-captcha, [data-sitekey]").count()) {
     await report("needs_you", "This form has a CAPTCHA, so a bot can't finish it. Apply by hand — your materials are in the Apply assistant.");

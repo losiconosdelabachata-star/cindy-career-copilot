@@ -1611,6 +1611,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
           '<button class="btn-ghost j-tailor"'+ (AI_ENABLED ? "" : " disabled") +'>'+ esc(j.tailoredResume ? t("retailorBtn") : t("tailorBtn")) +'</button>' +
           '<select class="j-tone" aria-label="Cover letter tone"><option value="warm">Warm</option><option value="formal">Formal</option><option value="concise">Concise</option><option value="confident">Confident</option></select>' +
           '<button class="btn-ghost j-cover"'+ (AI_ENABLED ? "" : " disabled") +'>Write cover letter</button>' +
+          '<div style="flex-basis:100%;"><label>Company’s own apply link <span style="text-transform:none; font-weight:400;">(open the job, click Apply there, copy the address you land on)</span></label>' +
+            '<div class="btn-row"><input class="j-applyurl" style="flex:1; min-width:200px;" placeholder="https://… (Greenhouse, Lever, company site)" value="'+esc(j.applyUrl||"")+'"><button class="btn-ghost j-saveurl">Save link</button></div></div>' +
           (botUrl(j)
             ? '<label class="chk"><input type="checkbox" class="j-approve"'+(j.approved ? " checked" : "")+(s==="applied" ? " disabled" : "")+'> Let the bot apply for me</label>'
             : '<span class="age">Apply by hand — no company link</span>') +
@@ -1645,6 +1647,11 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       var del = $(".j-del", el); if (del) del.onclick = function(){ onDeleteJob(id); };
       var sel = $(".j-status", el); if (sel) sel.onchange = function(){ onStatusChange(id, sel.value); };
       var apv = $(".j-approve", el); if (apv) apv.onchange = function(){ onApprove(id, apv.checked); };
+      var su = $(".j-saveurl", el); if (su) su.onclick = async function(){
+        var u = ($(".j-applyurl", el).value || "").trim(); var j = findJob(id);
+        if (u && (!/^https:\/\//i.test(u) || isBlockedHost(u))){ toast("Use the company’s own https:// application link — not LinkedIn, Indeed, Adzuna or other job boards."); return; }
+        j.applyUrl = u; j.updatedAt = now(); await persistJob(j); toast(u ? "Saved — you can now let the bot apply." : "Link removed."); render();
+      };
       var cv = $(".j-cover", el); if (cv) cv.onclick = function(){ onCoverLetter(id, cv, $(".j-tone", el).value); };
       var ap = $(".j-apply", el); if (ap) ap.onclick = function(){ onApply(id, ap); };
       var tl = $(".j-tailor", el); if (tl) tl.onclick = function(){ onTailor(id, tl); };
@@ -1846,7 +1853,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
 
   // ---------- Import + green-light queue ----------
   function isBlockedHost(u){
-    try { return /(^|\.)(linkedin|indeed)\.com$/i.test(new URL(u).hostname); } catch(e){ return true; }
+    try { return /(^|\.)(linkedin|indeed|adzuna|ziprecruiter|glassdoor|monster|simplyhired)\.(com|co\.uk)$/i.test(new URL(u).hostname); } catch(e){ return true; }
   }
   // the page the bot is allowed to apply on: the company's own link, never LinkedIn/Indeed
   function botUrl(j){
