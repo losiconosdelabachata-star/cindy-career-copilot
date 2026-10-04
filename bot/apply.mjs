@@ -6,7 +6,12 @@ import { chromium } from "playwright";
 import fs from "node:fs";
 
 const { RUN_ID, BOT_SECRET, API_BASE } = process.env;
-const H = { "x-bot-secret": BOT_SECRET, "content-type": "application/json" };
+// GitHub Actions identity token (audience-scoped) — verified server-side, no shared secret needed
+const idRes = await fetch(process.env.ACTIONS_ID_TOKEN_REQUEST_URL + "&audience=cindy-career-copilot", {
+  headers: { authorization: "Bearer " + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }
+});
+const { value: idToken } = await idRes.json();
+const H = { authorization: "Bearer " + idToken, "x-bot-secret": BOT_SECRET || "", "content-type": "application/json" };
 
 async function report(status, message, filled = [], missing = []) {
   console.log(status, message, filled, missing);

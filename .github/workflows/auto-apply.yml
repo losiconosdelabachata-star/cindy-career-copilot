@@ -2,6 +2,9 @@ name: auto-apply
 on:
   repository_dispatch:
     types: [auto-apply]
+permissions:
+  contents: read
+  id-token: write
 concurrency:
   group: auto-apply
   cancel-in-progress: false
