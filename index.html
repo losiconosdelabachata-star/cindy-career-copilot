@@ -2250,7 +2250,49 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       "Creator income is self-employment income: set money aside for taxes and talk to a tax pro about quarterly payments.",
       "An LLC is optional at the start — ask a professional what makes sense in your state.",
       "Get written permission before showing other people's faces, products or music. Know fair use is narrow.",
-      "Protect your privacy (no home address in shots) and your mental health — take breaks and block harassment."] }
+      "Protect your privacy (no home address in shots) and your mental health — take breaks and block harassment."] },
+    { t:"11. Edit videos with CapCut (step by step)", pts:[
+      "Start a new project and set the ratio to 9:16 for TikTok, Reels and Shorts (16:9 for YouTube long-form). Import your clips and drag them onto the timeline.",
+      "Cut the dead air: use Split and Delete to trim pauses and mistakes. Short-form usually changes shot or angle every 2-4 seconds to keep a fast pace.",
+      "Add captions: use Auto captions, then read every line and fix spelling by hand — the auto version makes mistakes. Keep the style to 1-2 colors and a readable font.",
+      "Fix the sound: turn music down so your voice stays clear (roughly 10-20% volume under speech), use noise reduction on voice tracks, and record voiceovers right in the app.",
+      "Hook in the first second: add big on-screen text, then use keyframes for a slow zoom or movement so the video never feels static.",
+      "Polish: apply one filter and keep it consistent, use Remove background or green screen when it helps, use speed curves for emphasis, and go light on transitions.",
+      "Learn from templates: open a trending template, swap in your own clips, then study how it's built (cuts, text timing, effects) and build your own version.",
+      "Export at 1080p and 30 fps (60 fps for gaming or fast action), preview on your phone, and save a draft so you can reuse the layout next time.",
+      "Check rights before posting: use music and effects from the app's licensed library, and note that some music, templates and Pro features have limits for commercial or business accounts."] },
+    { t:"12. Go live: streaming basics", pts:[
+      "Pick a platform that fits you (see the streaming list below). Twitch and Kick are live-first; YouTube Live and TikTok Live connect to the audience you already have.",
+      "Start with a simple setup: a phone or webcam, a decent mic, steady internet (use a cable if you can), and free software like OBS Studio.",
+      "Pick a schedule and stick to it — viewers need to know when you'll be live. Same days and times beat random bursts.",
+      "Talk the whole time. Greet people by name, say what you're doing, and ask questions. Silence loses viewers, especially at the start.",
+      "Set up chat moderation before you grow: banned words, slow mode, and a couple of trusted moderators.",
+      "Clip your best moments and post them as short videos on TikTok, Reels and Shorts — that's how most streamers get found.",
+      "Use only music you have rights to. Copyrighted music in a live stream or its replay can mute your video, strike your channel or get you banned.",
+      "Protect yourself: never show your address, mail or location, use a separate email for your channel, and turn on two-factor login."] }
+  ];
+  var STREAMING_PLATFORMS = [
+    { n:"Twitch", u:"https://www.twitch.tv", d:"The biggest live-streaming community for gaming, music, art and talk. Streamers can earn through subs, bits and ads once they reach Affiliate or Partner status — check the current requirements." },
+    { n:"Kick", u:"https://kick.com", d:"A newer live-streaming platform known for creator-friendly revenue terms. Growing fast, with a smaller audience than Twitch. Check current terms before you commit." },
+    { n:"YouTube Live", u:"https://www.youtube.com/live_dashboard", d:"Stream to your YouTube subscribers; replays stay up and can be found in search. Works well alongside Shorts and long videos." },
+    { n:"TikTok LIVE", u:"https://www.tiktok.com/live", d:"Go live to your TikTok followers and earn gifts from viewers. Has follower and age requirements — check the current rules." },
+    { n:"Facebook Live", u:"https://www.facebook.com/live/producer", d:"Good for community, local business, and older audiences. Stream to a page, group or profile." },
+    { n:"Instagram Live", u:"https://creators.instagram.com/", d:"Quick, casual lives to your followers — great for Q&As and collabs with another creator." },
+    { n:"Rumble", u:"https://rumble.com", d:"Video and live platform with a more open policy on content; check monetization terms and community fit." },
+    { n:"Trovo", u:"https://trovo.live", d:"A gaming-focused live platform that also has a streamer program. Smaller community; check the current terms." }
+  ];
+  var STREAMING_TOOLS = [
+    { n:"OBS Studio", u:"https://obsproject.com", d:"Free, open-source recording and streaming software that works with every platform above." },
+    { n:"Streamlabs", u:"https://streamlabs.com", d:"Streaming software plus alerts, overlays and donation tools (free tier; some features are paid)." },
+    { n:"StreamElements", u:"https://streamelements.com", d:"Free overlays, alerts, chat bots and tipping for streamers." },
+    { n:"Meld Studio", u:"https://meldstudio.co", d:"A beginner-friendly streaming app with simple scene setup." }
+  ];
+  var EDITING_LINKS = [
+    { n:"CapCut — free video editor (desktop, web and phone)", u:"https://www.capcut.com" },
+    { n:"CapCut resource center (tutorials and guides)", u:"https://commercepro.capcut.com/resource" },
+    { n:"DaVinci Resolve (free) — official training", u:"https://www.blackmagicdesign.com/products/davinciresolve/training" },
+    { n:"Kdenlive (free, open-source) — documentation", u:"https://docs.kdenlive.org" },
+    { n:"Canva Video Editor (free)", u:"https://www.canva.com/video-editor/" }
   ];
   var CREATOR_LINKS = [
     { n:"YouTube Creators (official)", u:"https://www.youtube.com/creators/" },
@@ -2338,11 +2380,19 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<div class="lede">Tell Cindy your niche and get 10 hooks to film this week.</div>' +
         '<div class="stack"><div class="grid2">' +
           '<div><label for="cu-niche">Your niche</label><input id="cu-niche" value="'+esc(c.niche)+'" placeholder="Budget meal prep, Miami real estate…"></div>' +
-          '<div><label for="cu-plat">Platform</label><select id="cu-plat">'+["TikTok","Instagram Reels","YouTube Shorts","YouTube (long)","LinkedIn"].map(function(x){ return '<option'+(c.platform===x?" selected":"")+'>'+x+'</option>'; }).join("")+'</select></div>' +
+          '<div><label for="cu-plat">Platform</label><select id="cu-plat">'+["TikTok","Instagram Reels","YouTube Shorts","YouTube (long)","Twitch (live)","Kick (live)","YouTube Live","LinkedIn"].map(function(x){ return '<option'+(c.platform===x?" selected":"")+'>'+x+'</option>'; }).join("")+'</select></div>' +
         '</div><div><label for="cu-aud">Who is it for? <span style="text-transform:none; font-weight:400;">(optional)</span></label><input id="cu-aud" value="'+esc(c.audience)+'" placeholder="Busy parents, first-time buyers…"></div>' +
         '<div class="btn-row"><button class="btn-primary" id="cu-go"'+(AI_ENABLED?"":" disabled")+'>Give me ideas</button></div></div>' +
         (creatorIdeas ? '<div class="out-h">Your ideas</div>' + creatorIdeas.map(function(x){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>“'+esc(x.hook)+'”</b><br><span class="age">'+esc(x.format)+'</span></span></div>'; }).join("") : "") +
       '</div>' +
+      '<div class="card"><h3>Learn to edit videos</h3>' +
+        '<div class="lede">Start with Module 11 above for a CapCut walkthrough, then use these free editors and official tutorials.</div>' +
+        EDITING_LINKS.map(function(l){ return '<div class="apply-row"><span class="v">'+esc(l.n)+'</span>'+linkBtn(l.u)+'</div>'; }).join("") + '</div>' +
+      '<div class="card"><h3>Live streaming platforms</h3>' +
+        '<div class="lede">Where creators stream live. Payout rules, revenue splits and requirements change often, so check each site before you decide. Module 12 above covers the basics.</div>' +
+        STREAMING_PLATFORMS.map(function(x){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(x.n)+'</b><br>'+esc(x.d)+'</span>'+linkBtn(x.u)+'</div>'; }).join("") +
+        '<div class="out-h">Streaming tools</div>' +
+        STREAMING_TOOLS.map(function(x){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(x.n)+'</b><br>'+esc(x.d)+'</span>'+linkBtn(x.u)+'</div>'; }).join("") + '</div>' +
       '<div class="card"><h3>Official lessons and rules</h3>' +
         CREATOR_LINKS.map(function(l){ return '<div class="apply-row"><span class="v">'+esc(l.n)+'</span>'+linkBtn(l.u)+'</div>'; }).join("") + '</div>';
     Array.prototype.forEach.call(host.querySelectorAll(".cu-done"), function(cb){
