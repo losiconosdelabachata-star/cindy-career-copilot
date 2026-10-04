@@ -102,7 +102,10 @@ try {
     await report("needs_you", "That site blocks automated visits, so I stopped. Apply by hand — your materials are ready in the Apply window.");
     process.exit(0);
   }
-  if (await page.locator("iframe[src*=recaptcha], iframe[src*=hcaptcha], .g-recaptcha, .h-captcha, [data-sitekey]").count()) {
+  // A CAPTCHA means a bot can't finish the submit. In a real run we stop here; in a practice run we
+  // still fill the form (so you can see what would work) and say a CAPTCHA is present.
+  const hasCaptcha = (await page.locator("iframe[src*=recaptcha], iframe[src*=hcaptcha], .g-recaptcha, .h-captcha, [data-sitekey]").count()) > 0;
+  if (hasCaptcha && packet.mode === "submit") {
     await report("needs_you", "This form has a CAPTCHA, so a bot can't finish it. Apply by hand — your materials are in the Apply assistant.");
     process.exit(0);
   }
@@ -156,7 +159,9 @@ try {
     process.exit(0);
   }
   if (packet.mode !== "submit") {
-    await report("dry_run_ok", "Practice run done — the form filled cleanly and nothing was submitted.", filled, missing);
+    await report("dry_run_ok", hasCaptcha
+      ? "Practice run done — the form filled, but it has a CAPTCHA, so a real submit would need you to finish it by hand. Nothing was submitted."
+      : "Practice run done — the form filled cleanly and nothing was submitted.", filled, missing);
     process.exit(0);
   }
 
