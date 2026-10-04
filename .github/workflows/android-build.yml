@@ -1,0 +1,90 @@
+name: android-build
+# Builds the Google Play app bundle (.aab) for Cindy Career Copilot on GitHub's servers — no Java/Android tools needed on your PC.
+#
+# - With NO secrets set: builds with a throwaway TEST key. Proves the pipeline works; that .aab is NOT uploadable to Play.
+# - With the 3 secrets below set: builds a properly signed .aab you upload to Google Play (see play-store/LAUNCH-GUIDE.md).
+#     ANDROID_KEYSTORE_BASE64   the upload keystore file, base64-encoded
+#     ANDROID_KEYSTORE_PASSWORD the keystore password
+#     ANDROID_KEY_ALIAS         the key alias   (key password is assumed to equal the keystore password)
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Android versionCode (increase by 1 for every upload to Play)"
+        default: "1"
+      version_name:
+        description: "Version name shown to users"
+        default: "1.0.0"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+
+      - name: Install Bubblewrap and point it at the preinstalled Java and Android SDK
+        run: |
+          npm install -g @bubblewrap/cli
+          mkdir -p ~/.bubblewrap
+          printf '{"jdkPath":"%s","androidSdkPath":"%s"}' "$JAVA_HOME" "$ANDROID_HOME" > ~/.bubblewrap/config.json
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Prepare the project and the signing key
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          mkdir -p twa && cp play-store/twa-manifest.json twa/twa-manifest.json
+          cd twa
+          python3 - <<'PY'
+          import json, os
+          m = json.load(open('twa-manifest.json'))
+          m['appVersionCode'] = int(os.environ.get('VCODE', '1'))
+          m['appVersion'] = os.environ.get('VNAME', '1.0.0')
+          json.dump(m, open('twa-manifest.json', 'w'), indent=2)
+          PY
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ] && [ -n "$KS_ALIAS" ]; then
+            echo "Using YOUR upload key"
+            echo "$KS_B64" | base64 -d > cindy-upload-key.keystore
+            sed -i "s/\"alias\": \"[^\"]*\"/\"alias\": \"$KS_ALIAS\"/" twa-manifest.json
+            echo "BUBBLEWRAP_KEYSTORE_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
+            echo "BUBBLEWRAP_KEY_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
+            echo "KEYMODE=real" >> "$GITHUB_ENV"
+          else
+            echo "No signing secrets found — building with a throwaway TEST key (not uploadable to Play)"
+            keytool -genkeypair -v -keystore cindy-upload-key.keystore -alias cindy-upload -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass testpass123 -keypass testpass123 -dname "CN=Cindy Test, O=Test, C=US" > /dev/null
+            echo "BUBBLEWRAP_KEYSTORE_PASSWORD=testpass123" >> "$GITHUB_ENV"
+            echo "BUBBLEWRAP_KEY_PASSWORD=testpass123" >> "$GITHUB_ENV"
+            echo "KEYMODE=test" >> "$GITHUB_ENV"
+          fi
+        env:
+          VCODE: ${{ inputs.version_code }}
+          VNAME: ${{ inputs.version_name }}
+
+      - name: Generate the Android project and build
+        working-directory: twa
+        run: |
+          bubblewrap update --skipVersionUpgrade --manifest=./twa-manifest.json || true
+          ls -la
+          bubblewrap build --skipPwaValidation --manifest=./twa-manifest.json
+
+      - name: Show the signing fingerprint (this is what goes into assetlinks.json if you use your own key)
+        working-directory: twa
+        run: |
+          keytool -list -v -keystore cindy-upload-key.keystore -storepass "$BUBBLEWRAP_KEYSTORE_PASSWORD" | grep -E "Alias name|SHA256" || true
+          ls -la *.aab *.apk 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cindy-android-${{ env.KEYMODE }}-key
+          path: |
+            twa/app-release-bundle.aab
+            twa/app-release-signed.apk
+            twa/twa-manifest.json
+          retention-days: 14
