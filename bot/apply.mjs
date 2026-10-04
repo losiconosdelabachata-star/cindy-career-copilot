@@ -74,9 +74,10 @@ try {
 
   // jump to the form if the posting page has an Apply button/tab first; follow it if it opens a new tab
   for (let attempt = 0; attempt < 3 && !(await onForm()); attempt++) {
-    const re = /^\s*(apply( now| for this (job|position|role)| here)?|application|start application)\s*$/i;
+    const re = /^\s*(apply\b(?!\s+(filters?|sort))|start (your )?application|application\s*$)/i;
     const cands = page.getByRole("link", { name: re }).or(page.getByRole("button", { name: re })).or(page.getByRole("tab", { name: re }));
     const total = await cands.count();
+    console.log("apply controls found:", total, "| url:", page.url());
     if (!total) break;
     // click the first VISIBLE match (pages often have hidden mobile/desktop duplicates)
     let clicked = false, href = "";
