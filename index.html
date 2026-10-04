@@ -702,6 +702,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   var pendingSync = null;
   function queueSync(){
     saveLocal();
+    scheduleRemindersSoon();
     if (!authToken) return;
     var snapshot = { profile:state.profile, activity:state.activity, jobs:state.jobs, cindy:state.cindy };
     if (pendingSync) clearTimeout(pendingSync);
@@ -868,6 +869,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     storeReady = true;
     authState = { mode:"login", error:"", username:"" };
     render();
+    scheduleRemindersSoon();
   }
 
   // A device that already had a browser-local-only account (from before
@@ -976,6 +978,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
 
   function logout(){
     if (authToken) apiRequest("/api/account/logout", { method:"POST", token:authToken }).catch(function(){});
+    try { cancelAllReminders(); } catch(e){}   // another person on this phone shouldn't get this person's reminders
     clearSession();
     currentUser = null;
     currentUserDisplay = "";
@@ -3514,6 +3517,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
           '<input type="file" id="p-restore" accept="application/json,.json" hidden>' +
         '</div>' +
       '</div>' +
+      deviceCardHtml() +
       '<div class="card">' +
         '<h3>Tell a friend about Cindy</h3>' +
         '<div class="lede">Know someone job-hunting or trying to get their money on track? Send them the link.</div>' +
@@ -3527,6 +3531,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
 
     $("#p-delete-acct").onclick = onDeleteAccount;
     $("#p-share").onclick = shareCindy;
+    wireDevice();
     $("#p-save").onclick = async function(){
       state.profile.name = $("#p-name").value.trim();
       state.profile.location = $("#p-loc").value.trim();
@@ -3721,6 +3726,157 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     if (NATIVE && window.Capacitor.Plugins && window.Capacitor.Plugins.Share){ window.Capacitor.Plugins.Share.share(data).catch(function(){}); return; }
     if (navigator.share){ navigator.share(data).catch(function(){}); return; }
     copyText(data.url); toast("Link copied — send it to a friend.");
+  }
+
+  // ---------- Face ID lock + reminder notifications (native app only; settings live on this phone) ----------
+  function devPrefs(){ try { return JSON.parse(localStorage.getItem("cindy-device-prefs") || "{}"); } catch(e){ return {}; } }
+  function saveDevPrefs(p){ try { localStorage.setItem("cindy-device-prefs", JSON.stringify(p)); } catch(e){} }
+  function plug(n){ return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[n]) || null; }
+
+  var lockEl = null, lockBusy = false, awaySince = 0;
+  function showLock(){
+    if (lockEl) return;
+    lockEl = document.createElement("div");
+    lockEl.id = "cindy-lock";
+    lockEl.style.cssText = "position:fixed; inset:0; z-index:9999; background:var(--ground); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; text-align:center;";
+    lockEl.innerHTML = '<img src="assets/logo-badge.png" alt="" style="width:110px; height:auto;">' +
+      '<div style="font-weight:700; font-size:20px;">Cindy is locked</div>' +
+      '<div class="age">Unlock to see your job search.</div>' +
+      '<button class="btn-primary" id="cindy-unlock" style="min-width:190px;">Unlock</button>' +
+      '<button class="btn-ghost" id="cindy-lock-out" style="font-size:12px;">Can’t unlock? Log out</button>';
+    document.body.appendChild(lockEl);
+    lockEl.querySelector("#cindy-unlock").onclick = tryUnlock;
+    lockEl.querySelector("#cindy-lock-out").onclick = function(){
+      var p = devPrefs(); p.lock = false; saveDevPrefs(p);
+      hideLock(); logout();
+    };
+    tryUnlock();
+  }
+  function hideLock(){ if (lockEl && lockEl.parentNode) lockEl.parentNode.removeChild(lockEl); lockEl = null; }
+  async function tryUnlock(){
+    if (lockBusy) return;
+    lockBusy = true;
+    var B = plug("NativeBiometric");
+    try {
+      if (!B) throw new Error("no biometric plugin");
+      await B.verifyIdentity({ reason:"Unlock Cindy", title:"Unlock Cindy", subtitle:"Your job search is private", useFallback:true, maxAttempts:5 });
+      hideLock();
+    } catch(e){ /* stay locked — the person can tap Unlock again */ }
+    lockBusy = false;
+  }
+  async function setLock(on){
+    var p = devPrefs();
+    if (!on){ p.lock = false; saveDevPrefs(p); return true; }
+    var B = plug("NativeBiometric");
+    try {
+      var av = B && await B.isAvailable({ useFallback:true });
+      if (!av || !av.isAvailable){ toast("Face ID / Touch ID isn’t set up on this phone. Turn it on in the iPhone Settings first."); return false; }
+      await B.verifyIdentity({ reason:"Turn on the Cindy lock", title:"Turn on lock", useFallback:true });
+    } catch(e){ toast("Couldn’t verify it’s you — the lock wasn’t turned on."); return false; }
+    p.lock = true; saveDevPrefs(p);
+    return true;
+  }
+
+  function hash32(s){ var h = 2166136261; for (var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 2000000000) + 1; }
+  function at9am(ts){ var d = new Date(ts); d.setHours(9, 0, 0, 0); return d; }
+  // everything is worked out on the phone from the saved jobs and certificates; nothing is sent anywhere
+  function buildReminders(){
+    var p = devPrefs(), out = [], nowT = Date.now(), DAY = 86400000;
+    function add(key, title, body, when){ if (when.getTime() > nowT + 60000) out.push({ id:hash32(key), title:title, body:body, schedule:{ at:when } }); }
+    if (p.followups) (state.jobs || []).forEach(function(j){
+      if (j.status === "applied" && j.appliedAt) add("fu:" + j.id, "Time to follow up", "It’s been a week since you applied for " + j.title + " at " + j.company + ". A short, polite note can help.", at9am(j.appliedAt + 7 * DAY));
+      if ((j.status === "tailored" || j.status === "saved") && j.tailoredResume && !j.appliedAt) add("rd:" + j.id, "Ready to send?", "Your résumé and cover letter for " + j.title + " at " + j.company + " are ready — apply today.", at9am((j.updatedAt || j.createdAt || nowT) + 2 * DAY));
+    });
+    if (p.certs) certList().forEach(function(c){
+      if (!c.expires) return;
+      var base = new Date(c.expires + "T09:00:00").getTime();
+      [[30, "in 30 days"], [7, "in 7 days"], [0, "today"]].forEach(function(x){
+        add("ce:" + c.id + ":" + x[0], "Certificate or license expiring", c.name + " expires " + x[1] + ". Renew it so you can keep applying.", new Date(base - x[0] * DAY));
+      });
+    });
+    var weekly = p.weekly ? { id:hash32("weekly"), title:"New week, new applications", body:"Pick three jobs to apply to this week — Cindy will get your materials ready.", schedule:{ on:{ weekday:2, hour:9, minute:0 }, allowWhileIdle:true } } : null;
+    return { items: out.slice(0, 50), weekly: weekly };
+  }
+  async function cancelAllReminders(){
+    var LN = plug("LocalNotifications"); if (!LN) return;
+    try { var pend = await LN.getPending(); if (pend && pend.notifications && pend.notifications.length) await LN.cancel({ notifications: pend.notifications.map(function(n){ return { id:n.id }; }) }); } catch(e){}
+  }
+  async function scheduleReminders(){
+    var LN = plug("LocalNotifications"); if (!LN || !currentUser) return;
+    var p = devPrefs();
+    try {
+      await cancelAllReminders();
+      if (!(p.followups || p.certs || p.weekly)) return;
+      var perm = await LN.checkPermissions();
+      if (!perm || perm.display !== "granted") return;
+      var plan = buildReminders(), list = plan.items.slice();
+      if (plan.weekly) list.push(plan.weekly);
+      if (list.length) await LN.schedule({ notifications: list });
+    } catch(e){}
+  }
+  var remTimer = null;
+  function scheduleRemindersSoon(){ if (!NATIVE) return; clearTimeout(remTimer); remTimer = setTimeout(scheduleReminders, 1500); }
+  async function askNotificationPermission(){
+    var LN = plug("LocalNotifications"); if (!LN) return false;
+    try {
+      var perm = await LN.checkPermissions();
+      if (perm && perm.display === "granted") return true;
+      perm = await LN.requestPermissions();
+      if (perm && perm.display === "granted") return true;
+    } catch(e){}
+    toast("Notifications are off for Cindy. Turn them on in the iPhone Settings → Notifications → Cindy.");
+    return false;
+  }
+
+  function deviceCardHtml(){
+    if (!NATIVE) return '<div class="card"><h3>Lock &amp; reminders</h3><div class="lede">Face ID lock and reminder notifications are available in the Cindy iPhone app.</div></div>';
+    var p = devPrefs();
+    function chk(id, label, on){ return '<label class="chk"><input type="checkbox" id="'+id+'"'+(on ? " checked" : "")+'> '+esc(label)+'</label>'; }
+    return '<div class="card"><h3>Lock &amp; reminders</h3>' +
+      '<div class="lede">Keep your job search private and never miss a follow-up. These settings are for this phone only.</div>' +
+      '<div class="stack">' +
+        chk("dv-lock", "Lock Cindy with Face ID / Touch ID", p.lock) +
+        chk("dv-fu", "Follow-up reminders — a week after you apply, and when your materials are ready to send", p.followups) +
+        chk("dv-ce", "Remind me before a certificate or license expires", p.certs) +
+        chk("dv-wk", "Monday-morning nudge to apply", p.weekly) +
+        '<div class="btn-row"><button class="btn-ghost" id="dv-test">Send a test reminder</button></div>' +
+        '<div class="age">The lock asks for Face ID or your phone passcode when you open Cindy or come back after a short time away. Reminders are created on your phone and stay on it.</div>' +
+      '</div></div>';
+  }
+  function wireDevice(){
+    if (!NATIVE || !$("#dv-lock")) return;
+    $("#dv-lock").onchange = async function(){
+      var el = $("#dv-lock"), want = el.checked;
+      var ok = await setLock(want);
+      if (!ok) el.checked = !want;
+      else toast(want ? "Cindy will ask for Face ID when you open it." : "Lock turned off.");
+    };
+    [["dv-fu", "followups"], ["dv-ce", "certs"], ["dv-wk", "weekly"]].forEach(function(pair){
+      $("#" + pair[0]).onchange = async function(){
+        var el = $("#" + pair[0]), want = el.checked;
+        if (want && !(await askNotificationPermission())){ el.checked = false; return; }
+        var p = devPrefs(); p[pair[1]] = want; saveDevPrefs(p);
+        scheduleReminders();
+        toast(want ? "Reminders on." : "Reminders off.");
+      };
+    });
+    $("#dv-test").onclick = async function(){
+      if (!(await askNotificationPermission())) return;
+      try {
+        await plug("LocalNotifications").schedule({ notifications:[{ id:hash32("test"), title:"Cindy", body:"This is a test reminder. You’re all set!", schedule:{ at:new Date(Date.now() + 5000) } }] });
+        toast("Test reminder coming in 5 seconds…");
+      } catch(e){ toast("Couldn’t schedule the test reminder."); }
+    };
+  }
+
+  if (NATIVE){
+    if (devPrefs().lock) showLock();
+    var AppP = plug("App");
+    if (AppP && AppP.addListener) AppP.addListener("appStateChange", function(st){
+      if (!devPrefs().lock) return;
+      if (!st.isActive){ awaySince = Date.now(); return; }
+      if (awaySince && Date.now() - awaySince > 20000) showLock();
+    });
   }
 
   // offline-capable shell (also what lets the Android app open instantly)
