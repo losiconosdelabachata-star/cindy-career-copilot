@@ -151,7 +151,7 @@ try {
         await page.waitForTimeout(500);
         await page.keyboard.press("Enter");
         await page.waitForTimeout(300);
-        const shown = (await el.evaluate(n => ((n.closest('[class*="select"]') || n.parentElement.parentElement || n).innerText || "")).catch(() => "")).toLowerCase();
+        const shown = (await el.evaluate(n => ((n.closest(".select__control") || n.closest('[class*="select-shell"]') || n.parentElement.parentElement || n).innerText || "")).catch(() => "")).toLowerCase();
         const key = isDecline(ans) ? "decline" : ans.toLowerCase().split(/\s+/)[0];
         if (shown.includes(key) || (isDecline(ans) && /prefer not|do not wish|don.t wish/.test(shown))) return true;
         await page.keyboard.press("Escape").catch(() => {});
