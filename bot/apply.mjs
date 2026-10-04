@@ -75,12 +75,26 @@ try {
   // jump to the form if the posting page has an Apply button/tab first; follow it if it opens a new tab
   for (let attempt = 0; attempt < 3 && !(await onForm()); attempt++) {
     const re = /^\s*(apply( now| for this (job|position|role)| here)?|application|start application)\s*$/i;
-    const btn = page.getByRole("link", { name: re }).or(page.getByRole("button", { name: re })).or(page.getByRole("tab", { name: re })).first();
-    if (!(await btn.count())) break;
-    popup = null;
-    await btn.click({ timeout: 8000 }).catch(() => {});
+    const cands = page.getByRole("link", { name: re }).or(page.getByRole("button", { name: re })).or(page.getByRole("tab", { name: re }));
+    const total = await cands.count();
+    if (!total) break;
+    // click the first VISIBLE match (pages often have hidden mobile/desktop duplicates)
+    let clicked = false, href = "";
+    for (let i = 0; i < Math.min(total, 8) && !clicked; i++) {
+      const c = cands.nth(i);
+      if (!(await c.isVisible().catch(() => false))) continue;
+      href = href || (await c.getAttribute("href").catch(() => "")) || "";
+      popup = null;
+      clicked = await c.click({ timeout: 6000 }).then(() => true).catch(() => false);
+    }
+    if (!href) href = (await cands.first().getAttribute("href").catch(() => "")) || "";
     await page.waitForTimeout(4000);
     if (popup) { page = popup; await page.waitForLoadState("domcontentloaded").catch(() => {}); await page.waitForTimeout(3000); }
+    // click didn't get us there? go straight to the link's address
+    if (!(await onForm()) && href && !/^(#|javascript:)/i.test(href)) {
+      await page.goto(new URL(href, page.url()).toString(), { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(4500);
+    }
   }
   const bodyText = (await page.locator("body").innerText().catch(() => "")).toLowerCase();
   if (/suspicious (behaviou?r|activity)|unusual (traffic|behaviou?r)|verify you are (a )?human|access denied|are you a robot/.test(bodyText)) {
