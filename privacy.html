@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Cindy Career Copilot</title>
+<meta name="description" content="How Cindy Career Copilot collects, uses, stores and deletes your information.">
+<link rel="icon" type="image/png" href="assets/favicon-32.png">
+<style>
+  :root{--ink:#17232e; --muted:#5c6f7f; --bg:#eef2f5; --panel:#fff; --line:#d6dde4; --accent:#2b6b88;}
+  @media (prefers-color-scheme:dark){:root{--ink:#e5edf3; --muted:#8ba0b0; --bg:#0d151d; --panel:#151f29; --line:#273743; --accent:#6fb4d3;}}
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
+  .wrap{max-width:760px; margin:0 auto; padding:20px 18px 60px;}
+  header{display:flex; align-items:center; gap:12px; margin:8px 0 18px;}
+  header img{width:48px; height:auto;}
+  header a{color:var(--ink); text-decoration:none; font-weight:700;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px;}
+  h1{font-size:26px; margin:0 0 4px;} h2{font-size:18px; margin:26px 0 6px;}
+  p,li{color:var(--ink)} .muted{color:var(--muted); font-size:14px;}
+  a{color:var(--accent)} ul{padding-left:20px}
+  table{border-collapse:collapse; width:100%; font-size:14px;} td,th{border:1px solid var(--line); padding:8px; text-align:left; vertical-align:top;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><img src="assets/logo-badge.png" alt=""><a href="./">Cindy Career Copilot</a></header>
+  <div class="card">
+    <h1>Privacy Policy</h1>
+    <p class="muted">Effective October 4, 2026</p>
+
+    <p>Cindy Career Copilot (“Cindy,” “we”) is a job-search, résumé, credit-education and benefits-finding tool. This policy explains what information we handle, why, who else touches it, and how you can delete it. We do not sell your information, show ads, or use advertising or analytics trackers.</p>
+
+    <h2>What we collect</h2>
+    <table>
+      <tr><th>Information</th><th>Why</th></tr>
+      <tr><td>Username and password (the password is stored only as a salted hash — we cannot read it)</td><td>To sign you in from any device</td></tr>
+      <tr><td>Profile details you type in: name, email, phone, city/state, LinkedIn or website links, target roles</td><td>To fill in applications and tailor documents</td></tr>
+      <tr><td>Résumé, cover letter, certificates and licenses, job pipeline (jobs, notes, statuses), activity log, your chats with Cindy</td><td>To run the features you use</td></tr>
+      <tr><td>Saved application answers (for example work authorization, sponsorship, salary, and optional voluntary self-identification choices)</td><td>Only so the auto-apply helper can reuse answers you chose. Voluntary questions stay blank unless you set them.</td></tr>
+      <tr><td>Credit and benefits tool inputs (score range, household size, income, state)</td><td>To build your plan and benefits estimate</td></tr>
+    </table>
+    <p>We do not collect your precise location, contacts, photos, microphone, or device identifiers. We do not ask for your Social Security number, bank, or card details, and the app never enters those on your behalf.</p>
+
+    <h2>Where it is stored</h2>
+    <p>Your account data is stored on Cloudflare (Cloudflare KV) so it follows you across devices, and a copy is cached in your browser or app for speed and offline use. Data is sent over HTTPS.</p>
+
+    <h2>Other services that receive some of your information</h2>
+    <ul>
+      <li><b>AI features</b> (tailored résumés, cover letters, essay drafts, plans) run on Cloudflare Workers AI. The text you submit for that feature (for example your résumé and a job description) is processed to produce the result.</li>
+      <li><b>Job search</b> sends your search words and location to job-listing providers (Adzuna, Remotive, RemoteOK, Jobicy, Himalayas, We Work Remotely). We don't send your name or account details.</li>
+      <li><b>Benefits estimate</b> sends household size, ages, income and state (no name) to PolicyEngine's public calculator.</li>
+      <li><b>Auto-apply helper</b> (only when you press the button): the job link, your selected documents, contact details and saved answers are held briefly on Cloudflare, then handled by a short-lived GitHub Actions runner that fills the employer's form. The temporary copy is erased when the run finishes and expires within 24 hours at the latest. The employer's site then receives what you chose to apply with.</li>
+      <li>Links to employers, job boards, government sites and other third parties leave Cindy. Their privacy policies apply there.</li>
+    </ul>
+
+    <h2>How long we keep it</h2>
+    <p>Until you delete your account. Temporary auto-apply copies are removed as described above.</p>
+
+    <h2>Your choices and deleting your data</h2>
+    <ul>
+      <li>Edit or remove any item in the app at any time (Profile tab).</li>
+      <li><b>Delete your account and all stored data:</b> in the app, Profile → “Delete my account”, or on the web at <a href="delete-account.html">delete-account.html</a>. Deletion is permanent. Copies in your own browser are cleared when you sign out or clear site data.</li>
+      <li>Back up your data first with Profile → Download backup if you want to keep a copy.</li>
+    </ul>
+
+    <h2>Children</h2>
+    <p>Cindy is for adults job-seeking and managing money. It isn't directed to children under 13, and we don't knowingly collect their information.</p>
+
+    <h2>Security</h2>
+    <p>Passwords are salted and hashed, connections use HTTPS, and access to stored data requires your sign-in. No online service is perfectly secure, so please use a strong, unique password.</p>
+
+    <h2>Not professional advice</h2>
+    <p>Cindy provides general education and tools. It is not legal, financial, credit, tax, or career-counseling advice, and benefit estimates are not guarantees of eligibility. See our <a href="terms.html">Terms</a>.</p>
+
+    <h2>Changes and contact</h2>
+    <p>If we change this policy we'll update the date above. Questions or requests: open an issue at <a href="https://github.com/losiconosdelabachata-star/cindy-career-copilot/issues">github.com/losiconosdelabachata-star/cindy-career-copilot/issues</a> (don't post private details there) or use the account deletion page.</p>
+  </div>
+  <p class="muted" style="text-align:center; margin-top:18px;"><a href="./">Back to Cindy</a> · <a href="terms.html">Terms</a> · <a href="delete-account.html">Delete my account</a></p>
+</div>
+</body>
+</html>

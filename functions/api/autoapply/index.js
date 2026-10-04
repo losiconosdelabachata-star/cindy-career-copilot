@@ -43,7 +43,7 @@ export async function onRequestPost({ request, env }) {
       const out = {};
       const a = b.answers && typeof b.answers === "object" ? b.answers : {};
       ["workAuth", "sponsor", "relocate", "heard", "salary", "notice", "country", "over18", "gender", "race", "veteran", "disability"].forEach(function (k) {
-        if (typeof a[k] === "string" && a[k].trim()) out[k] = a[k].trim().slice(0, 120);
+        if (typeof a[k] === "string" && a[k].trim()) out[k] = a[k].trim().slice(0, 120);   // includes voluntary self-ID choices
       });
       return out;
     })()

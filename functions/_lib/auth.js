@@ -62,7 +62,12 @@ export async function resolveSession(request, env) {
   if (!m) return null;
   const raw = await env.ACCOUNTS.get("sess:" + m[1].trim());
   if (!raw) return null;
-  try { return JSON.parse(raw).key || null; } catch (e) { return null; }
+  let key = null;
+  try { key = JSON.parse(raw).key || null; } catch (e) { return null; }
+  if (!key) return null;
+  // a deleted account's leftover sessions must not work (or recreate its data)
+  if (!(await env.ACCOUNTS.get("acct:" + key))) return null;
+  return key;
 }
 
 export function normalizeUsername(u) {

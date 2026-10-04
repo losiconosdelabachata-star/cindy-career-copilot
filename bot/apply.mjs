@@ -117,6 +117,24 @@ try {
   // ----- the user's saved answers to common application questions -----
   const A = packet.answers || {};
   const isDecline = v => /^decline/i.test(v || "");
+  // forms word the voluntary self-ID options differently; match each saved choice by meaning
+  const MEANING = {
+    "male": /^(male|man)\b/i,
+    "female": /^(female|woman)\b/i,
+    "non-binary": /non.?binary|nonconforming|non-conforming|genderqueer/i,
+    "hispanic or latino": /hispanic|latin/i,
+    "white": /^white|caucasian/i,
+    "black or african american": /black|african/i,
+    "asian": /^asian/i,
+    "native hawaiian or pacific islander": /hawaiian|pacific/i,
+    "american indian or alaska native": /american indian|alaska/i,
+    "two or more races": /two or more|multi.?racial|more than one/i,
+    "not a protected veteran": /not a (protected )?veteran|i am not a protected|not.*protected veteran|^no\b/i,
+    "protected veteran": /^(?!.*\bnot\b).*(protected )?veteran|identify as one or more of the classifications/i,
+    "no, i don't have a disability": /no,? (i )?(do not|don.t) have|^no\b|do not have a disability|not have a disability/i,
+    "yes, i have a disability": /^(?!.*\b(no|not)\b).*(yes|have a disability)/i
+  };
+  const meaningOf = v => MEANING[(v || "").toLowerCase()] || null;
   function pickAnswer(t) {
     if (/agree|acknowledge|confirm that you have read|privacy|plagiarism|consent|i understand|certify/.test(t)) return null; // never tick agreements
     if (/sponsor/.test(t)) return A.sponsor;
@@ -138,9 +156,10 @@ try {
       if (info.tag === "select") {
         const opts = await el.evaluate(n => [...n.options].map(o => o.text.trim()));
         const want = ans.toLowerCase();
+        const mre = meaningOf(ans);
         const pick = isDecline(ans)
           ? opts.find(o => /decline|prefer not|do not wish|don.t wish|choose not/i.test(o))
-          : (opts.find(o => o.toLowerCase() === want) || opts.find(o => o.toLowerCase().startsWith(want)) || opts.find(o => o.toLowerCase().includes(want)));
+          : (opts.find(o => o.toLowerCase() === want) || (mre && opts.find(o => mre.test(o))) || opts.find(o => o.toLowerCase().startsWith(want)) || opts.find(o => o.toLowerCase().includes(want)));
         if (!pick) return false;
         await el.selectOption({ label: pick });
         return true;
@@ -160,6 +179,8 @@ try {
           let idx = isDecline(ans)
             ? texts.findIndex(o => declineRe.test(o))
             : texts.findIndex(o => o.toLowerCase() === want);
+          const mre2 = meaningOf(ans);
+          if (idx < 0 && mre2) idx = texts.findIndex(o => mre2.test(o));
           if (idx < 0 && !isDecline(ans)) idx = texts.findIndex(o => o.toLowerCase().startsWith(want));
           if (idx < 0 && !isDecline(ans)) idx = texts.findIndex(o => o.toLowerCase().includes(want));
           if (idx >= 0) {

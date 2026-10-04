@@ -371,7 +371,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       uiAgencyLabel: "State / agency name (optional)", uiAgencyPlaceholder: "e.g. Florida DEO",
       uiFromLabel: "From (optional)", uiToLabel: "To (optional)",
       downloadLogPdfBtn: "Download log (PDF)", downloadLogCsvBtn: "Download log (CSV)",
-      backupH: "Back up & restore", backupLede: "Everything lives in this browser. Download a backup file to keep it safe or move it to another device.",
+      backupH: "Back up & restore", backupLede: "Your data is saved to your account and cached on this device. Download a backup file to keep your own copy.",
       downloadBackupBtn: "Download backup", restoreBtn: "Restore from file",
 
       activityLogH: "Activity log", markAllReadBtn: "Mark all read", noActivityYet: "No activity yet. It logs here as you add and move roles.",
@@ -461,7 +461,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       uiAgencyLabel: "Estado / agencia (opcional)", uiAgencyPlaceholder: "ej. Florida DEO",
       uiFromLabel: "Desde (opcional)", uiToLabel: "Hasta (opcional)",
       downloadLogPdfBtn: "Descargar registro (PDF)", downloadLogCsvBtn: "Descargar registro (CSV)",
-      backupH: "Respaldar y restaurar", backupLede: "Todo vive en este navegador. Descarga un respaldo para guardarlo a salvo o moverlo a otro dispositivo.",
+      backupH: "Respaldar y restaurar", backupLede: "Tus datos se guardan en tu cuenta y en este dispositivo. Descarga un respaldo para tener tu propia copia.",
       downloadBackupBtn: "Descargar respaldo", restoreBtn: "Restaurar desde archivo",
 
       activityLogH: "Registro de actividad", markAllReadBtn: "Marcar todo como leído", noActivityYet: "Aún no hay actividad. Se registra aquí cuando agregas o mueves puestos.",
@@ -940,6 +940,40 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     }
   }
 
+  // Permanently delete the signed-in account (server data) after re-entering the password.
+  function onDeleteAccount(){
+    var bd = document.createElement("div");
+    bd.className = "apply-backdrop";
+    bd.innerHTML =
+      '<div class="apply-modal" role="dialog" aria-modal="true" style="max-width:460px; align-self:center;">' +
+        '<h2>Delete your account?</h2>' +
+        '<div class="age" style="margin:6px 0 12px;">This permanently deletes <b>'+esc(currentUserDisplay || currentUser || "")+'</b> and all its data on our servers. It can’t be undone.</div>' +
+        '<label for="del-pass">Enter your password to confirm</label><input id="del-pass" type="password" autocomplete="current-password">' +
+        '<label class="chk" style="margin-top:12px;"><input type="checkbox" id="del-ok"> I understand this is permanent</label>' +
+        '<div class="age" id="del-msg" style="margin-top:8px; color:var(--danger);"></div>' +
+        '<div class="btn-row" style="margin-top:14px; justify-content:space-between;"><button class="btn-ghost" id="del-cancel">Cancel</button><button class="btn-danger" id="del-go" disabled>Delete forever</button></div>' +
+      '</div>';
+    document.body.appendChild(bd);
+    function close(){ if (bd.parentNode) bd.parentNode.removeChild(bd); }
+    bd.onclick = function(e){ if (e.target === bd) close(); };
+    bd.querySelector("#del-cancel").onclick = close;
+    bd.querySelector("#del-ok").onchange = function(){ bd.querySelector("#del-go").disabled = !bd.querySelector("#del-ok").checked; };
+    bd.querySelector("#del-go").onclick = async function(){
+      var pw = bd.querySelector("#del-pass").value, msg = bd.querySelector("#del-msg"), go = bd.querySelector("#del-go");
+      if (!pw){ msg.textContent = "Enter your password."; return; }
+      go.disabled = true; go.textContent = "Deleting…"; msg.textContent = "";
+      try {
+        await apiRequest("/api/account/delete", { method:"POST", body:{ username: currentUserDisplay || currentUser, password: pw } });
+        try { localStorage.removeItem(userKey()); } catch(e){}
+        close(); logout();
+        toast("Your account was deleted.");
+      } catch(e){
+        msg.textContent = (e && e.message) || "That didn’t work. Check your password.";
+        go.disabled = false; go.textContent = "Delete forever";
+      }
+    };
+  }
+
   function logout(){
     if (authToken) apiRequest("/api/account/logout", { method:"POST", token:authToken }).catch(function(){});
     clearSession();
@@ -988,7 +1022,8 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       '</div>' +
       '<div id="tab-body" class="fade"></div>' +
       '<div class="foot">' +
-        esc(t("footer")) +
+        '<a href="privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="terms.html" target="_blank" rel="noopener">Terms</a> · <a href="delete-account.html" target="_blank" rel="noopener">Delete account</a><br>' +
+        'Not legal, financial or career advice.' +
       '</div>';
 
     $("#theme-btn").onclick = toggleTheme;
@@ -2589,15 +2624,15 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     { k:"notice",   label:"Notice period / earliest start date", text:"e.g. 2 weeks" }
   ];
   var ANSWER_VOLUNTARY = [
-    { k:"gender", label:"Gender (voluntary question)" },
-    { k:"race", label:"Race / ethnicity (voluntary question)" },
-    { k:"veteran", label:"Veteran status (voluntary question)" },
-    { k:"disability", label:"Disability status (voluntary question)" }
+    { k:"gender", label:"Gender (voluntary question)", opts:["Male","Female","Non-binary"] },
+    { k:"race", label:"Race / ethnicity (voluntary question)", opts:["Hispanic or Latino","White","Black or African American","Asian","Native Hawaiian or Pacific Islander","American Indian or Alaska Native","Two or more races"] },
+    { k:"veteran", label:"Veteran status (voluntary question)", opts:["Not a protected veteran","Protected veteran"] },
+    { k:"disability", label:"Disability status (voluntary question)", opts:["No, I don't have a disability","Yes, I have a disability"] }
   ];
   function answersCardHtml(){
     var a = state.profile.answers || {};
     return '<div class="card"><h3>Application answers</h3>' +
-      '<div class="lede">Answer these once and the bot reuses them on application forms. It only uses what you put here — if a question isn’t covered, it stops and asks you. Private questions are optional: leave them on “I’ll answer myself” and the bot won’t touch them.</div>' +
+      '<div class="lede">Answer these once and the bot reuses them on application forms. It only uses what you put here — if a question isn’t covered, it stops and asks you. The voluntary questions are optional and private: pick your real answer, choose “Decline to answer”, or leave “I’ll answer myself” and the bot won’t touch them.</div>' +
       '<div class="stack"><div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));">' +
       ANSWER_FIELDS.map(function(f){
         return '<div><label for="ans-'+f.k+'">'+esc(f.label)+'</label>' + (f.opts
@@ -2606,7 +2641,9 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       }).join("") + '</div>' +
       '<div class="out-h">Voluntary questions</div><div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));">' +
       ANSWER_VOLUNTARY.map(function(f){
-        return '<div><label for="ans-'+f.k+'">'+esc(f.label)+'</label><select id="ans-'+f.k+'"><option value="">I’ll answer myself</option><option value="Decline"'+(a[f.k]==="Decline"?" selected":"")+'>Decline to answer</option></select></div>';
+        return '<div><label for="ans-'+f.k+'">'+esc(f.label)+'</label><select id="ans-'+f.k+'"><option value="">I’ll answer myself</option>' +
+          f.opts.map(function(o){ return '<option'+(a[f.k]===o?" selected":"")+'>'+esc(o)+'</option>'; }).join("") +
+          '<option value="Decline"'+(a[f.k]==="Decline"?" selected":"")+'>Decline to answer</option></select></div>';
       }).join("") + '</div>' +
       '<div class="btn-row"><button class="btn-primary" id="ans-save">Save answers</button><span class="saveflash" id="ans-flash"></span></div></div></div>';
   }
@@ -3476,8 +3513,14 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
           '<button class="btn-ghost" id="p-restore-btn">'+esc(t("restoreBtn"))+'</button>' +
           '<input type="file" id="p-restore" accept="application/json,.json" hidden>' +
         '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<h3>Delete my account</h3>' +
+        '<div class="lede">Permanently deletes your account and everything stored for it (profile, résumé, pipeline, saved answers, chats). This can’t be undone — download a backup first if you want a copy.</div>' +
+        '<div class="btn-row"><button class="btn-danger" id="p-delete-acct">Delete my account…</button></div>' +
       '</div>';
 
+    $("#p-delete-acct").onclick = onDeleteAccount;
     $("#p-save").onclick = async function(){
       state.profile.name = $("#p-name").value.trim();
       state.profile.location = $("#p-loc").value.trim();
@@ -3633,12 +3676,26 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     authToken = token;
     apiRequest("/api/account/session", { method:"GET", token:token }).then(function(res){
       enterAccount((res.username||"").toLowerCase(), res.username, token, res.data);
-    }).catch(function(){
-      clearSession();
-      authToken = null;
-      renderAuth();
+    }).catch(function(err){
+      if (err && err.status){          // the server answered and rejected the session → sign in again
+        clearSession();
+        authToken = null;
+        renderAuth();
+        return;
+      }
+      // no connection: keep the saved sign-in and let the person retry (don't log them out)
+      app.innerHTML = '<div class="auth-hero" style="margin-top:40px;"><img src="assets/logo-full.png" alt="Cindy Career Copilot"></div>' +
+        '<div class="card" style="max-width:420px; margin:0 auto; text-align:center;"><h2>You’re offline</h2>' +
+        '<div class="lede">Cindy needs a connection to load your account. Your data is safe — reconnect and try again.</div>' +
+        '<div class="btn-row" style="justify-content:center;"><button class="btn-primary" id="offline-retry">Try again</button></div></div>';
+      var rb = document.getElementById("offline-retry"); if (rb) rb.onclick = function(){ location.reload(); };
     });
   })();
+
+  // offline-capable shell (also what lets the Android app open instantly)
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+  }
 })();
 </script>
 </body>

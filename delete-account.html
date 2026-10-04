@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delete your account — Cindy Career Copilot</title>
+<meta name="description" content="Permanently delete your Cindy Career Copilot account and all data stored for it.">
+<link rel="icon" type="image/png" href="assets/favicon-32.png">
+<style>
+  :root{--ink:#17232e; --muted:#5c6f7f; --bg:#eef2f5; --panel:#fff; --line:#d6dde4; --accent:#2b6b88; --danger:#b3261e; --input:#f5f8fa;}
+  @media (prefers-color-scheme:dark){:root{--ink:#e5edf3; --muted:#8ba0b0; --bg:#0d151d; --panel:#151f29; --line:#273743; --accent:#6fb4d3; --danger:#ff8a80; --input:#1a2530;}}
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
+  .wrap{max-width:560px; margin:0 auto; padding:20px 18px 60px;}
+  header{display:flex; align-items:center; gap:12px; margin:8px 0 18px;}
+  header img{width:48px; height:auto;}
+  header a{color:var(--ink); text-decoration:none; font-weight:700;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:22px;}
+  h1{font-size:24px; margin:0 0 8px;}
+  label{display:block; font-size:13px; font-weight:600; margin:14px 0 4px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;}
+  input[type=text],input[type=password]{width:100%; background:var(--input); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:11px 12px; font-size:16px;}
+  .chk{display:flex; gap:10px; align-items:flex-start; margin:16px 0; font-size:15px;} .chk input{margin-top:5px;}
+  button{width:100%; min-height:46px; border:none; border-radius:8px; background:var(--danger); color:#fff; font-size:16px; font-weight:700; cursor:pointer;}
+  button:disabled{opacity:.5; cursor:not-allowed;}
+  .msg{margin-top:14px; padding:12px; border-radius:8px; font-size:15px; display:none;}
+  .msg.ok{display:block; background:rgba(46,125,50,.12); border:1px solid #2e7d32;}
+  .msg.err{display:block; background:rgba(179,38,30,.1); border:1px solid var(--danger);}
+  .muted{color:var(--muted); font-size:14px;} a{color:var(--accent)} ul{padding-left:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><img src="assets/logo-badge.png" alt=""><a href="./">Cindy Career Copilot</a></header>
+  <div class="card">
+    <h1>Delete your account</h1>
+    <p>This permanently deletes your Cindy Career Copilot account and everything stored for it on our servers:</p>
+    <ul>
+      <li>your profile, résumé and cover letter</li>
+      <li>your job pipeline, activity and chats with Cindy</li>
+      <li>certificates, licenses and saved application answers</li>
+    </ul>
+    <p><b>This can't be undone.</b> If you want a copy first, sign in and use Profile → Download backup.</p>
+    <p class="muted">You can also do this inside the app: Profile → Delete my account.</p>
+
+    <form id="f" autocomplete="off">
+      <label for="u">Username</label>
+      <input type="text" id="u" autocomplete="username" required>
+      <label for="p">Password</label>
+      <input type="password" id="p" autocomplete="current-password" required>
+      <div class="chk"><input type="checkbox" id="c"><label for="c" style="text-transform:none; font-size:15px; font-weight:400; margin:0; color:inherit;">I understand my account and all its data will be permanently deleted.</label></div>
+      <button type="submit" id="go" disabled>Delete my account</button>
+    </form>
+    <div class="msg" id="msg"></div>
+    <p class="muted" style="margin-top:18px;">Temporary copies made for the auto-apply helper are erased automatically within 24 hours. Forgot your password? Open an issue at <a href="https://github.com/losiconosdelabachata-star/cindy-career-copilot/issues">our GitHub page</a> without posting private details and we'll help.</p>
+  </div>
+  <p class="muted" style="text-align:center; margin-top:18px;"><a href="./">Back to Cindy</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
+</div>
+<script>
+(function(){
+  var API = "https://cindy-career-copilot.pages.dev";
+  var f = document.getElementById("f"), go = document.getElementById("go"), c = document.getElementById("c"), msg = document.getElementById("msg");
+  c.onchange = function(){ go.disabled = !c.checked; };
+  f.onsubmit = function(e){
+    e.preventDefault();
+    if (!c.checked) return;
+    go.disabled = true; go.textContent = "Deleting…"; msg.className = "msg";
+    fetch(API + "/api/account/delete", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: document.getElementById("u").value, password: document.getElementById("p").value })
+    }).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); })
+    .then(function(x){
+      if (x.ok) {
+        try { localStorage.clear(); } catch(e){}
+        msg.className = "msg ok"; msg.textContent = "Your account and its data were deleted.";
+        f.style.display = "none";
+      } else {
+        msg.className = "msg err"; msg.textContent = (x.d && x.d.message) || "That didn't work. Check your username and password.";
+        go.disabled = !c.checked; go.textContent = "Delete my account";
+      }
+    }).catch(function(){
+      msg.className = "msg err"; msg.textContent = "Couldn't reach the server. Check your connection and try again.";
+      go.disabled = !c.checked; go.textContent = "Delete my account";
+    });
+  };
+})();
+</script>
+</body>
+</html>
