@@ -43,11 +43,21 @@ export async function onRequestPost({ request, env }) {
         "validating debts before paying collectors and written pay-for-delete/settlement agreements, secured cards or credit-builder loans for thin files, " +
         "becoming an authorized user, and not closing old accounts. " +
         "Never promise a score change, never recommend paying a credit repair company, never suggest disputing accurate items falsely or creating a new identity (CPN scams). " +
-        "Reply with ONLY JSON: {\"summary\":\"2-3 sentences\",\"steps\":[{\"title\":\"short\",\"detail\":\"specific what-to-do, 1-3 sentences\",\"when\":\"This week|Next 30 days|Months 2-3|Months 4-6|Ongoing\"}]} with 8 to 12 steps.";
+        "Reply with ONLY JSON: {\"summary\":\"2-3 sentences\",\"steps\":[{\"title\":\"short\",\"detail\":\"specific what-to-do, 1-3 sentences\",\"when\":\"This week|Next 30 days|Months 2-3|Months 4-6|Ongoing\"}]} with 8 to 10 steps, each detail under 35 words.";
       const user =
         "Score range: " + String(b.score || "unknown").slice(0, 40) + "\nProblems: " + (arr(b.issues, 12, 60).join(", ") || "none listed") +
         "\nGoal: " + String(b.goal || "improve overall").slice(0, 200) + "\nMonthly money available for debt/credit building: " + String(b.income || "unknown").slice(0, 60);
-      const o = parseObj(await ask(env, system, user, 1800));
+      const rawPlan = await ask(env, system, user, 2800);
+      let o = parseObj(rawPlan);
+      if (!o || !Array.isArray(o.steps)) {
+        // tolerate a cut-off or slightly malformed reply: harvest each complete step
+        const steps = [];
+        const re = /"title"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"detail"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"when"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+        let m;
+        while ((m = re.exec(rawPlan)) !== null) steps.push({ title: m[1], detail: m[2], when: m[3] });
+        const sm = rawPlan.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (steps.length) o = { summary: sm ? sm[1] : "", steps: steps };
+      }
       if (!o || !Array.isArray(o.steps)) return json({ error: "parse", message: "Couldn't build the plan. Try again." }, 502);
       return json({
         summary: String(o.summary || "").slice(0, 600),
