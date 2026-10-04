@@ -25,7 +25,8 @@ export async function onRequestPost({ request, env }) {
     "If the company isn't stated, use an empty string. Never invent details.";
   try {
     const r = await env.AI.run(MODEL, { messages: [{ role: "system", content: system }, { role: "user", content: text }], max_tokens: 900 });
-    const raw = String((r && (r.response || r.result)) || "");
+    const out = r && (r.response || r.result);
+    const raw = out && typeof out === "object" ? JSON.stringify(out) : String(out || "");
     const m = raw.match(/\{[\s\S]*\}/);
     if (!m) return json({ error: "parse", message: "Couldn't read that posting." }, 502);
     const o = JSON.parse(m[0]);

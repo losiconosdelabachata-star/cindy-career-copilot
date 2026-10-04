@@ -20,7 +20,10 @@ function arr(v, n, len) { return (Array.isArray(v) ? v : []).slice(0, n).map(fun
 
 async function ask(env, system, user, max) {
   const r = await env.AI.run(MODEL, { messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: max || 1400 });
-  return String((r && (r.response || r.result)) || "").trim();
+  const out = r && (r.response || r.result);
+  // Workers AI hands back an already-parsed object when the model replies with pure JSON
+  if (out && typeof out === "object") return JSON.stringify(out);
+  return String(out || "").trim();
 }
 function parseObj(raw) {
   const m = raw.match(/\{[\s\S]*\}/);
