@@ -119,6 +119,10 @@ input::placeholder,textarea::placeholder{color:var(--faint);}
 button{font-family:var(--serif); font-weight:600; font-size:13.5px; text-transform:uppercase; letter-spacing:.05em;
   border:1px solid transparent; border-radius:var(--radius); padding:9px 16px; cursor:pointer;}
 button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.chk-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px;}
+.chk{display:flex !important; align-items:center; gap:10px; margin:0 !important; padding:9px 12px; border:1px solid var(--border); border-radius:8px; background:var(--panel-2); font-size:14px; text-transform:none !important; font-weight:400 !important; letter-spacing:0 !important; cursor:pointer; text-align:left;}
+.chk input{width:auto !important; flex:none; margin:0;}
+.chk:has(input:checked){border-color:var(--accent); background:var(--accent-ghost);}
 .apply-backdrop{position:fixed; inset:0; background:rgba(10,18,26,.6); z-index:50; display:flex; align-items:flex-start; justify-content:center; overflow:auto; padding:24px 12px;}
 .apply-modal{background:var(--panel-2); color:var(--ink); border:1px solid var(--border); border-radius:10px; max-width:720px; width:100%; padding:20px;}
 .apply-modal h2{margin:0 0 4px; font-size:20px;}
@@ -1574,7 +1578,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<select class="j-tone" aria-label="Cover letter tone"><option value="warm">Warm</option><option value="formal">Formal</option><option value="concise">Concise</option><option value="confident">Confident</option></select>' +
         '<button class="btn-ghost j-cover"'+ (AI_ENABLED ? "" : " disabled") +'>Write cover letter</button>' +
         (botUrl(j)
-          ? '<label style="display:flex; align-items:center; gap:6px; font-size:13px;"><input type="checkbox" class="j-approve"'+(j.approved ? " checked" : "")+(s==="applied" ? " disabled" : "")+'> Approved for auto-apply</label>'
+          ? '<label class="chk"><input type="checkbox" class="j-approve"'+(j.approved ? " checked" : "")+(s==="applied" ? " disabled" : "")+'> Approved for auto-apply</label>'
           : '<span class="age">Apply by hand (no company link)</span>') +
         '<button class="btn-primary j-apply"'+ (AI_ENABLED ? "" : " disabled") +'>Apply →</button>' +
         '<select class="j-status" aria-label="'+esc(t("statusAria"))+'">' +
@@ -1940,8 +1944,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<div class="lede">A step-by-step plan using the free methods the law gives you — you never need to pay a “credit repair” company. This is education, not legal or financial advice, and no one can promise a score.</div>' +
         '<div class="stack">' +
           '<div><label for="cr-score">Where’s your score now?</label><select id="cr-score">' + CREDIT_SCORES.map(function(x){ return '<option'+(inp.score===x?" selected":"")+'>'+esc(x)+'</option>'; }).join("") + '</select></div>' +
-          '<div><label>What’s on your report? <span style="text-transform:none; font-weight:400;">(check all that apply)</span></label>' +
-            CREDIT_ISSUES.map(function(x,i){ return '<label style="display:flex; gap:8px; align-items:center; font-size:14px; text-transform:none; font-weight:400;"><input type="checkbox" class="cr-issue" value="'+esc(x)+'"'+(inp.issues.indexOf(x)!==-1?" checked":"")+'> '+esc(x)+'</label>'; }).join("") + '</div>' +
+          '<div><label>What’s on your report? <span style="text-transform:none; font-weight:400;">(check all that apply)</span></label><div class="chk-grid">' +
+            CREDIT_ISSUES.map(function(x,i){ return '<label class="chk"><input type="checkbox" class="cr-issue" value="'+esc(x)+'"'+(inp.issues.indexOf(x)!==-1?" checked":"")+'> '+esc(x)+'</label>'; }).join("") + '</div></div>' +
           '<div class="grid2">' +
             '<div><label for="cr-goal">Your goal</label><input id="cr-goal" value="'+esc(inp.goal)+'" placeholder="Buy a car, rent an apartment, 700+…"></div>' +
             '<div><label for="cr-money">Monthly $ you can put toward this</label><input id="cr-money" value="'+esc(inp.income)+'" placeholder="$100"></div>' +
@@ -2032,8 +2036,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<div class="lede">Pick your state and what you need. You’ll get official places to look and apply, a prep checklist, and a drafted statement of need. Applications ask for private details (SSN, bank, income), so you submit those yourself — Cindy never enters them for you.</div>' +
         '<div class="stack">' +
           '<div><label for="g-state">Your state</label><select id="g-state"><option value="">Choose…</option>' + STATES.map(function(x){ return '<option'+(g.state===x?" selected":"")+'>'+esc(x)+'</option>'; }).join("") + '</select></div>' +
-          '<div><label>What do you need help with?</label>' +
-            GRANT_CATS.map(function(c){ return '<label style="display:flex; gap:8px; align-items:center; font-size:14px; text-transform:none; font-weight:400;"><input type="checkbox" class="g-cat" value="'+c.key+'"'+(g.cats.indexOf(c.key)!==-1?" checked":"")+'> '+esc(c.label)+'</label>'; }).join("") + '</div>' +
+          '<div><label>What do you need help with?</label><div class="chk-grid">' +
+            GRANT_CATS.map(function(c){ return '<label class="chk"><input type="checkbox" class="g-cat" value="'+c.key+'"'+(g.cats.indexOf(c.key)!==-1?" checked":"")+'> '+esc(c.label)+'</label>'; }).join("") + '</div></div>' +
           '<div><label for="g-sit">Your situation <span style="text-transform:none; font-weight:400;">(in your own words — used for the statement)</span></label><textarea id="g-sit" rows="4" placeholder="Household size, income change, what happened, what you need…">'+esc(g.situation)+'</textarea></div>' +
           '<div class="btn-row"><button class="btn-primary" id="g-go"'+(AI_ENABLED?"":" disabled")+'>Find my options</button></div>' +
         '</div></div>' +
