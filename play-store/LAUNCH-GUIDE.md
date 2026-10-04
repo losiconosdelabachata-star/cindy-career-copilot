@@ -24,7 +24,23 @@ you only publish a new Play release if you change the app's icon, name, or packa
    Note: *personal* developer accounts created recently must run a **closed test with a minimum number of testers
    (currently 12) for 14 days** before they can publish to production. Check the current rule in Play Console.
    Organization accounts skip that but need a D-U-N-S number.
-2. **Build the app bundle (.aab)** — pick one:
+2. **Build the app bundle (.aab)** — **recommended: let GitHub build it for you** (already set up and tested — it produced a real 3.6 MB .aab):
+   1. On your PC, make your **upload key** once (PowerShell, in a safe folder — it asks you for a password and some details; at "key password" just press Enter):
+      ```
+      keytool -genkeypair -v -keystore cindy-upload-key.keystore -alias cindy-upload -keyalg RSA -keysize 2048 -validity 10000
+      ```
+      **Back this file up somewhere safe (cloud drive + USB) and never share it.** Google can reset a lost upload key if you use Play App Signing, but it's a hassle.
+   2. Copy the key into your clipboard as text:
+      ```
+      [Convert]::ToBase64String([IO.File]::ReadAllBytes("cindy-upload-key.keystore")) | Set-Clipboard
+      ```
+   3. GitHub → the repo → *Settings → Secrets and variables → Actions → New repository secret*, add three secrets:
+      `ANDROID_KEYSTORE_BASE64` (paste), `ANDROID_KEYSTORE_PASSWORD` (the password you chose), `ANDROID_KEY_ALIAS` (`cindy-upload`).
+   4. GitHub → *Actions → android-build → Run workflow* (leave version code `1`; use `2`, `3`… for each later upload).
+   5. When it's green, open the run, download the artifact `cindy-android-real-key`, and unzip it: **`app-release-bundle.aab` is what you upload to Play.**
+      (Without the three secrets it builds with a throwaway test key — useful for a trial run, but Play will reject it.)
+
+   Other ways, if you prefer:
    - **Easiest — PWABuilder:** go to https://www.pwabuilder.com, enter `https://cindy-career-copilot.pages.dev`,
      click *Package for stores → Android*, use package ID `com.cindycareercopilot.app`, and download the package.
      It generates the signing key for you — **keep that file and its password safe; you can't publish updates without it.**
@@ -123,6 +139,12 @@ Your data stays yours: no ads, no data selling, and you can delete your account 
 - [ ] Demo account works; Data safety + App content forms complete
 - [ ] 12+ testers opted in for 14 days (personal accounts) → apply for production access → promote release
 - [ ] For later updates: bump `appVersionCode` (and `appVersion`) in `twa-manifest.json`, rebuild, upload
+
+## Face ID lock and reminders on Android
+The Play Store app (a Trusted Web Activity) shows the website, so **Face ID/fingerprint lock and reminder notifications are in the iPhone app only for now**
+(they need native code). If you want them on Android too, the clean way is to switch the Play app to the same Capacitor build as iPhone
+(biometric lock + local notifications work the same way). Same package ID and signing key, so it replaces the first version as an update.
+Recommended order: **upload the current build now to start the closed-test clock, then swap in the Capacitor Android build** when ready.
 
 ## iPhone note
 
