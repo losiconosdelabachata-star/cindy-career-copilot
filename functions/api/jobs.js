@@ -31,6 +31,9 @@ export async function onRequestGet(context) {
   const country = (url.searchParams.get("country") || "us").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2) || "us";
   const remote = url.searchParams.get("remote") === "1";
   const page = Math.max(1, Math.min(10, parseInt(url.searchParams.get("page"), 10) || 1));
+  const jobType = (url.searchParams.get("type") || "").toLowerCase();
+  const days = Math.max(0, Math.min(90, parseInt(url.searchParams.get("days"), 10) || 0));
+  const sortNew = url.searchParams.get("sort") === "date";
 
   if (!env.ADZUNA_APP_ID || !env.ADZUNA_APP_KEY) {
     return json({ error: "not_configured", message: "Job matching isn't configured yet." }, 501);
@@ -51,8 +54,10 @@ export async function onRequestGet(context) {
     u.searchParams.set("app_key", env.ADZUNA_APP_KEY);
     u.searchParams.set("results_per_page", remote ? "50" : "20");
     u.searchParams.set("what", remote ? term + " remote" : term);
-    if (remote) u.searchParams.set("sort_by", "date");
-    else if (where.trim()) u.searchParams.set("where", where);
+    if (remote || sortNew) u.searchParams.set("sort_by", "date");
+    if (!remote && where.trim()) u.searchParams.set("where", where);
+    if (jobType === "full_time" || jobType === "part_time" || jobType === "contract") u.searchParams.set(jobType, "1");
+    if (days) u.searchParams.set("max_days_old", String(days));
     u.searchParams.set("content-type", "application/json");
     const res = await fetch(u.toString());
     if (!res.ok) {

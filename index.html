@@ -1576,13 +1576,30 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '</div>' +
       '</div>' +
       '<div id="jobs-list">' +
-        (jobs.length ? jobs.map(jobCard).join("") : '<div class="card"><div class="empty">'+esc(t("noRolesYet"))+'</div></div>') +
+        (jobs.length ? groupedJobsHtml(jobs) : '<div class="card"><div class="empty">'+esc(t("noRolesYet"))+'</div></div>') +
       '</div>';
 
     $("#j-add").onclick = onAddJob;
     $("#imp-go").onclick = onImportJob;
+    Array.prototype.forEach.call(b.querySelectorAll(".stage-group"), function(d){
+      d.addEventListener("toggle", function(){ groupOpen[d.dataset.stage] = d.open; });
+    });
     var qb = $("#q-submit"); if (qb) qb.onclick = onSubmitApproved;
     wireJobCards();
+  }
+
+  // Jobs grouped by stage: active stages open, finished ones (denied / closed) collapsed.
+  var groupOpen = {};
+  function groupedJobsHtml(jobs){
+    var order = ["interview","tailored","saved","applied","denied","closed"];
+    return order.map(function(key){
+      var list = jobs.filter(function(j){ return (j.status || "saved") === key; });
+      if (!list.length) return "";
+      var open = groupOpen[key] != null ? groupOpen[key] : (key !== "denied" && key !== "closed");
+      return '<details class="stage-group" data-stage="'+key+'"'+(open ? " open" : "")+' style="margin-bottom:14px;">' +
+        '<summary style="cursor:pointer; font-weight:700; font-size:15px; padding:8px 2px;"><span class="stat s-'+key+'" style="margin-right:8px;">'+esc(stageLabel(key))+'</span>'+list.length+(list.length===1 ? " job" : " jobs")+'</summary>' +
+        list.map(jobCard).join("") + '</details>';
+    }).join("");
   }
 
   function jobCard(j){
@@ -2737,6 +2754,11 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
             '<div><label for="m-where">'+esc(t("matchesWhereLabel"))+'</label><input id="m-where" value="'+esc(m.where)+'" placeholder="Miami, FL"></div>' +
           '</div>' +
           '<label class="chk"><input type="checkbox" id="m-remote"'+(m.remote?" checked":"")+'> Remote jobs only (ignores location)</label>' +
+          '<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">' +
+            '<div><label for="m-type">Job type</label><select id="m-type">' + [["","Any"],["full_time","Full-time"],["part_time","Part-time"],["contract","Contract"]].map(function(x){ return '<option value="'+x[0]+'"'+((m.type||"")===x[0]?" selected":"")+'>'+x[1]+'</option>'; }).join("") + '</select></div>' +
+            '<div><label for="m-days">Posted</label><select id="m-days">' + [["","Any time"],["1","Last 24 hours"],["7","Last 7 days"],["30","Last 30 days"]].map(function(x){ return '<option value="'+x[0]+'"'+((m.days||"")===x[0]?" selected":"")+'>'+x[1]+'</option>'; }).join("") + '</select></div>' +
+            '<div><label for="m-sort">Sort by</label><select id="m-sort"><option value=""'+(m.sort?"":" selected")+'>Best match</option><option value="date"'+(m.sort==="date"?" selected":"")+'>Newest first</option></select></div>' +
+          '</div>' +
           '<div class="btn-row">' +
             '<button class="btn-primary" id="m-search">'+ esc(m.running ? t("matchesSearching") : t("matchesSearchBtn")) +'</button>' +
           '</div>' +
@@ -2757,6 +2779,9 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
 
     $("#m-search").onclick = onSearchMatches;
     $("#m-remote").onchange = function(){ matchesCache.remote = $("#m-remote").checked; updateQuickLinks(); };
+    $("#m-type").onchange = function(){ matchesCache.type = $("#m-type").value; };
+    $("#m-days").onchange = function(){ matchesCache.days = $("#m-days").value; };
+    $("#m-sort").onchange = function(){ matchesCache.sort = $("#m-sort").value; };
     $("#m-easy").onchange = function(){ matchesCache.easyApply = $("#m-easy").checked; updateQuickLinks(); };
     $("#m-what").oninput = function(){ matchesCache.what = $("#m-what").value; updateQuickLinks(); };
     $("#m-where").oninput = function(){ matchesCache.where = $("#m-where").value; updateQuickLinks(); };
@@ -2815,7 +2840,9 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         (tracked
           ? '<button class="btn-ghost" disabled>'+esc(t("matchesAlreadyTracked"))+'</button>'
           : '<button class="btn-ghost m-save">'+esc(t("matchesSaveBtn"))+'</button>' +
-            (isBlockedHost(r.url) ? "" : '<button class="btn-primary m-approve">Approve for auto-apply</button>')) +
+            (isBlockedHost(r.url)
+              ? '<button class="btn-primary m-find">Find company apply page</button>'
+              : '<button class="btn-primary m-approve">Approve for auto-apply</button>')) +
       '</div>' +
     '</div>';
   }
@@ -2826,6 +2853,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       var save = $(".m-save", el);
       if (save) save.onclick = function(){ onSaveMatch(idx, save, false); };
       var apr = $(".m-approve", el); if (apr) apr.onclick = function(){ onSaveMatch(idx, apr, true); };
+      var fnd = $(".m-find", el); if (fnd) fnd.onclick = function(){ onFindApply(idx, fnd); };
     });
   }
 
@@ -2838,7 +2866,10 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     matchesCache.running = true; matchesCache.error = ""; matchesCache.results = null;
     renderMatches($("#tab-body"));
     try {
-      var url = AI_BASE + "/api/jobs?what=" + encodeURIComponent(what) + (where && !matchesCache.remote ? "&where=" + encodeURIComponent(where) : "") + (matchesCache.remote ? "&remote=1" : "");
+      var url = AI_BASE + "/api/jobs?what=" + encodeURIComponent(what) + (where && !matchesCache.remote ? "&where=" + encodeURIComponent(where) : "") + (matchesCache.remote ? "&remote=1" : "") +
+        (matchesCache.type ? "&type=" + encodeURIComponent(matchesCache.type) : "") +
+        (matchesCache.days ? "&days=" + encodeURIComponent(matchesCache.days) : "") +
+        (matchesCache.sort ? "&sort=" + encodeURIComponent(matchesCache.sort) : "");
       var res = await fetch(url);
       var data = await res.json().catch(function(){ return null; });
       if (!res.ok || !data || data.error){
@@ -2852,6 +2883,35 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     } finally {
       matchesCache.running = false;
       renderMatches($("#tab-body"));
+    }
+  }
+
+  // Look for the company's own application page (Greenhouse / Lever / Ashby). If found, save the job
+  // with that link so the bot can apply; if not, say so and save it for a manual apply.
+  async function onFindApply(idx, btn){
+    var r = matchesCache.results && matchesCache.results[idx];
+    if (!r) return;
+    btn.disabled = true; btn.textContent = "Looking…";
+    var found = null;
+    try {
+      var res = await fetch(AI_BASE + "/api/findapply?company=" + encodeURIComponent(r.company) + "&title=" + encodeURIComponent(r.title));
+      var d = await res.json().catch(function(){ return null; });
+      if (d && d.url) found = d;
+    } catch(e){}
+    var existing = alreadyTracked(r.url);
+    if (found){
+      var job = existing || { id:uid(), title:r.title, company:r.company, url:r.url,
+        description:(r.description || "").slice(0, 1500), approved:false,
+        status:"saved", tailoredResume:"", coverLetter:"", createdAt:now(), updatedAt:now(), appliedAt:null };
+      job.applyUrl = found.url; job.updatedAt = now();
+      if (!existing) state.jobs.unshift(job);
+      await persistJob(job);
+      await pushActivity("Found the company application page for " + r.title + " at " + r.company + " (" + found.source + ").", job.id);
+      toast("Found it on " + found.source + " — saved to your pipeline. Open it there and hit Apply →.");
+      render();
+    } else {
+      btn.disabled = false; btn.textContent = "Find company apply page";
+      toast("Couldn’t find " + r.company + "’s own page. Open the posting, click Apply, and paste the company’s link into the Apply window.");
     }
   }
 
