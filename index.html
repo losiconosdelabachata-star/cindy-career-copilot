@@ -1800,7 +1800,12 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
           '<div class="btn-row"><button class="btn-ghost" id="ap-dry">Practice run (won’t submit)</button>' +
           '<button class="btn-primary" id="ap-auto">Auto-apply for me</button></div>' +
           '<div class="age" id="ap-status" style="margin-top:8px;"></div>'
-        ) : "") +
+        ) : (
+          '<div class="out-h">Want the bot to apply for you?</div>' +
+          '<div class="age" style="margin:4px 0 8px;">Job boards (Adzuna, LinkedIn, Indeed…) don’t allow bots. Open the job above, click Apply there, and copy the web address of the <b>company’s own</b> application page (often Greenhouse, Lever or their careers site). Paste it here:</div>' +
+          '<div class="btn-row"><input id="ap-link" style="flex:1; min-width:200px;" placeholder="https://…"><button class="btn-primary" id="ap-savelink">Save link</button></div>' +
+          '<div class="age" id="ap-linkmsg" style="margin-top:6px;"></div>'
+        )) +
         '<div class="btn-row" style="margin-top:18px; justify-content:space-between;">' +
           '<button class="btn-ghost" id="ap-close">Close</button>' +
           '<button class="btn-primary" id="ap-done">I submitted it ✓</button>' +
@@ -1844,6 +1849,16 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         setBtns(false);
       }
     }
+    var sl = bd.querySelector("#ap-savelink"); if (sl) sl.onclick = async function(){
+      var u = (bd.querySelector("#ap-link").value || "").trim();
+      var msg = bd.querySelector("#ap-linkmsg");
+      if (!/^https:\/\//i.test(u) || isBlockedHost(u)){ msg.textContent = "Use the company’s own https:// application link — not LinkedIn, Indeed, Adzuna or other job boards."; return; }
+      j.applyUrl = u; j.updatedAt = now();
+      await persistJob(j);
+      close();
+      openApplyModal(j);
+      toast("Link saved — the Auto-apply buttons are now available.");
+    };
     var dry = bd.querySelector("#ap-dry"); if (dry) dry.onclick = function(){ runBot("dry"); };
     var au = bd.querySelector("#ap-auto"); if (au) au.onclick = function(){ runBot("submit"); };
     bd.querySelector("#ap-done").onclick = async function(){
