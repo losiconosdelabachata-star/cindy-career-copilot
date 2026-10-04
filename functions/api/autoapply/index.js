@@ -9,6 +9,7 @@ import { CORS, json } from "../../_lib/cors.js";
 import { resolveSession } from "../../_lib/auth.js";
 
 const TTL = 60 * 60 * 24;
+const DEFAULT_REPO = "losiconosdelabachata-star/cindy-career-copilot";
 
 export async function onRequestOptions() {
   return new Response(null, { headers: CORS });
@@ -19,7 +20,7 @@ function clip(v, n) { return String(v == null ? "" : v).slice(0, n); }
 export async function onRequestPost({ request, env }) {
   const user = await resolveSession(request, env);
   if (!user) return json({ error: "unauthorized" }, 401);
-  if (!env.GH_DISPATCH_TOKEN || !env.GH_REPO || !env.BOT_SECRET) {
+  if (!env.GH_DISPATCH_TOKEN || !env.BOT_SECRET) {
     return json({ error: "bot_not_configured", message: "Auto-apply isn't switched on yet (server setup missing)." }, 503);
   }
   let b;
@@ -45,7 +46,8 @@ export async function onRequestPost({ request, env }) {
   const id = crypto.randomUUID();
   await env.ACCOUNTS.put("apply:" + id, JSON.stringify({ user: user, status: "queued", message: "Waiting for the bot to start…", packet: packet, at: Date.now() }), { expirationTtl: TTL });
 
-  const gh = await fetch("https://api.github.com/repos/" + env.GH_REPO + "/dispatches", {
+  const repo = /^[\w.-]+\/[\w.-]+$/.test(String(env.GH_REPO || "").trim()) ? String(env.GH_REPO).trim() : DEFAULT_REPO;
+  const gh = await fetch("https://api.github.com/repos/" + repo + "/dispatches", {
     method: "POST",
     headers: {
       authorization: "Bearer " + env.GH_DISPATCH_TOKEN,
@@ -57,7 +59,7 @@ export async function onRequestPost({ request, env }) {
   });
   if (!gh.ok) {
     await env.ACCOUNTS.delete("apply:" + id);
-    return json({ error: "dispatch_failed", message: "Couldn't start the bot (" + gh.status + ")." }, 502);
+    return json({ error: "dispatch_failed", message: "Couldn't start the bot (" + gh.status + "). " + (gh.status === 404 ? "GitHub can't see the repo with this token." : gh.status === 401 ? "GitHub rejected the token." : gh.status === 403 ? "The token is missing Contents read/write." : "") }, 502);
   }
   return json({ id: id });
 }
