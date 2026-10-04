@@ -38,6 +38,8 @@ jobs:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          VCODE: ${{ inputs.version_code }}
+          VNAME: ${{ inputs.version_name }}
         run: |
           mkdir -p twa && cp play-store/twa-manifest.json twa/twa-manifest.json
           cd twa
@@ -63,9 +65,6 @@ jobs:
             echo "BUBBLEWRAP_KEY_PASSWORD=testpass123" >> "$GITHUB_ENV"
             echo "KEYMODE=test" >> "$GITHUB_ENV"
           fi
-        env:
-          VCODE: ${{ inputs.version_code }}
-          VNAME: ${{ inputs.version_name }}
 
       - name: Generate the Android project and build
         working-directory: twa
