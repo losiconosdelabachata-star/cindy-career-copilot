@@ -84,10 +84,19 @@ export async function onRequestPost({ request, env }) {
     }
     if (b.kind === "ideas") {
       const system =
-        "You are a short-form and long-form content strategist. Give 10 specific, original content ideas for a beginner creator. For each: a scroll-stopping hook line (first 3 seconds) and the format. " +
+        "You are a short-form and long-form content strategist. Give 8 specific, original content ideas for a beginner creator. For each: a scroll-stopping hook line (first 3 seconds) and the format. " +
         "Reply with ONLY JSON: {\"ideas\":[{\"hook\":\"...\",\"format\":\"...\"}]}";
       const user = "Niche: " + String(b.niche || "").slice(0, 120) + "\nPlatform: " + String(b.platform || "").slice(0, 60) + "\nAudience: " + String(b.audience || "").slice(0, 150);
-      const o = parseObj(await ask(env, system, user, 1200));
+      const rawIdeas = await ask(env, system, user, 1800);
+      let o = parseObj(rawIdeas);
+      if (!o) {
+        // tolerate a cut-off reply: pull out each complete {"hook":..,"format":..} pair
+        const found = [];
+        const re = /"hook"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"format"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+        let m;
+        while ((m = re.exec(rawIdeas)) !== null) found.push({ hook: m[1], format: m[2] });
+        if (found.length) o = { ideas: found };
+      }
       if (!o || !Array.isArray(o.ideas)) return json({ error: "parse", message: "Couldn't come up with ideas. Try again." }, 502);
       return json({ ideas: o.ideas.slice(0, 12).map(function (i) { return { hook: String(i.hook || "").slice(0, 200), format: String(i.format || "").slice(0, 80) }; }) });
     }
