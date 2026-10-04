@@ -85,6 +85,17 @@ export async function onRequestPost({ request, env }) {
       if (!text) return json({ error: "ai_error", message: "Empty reply." }, 502);
       return json({ statement: text });
     }
+    if (b.kind === "essay") {
+      const system =
+        "Write a first-person answer to a job application question, under 150 words, using ONLY facts that appear in the applicant's résumé. " +
+        "Be specific and plain. Do not invent employers, tools, numbers, degrees or experience. If the résumé doesn't support a strong answer, say what is true and keep it short. " +
+        "Output only the answer text.";
+      const user = "QUESTION:\n" + String(b.question || "").slice(0, 800) + "\n\nJOB: " + String(b.title || "").slice(0, 150) + " at " + String(b.company || "").slice(0, 150) +
+        "\n\nJOB DESCRIPTION:\n" + String(b.description || "").slice(0, 1500) + "\n\nAPPLICANT RÉSUMÉ:\n" + String(b.resume || "").slice(0, 4500);
+      const text = await ask(env, system, user, 450);
+      if (!text) return json({ error: "ai_error", message: "Empty reply." }, 502);
+      return json({ answer: text });
+    }
     if (b.kind === "proposal") {
       const system =
         "Write a short, specific freelance proposal (under 170 words) answering a client's job post. Open with the client's problem in one sentence, " +

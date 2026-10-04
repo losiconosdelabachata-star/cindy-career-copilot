@@ -1833,6 +1833,13 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
           '<div class="btn-row"><input id="ap-link" style="flex:1; min-width:200px;" placeholder="https://…"><button class="btn-primary" id="ap-savelink">Save link</button></div>' +
           '<div class="age" id="ap-linkmsg" style="margin-top:6px;"></div>'
         )) +
+        '<div id="ap-qs" style="margin-top:8px;"></div>' +
+        '<details id="es-box" style="margin-top:14px;"><summary class="age" style="cursor:pointer;">Need help with an essay question?</summary>' +
+          '<div class="age" style="margin:6px 0;">Paste a question from the application and Cindy drafts an answer from your résumé. Edit it so it’s true and in your own voice — and check the employer’s rules first, since some forbid AI-written answers.</div>' +
+          '<textarea id="es-q" rows="3" placeholder="Paste the question here…"></textarea>' +
+          '<div class="btn-row" style="margin-top:6px;"><button class="btn-ghost" id="es-go">Draft my answer</button><button class="btn-ghost" id="es-copy" style="display:none;">Copy</button></div>' +
+          '<div class="out" id="es-out" style="display:none; margin-top:8px;"></div>' +
+        '</details>' +
         '<div class="btn-row" style="margin-top:18px; justify-content:space-between;">' +
           '<button class="btn-ghost" id="ap-close">Close</button>' +
           '<button class="btn-primary" id="ap-done">I submitted it ✓</button>' +
@@ -1857,7 +1864,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       try {
         var r = await apiRequest("/api/autoapply", { method:"POST", token:authToken, body:{
           url:botUrl(j), title:j.title, company:j.company, mode:mode, resume:j.tailoredResume, coverLetter:j.coverLetter,
-          profile:{ name:p.name, email:p.email, phone:p.phone, location:p.location, linkedin:L.linkedin, website:L.portfolio } } });
+          profile:{ name:p.name, email:p.email, phone:p.phone, location:p.location, linkedin:L.linkedin, website:L.portfolio }, answers:(p.answers || {}) } });
         var tries = 0;
         var iv = setInterval(async function(){
           tries++;
@@ -1867,7 +1874,15 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
             var secs = tries * 4;
             stEl.textContent = s2.message + (s2.status === "queued" ? " (" + secs + "s — starting the bot takes about a minute; status can lag a bit)" : "") +
               (s2.filled && s2.filled.length ? " Filled: " + s2.filled.length + " fields." : "") +
-              (s2.missing && s2.missing.length ? " Questions for you: " + s2.missing.filter(function(x){ return x !== "(unlabeled required field)"; }).join("; ") : "");
+              (s2.missing && s2.missing.length ? " " + s2.missing.length + " question(s) are left for you (below)." : "");
+            var qsBox = bd.querySelector("#ap-qs");
+            if (qsBox && s2.missing && s2.missing.length){
+              qsBox.innerHTML = '<div class="out-h">Questions the bot left for you</div>' +
+                s2.missing.map(function(q, qi){ return '<div class="apply-row"><span class="v">'+esc(q)+'</span>'+(q.length > 35 ? '<button class="btn-ghost ap-qdraft" data-qi="'+qi+'" style="font-size:12px; padding:5px 10px;">Draft answer</button>' : '')+'</div>'; }).join("");
+              Array.prototype.forEach.call(qsBox.querySelectorAll(".ap-qdraft"), function(b2){
+                b2.onclick = function(){ bd.querySelector("#es-q").value = s2.missing[parseInt(b2.dataset.qi, 10)]; bd.querySelector("#es-box").open = true; bd.querySelector("#es-go").click(); };
+              });
+            }
             if (done || tries > 90){
               clearInterval(iv); setBtns(false);
               if (s2.status === "submitted"){ await onStatusChange(j.id, "applied"); toast("Submitted — logged as applied."); }
@@ -1879,6 +1894,21 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         setBtns(false);
       }
     }
+    var esGo = bd.querySelector("#es-go");
+    if (esGo) esGo.onclick = async function(){
+      var q = (bd.querySelector("#es-q").value || "").trim();
+      if (q.length < 8){ toast("Paste the question first."); return; }
+      var outEl = bd.querySelector("#es-out"), cpBtn = bd.querySelector("#es-copy");
+      esGo.disabled = true; esGo.textContent = "Writing…";
+      try {
+        var d = await aiRequest("/api/money", { kind:"essay", question:q, title:j.title, company:j.company, description:(j.description||"").slice(0,1500), resume:resumeWithCerts() });
+        var ans = String(d.answer || "").trim();
+        outEl.textContent = ans; outEl.style.display = ans ? "block" : "none";
+        cpBtn.style.display = ans ? "inline-block" : "none";
+        cpBtn.onclick = function(){ copyText(ans); };
+      } catch(e){ toast((e && e.message) || "That didn’t go through. Try again."); }
+      esGo.disabled = false; esGo.textContent = "Draft my answer";
+    };
     var sl = bd.querySelector("#ap-savelink"); if (sl) sl.onclick = async function(){
       var u = (bd.querySelector("#ap-link").value || "").trim();
       var msg = bd.querySelector("#ap-linkmsg");
@@ -1970,7 +2000,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     var p = state.profile || {}, L = p.links || {};
     var r = await apiRequest("/api/autoapply", { method:"POST", token:authToken, body:{
       url:botUrl(j), title:j.title, company:j.company, mode:mode, resume:j.tailoredResume, coverLetter:j.coverLetter,
-      profile:{ name:p.name, email:p.email, phone:p.phone, location:p.location, linkedin:L.linkedin, website:L.portfolio } } });
+      profile:{ name:p.name, email:p.email, phone:p.phone, location:p.location, linkedin:L.linkedin, website:L.portfolio }, answers:(p.answers || {}) } });
     for (var i=0; i<90; i++){
       await new Promise(function(res){ setTimeout(res, 4000); });
       var s2 = await apiRequest("/api/autoapply?id=" + r.id, { token:authToken }).catch(function(){ return null; });
@@ -2444,6 +2474,50 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     });
     return items.length ? base + "\n\nCERTIFICATIONS & LICENSES: " + items.join("; ").slice(0, 480) : base;
   }
+  // ---------- Saved answers to common application questions (used by the bot; never guessed) ----------
+  var ANSWER_FIELDS = [
+    { k:"workAuth", label:"Legally authorized to work in the US?", opts:["Yes","No"] },
+    { k:"sponsor",  label:"Will you need visa sponsorship, now or later?", opts:["No","Yes"] },
+    { k:"relocate", label:"Willing to relocate?", opts:["Yes","No"] },
+    { k:"over18",   label:"18 years or older?", opts:["Yes","No"] },
+    { k:"country",  label:"Country you live in", text:"United States" },
+    { k:"heard",    label:"“How did you hear about this job?”", text:"Job board" },
+    { k:"salary",   label:"Desired salary", text:"e.g. $60,000" },
+    { k:"notice",   label:"Notice period / earliest start date", text:"e.g. 2 weeks" }
+  ];
+  var ANSWER_VOLUNTARY = [
+    { k:"gender", label:"Gender (voluntary question)" },
+    { k:"race", label:"Race / ethnicity (voluntary question)" },
+    { k:"veteran", label:"Veteran status (voluntary question)" },
+    { k:"disability", label:"Disability status (voluntary question)" }
+  ];
+  function answersCardHtml(){
+    var a = state.profile.answers || {};
+    return '<div class="card"><h3>Application answers</h3>' +
+      '<div class="lede">Answer these once and the bot reuses them on application forms. It only uses what you put here — if a question isn’t covered, it stops and asks you. Private questions are optional: leave them on “I’ll answer myself” and the bot won’t touch them.</div>' +
+      '<div class="stack"><div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));">' +
+      ANSWER_FIELDS.map(function(f){
+        return '<div><label for="ans-'+f.k+'">'+esc(f.label)+'</label>' + (f.opts
+          ? '<select id="ans-'+f.k+'"><option value="">Not set — ask me</option>'+f.opts.map(function(o){ return '<option'+(a[f.k]===o?" selected":"")+'>'+o+'</option>'; }).join("")+'</select>'
+          : '<input id="ans-'+f.k+'" value="'+esc(a[f.k]||"")+'" placeholder="'+esc(f.text)+'">') + '</div>';
+      }).join("") + '</div>' +
+      '<div class="out-h">Voluntary questions</div><div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));">' +
+      ANSWER_VOLUNTARY.map(function(f){
+        return '<div><label for="ans-'+f.k+'">'+esc(f.label)+'</label><select id="ans-'+f.k+'"><option value="">I’ll answer myself</option><option value="Decline"'+(a[f.k]==="Decline"?" selected":"")+'>Decline to answer</option></select></div>';
+      }).join("") + '</div>' +
+      '<div class="btn-row"><button class="btn-primary" id="ans-save">Save answers</button><span class="saveflash" id="ans-flash"></span></div></div></div>';
+  }
+  function wireAnswers(){
+    var sv = $("#ans-save"); if (!sv) return;
+    sv.onclick = async function(){
+      var a = {};
+      ANSWER_FIELDS.concat(ANSWER_VOLUNTARY).forEach(function(f){ var v = ($("#ans-"+f.k).value || "").trim(); if (v) a[f.k] = v; });
+      state.profile.answers = a;
+      await persistMain();
+      flash("#ans-flash");
+    };
+  }
+
   function certsCardHtml(){
     var list = certList();
     return '<div class="card"><h3>Certificates &amp; licenses</h3>' +
@@ -3261,6 +3335,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-resume">'+esc(t("saveResumeBtn"))+'</button><span class="saveflash" id="r-flash"></span></div>' +
       '</div>' +
       certsCardHtml() +
+      answersCardHtml() +
       '<div class="card">' +
         '<h3>'+esc(t("coverLetterCardH"))+'</h3>' +
         '<div class="lede">'+esc(t("coverLetterCardLede"))+'</div>' +
@@ -3335,6 +3410,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       e.target.value = "";
     };
     wireCerts();
+    wireAnswers();
     $("#p-save-cl").onclick = async function(){
       state.profile.coverLetterText = $("#p-coverletter").value;
       await persistMain();

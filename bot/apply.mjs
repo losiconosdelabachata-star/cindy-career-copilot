@@ -113,6 +113,55 @@ try {
   const root = gh === page.mainFrame() ? page : gh;
 
   const filled = [], missing = [];
+
+  // ----- the user's saved answers to common application questions -----
+  const A = packet.answers || {};
+  const isDecline = v => /^decline/i.test(v || "");
+  function pickAnswer(t) {
+    if (/agree|acknowledge|confirm that you have read|privacy|plagiarism|consent|i understand|certify/.test(t)) return null; // never tick agreements
+    if (/sponsor/.test(t)) return A.sponsor;
+    if (/authori[sz]ed to work|work authori[sz]ation|right to work|eligible to work|legally (able|eligible)/.test(t)) return A.workAuth;
+    if (/relocat/.test(t)) return A.relocate;
+    if (/how did you hear|where did you (hear|find|see)|referral source/.test(t)) return A.heard;
+    if (/salary|compensation expectation|pay expectation|desired pay/.test(t)) return A.salary;
+    if (/notice period|start date|available to start|earliest (start|date)/.test(t)) return A.notice;
+    if (/18 years|at least 18|over 18|legal age/.test(t)) return A.over18;
+    if (/\bcountry\b/.test(t) && !/code|phone/.test(t)) return A.country;
+    if (/gender/.test(t) && !/orientation/.test(t)) return A.gender;
+    if (/\brace\b|ethnic/.test(t)) return A.race;
+    if (/veteran/.test(t)) return A.veteran;
+    if (/disabilit/.test(t)) return A.disability;
+    return null;
+  }
+  async function setAnswer(el, info, ans) {
+    try {
+      if (info.tag === "select") {
+        const opts = await el.evaluate(n => [...n.options].map(o => o.text.trim()));
+        const want = ans.toLowerCase();
+        const pick = isDecline(ans)
+          ? opts.find(o => /decline|prefer not|do not wish|don.t wish|choose not/i.test(o))
+          : (opts.find(o => o.toLowerCase() === want) || opts.find(o => o.toLowerCase().startsWith(want)) || opts.find(o => o.toLowerCase().includes(want)));
+        if (!pick) return false;
+        await el.selectOption({ label: pick });
+        return true;
+      }
+      if (info.combo) {
+        await el.click();
+        await page.keyboard.type(isDecline(ans) ? "Decline" : ans.slice(0, 40), { delay: 40 });
+        await page.waitForTimeout(500);
+        await page.keyboard.press("Enter");
+        await page.waitForTimeout(300);
+        const shown = (await el.evaluate(n => ((n.closest('[class*="select"]') || n.parentElement.parentElement || n).innerText || "")).catch(() => "")).toLowerCase();
+        const key = isDecline(ans) ? "decline" : ans.toLowerCase().split(/\s+/)[0];
+        if (shown.includes(key) || (isDecline(ans) && /prefer not|do not wish|don.t wish/.test(shown))) return true;
+        await page.keyboard.press("Escape").catch(() => {});
+        return false;
+      }
+      await el.fill(ans);
+      return true;
+    } catch (e) { return false; }
+  }
+
   const fields = await root.locator("input:not([type=hidden]):not([type=submit]):not([type=button]), textarea, select").elementHandles();
   for (const el of fields) {
     if (!(await el.isVisible())) continue;
@@ -123,7 +172,8 @@ try {
         tag: n.tagName.toLowerCase(), type: (n.type || "").toLowerCase(),
         text: ((lab && lab.innerText) || n.getAttribute("aria-label") || n.placeholder || n.name || id || "").trim().toLowerCase(),
         required: n.required || n.getAttribute("aria-required") === "true" || /\*/.test((lab && lab.innerText) || ""),
-        value: n.value, checked: n.checked
+        value: n.value, checked: n.checked,
+        combo: n.getAttribute("role") === "combobox" || !!n.getAttribute("aria-autocomplete") || /select__input|react-select/.test(n.className || "")
       };
     });
     const t = info.text;
@@ -145,8 +195,14 @@ try {
       if (!info.value) await el.fill(val).catch(() => {});
       filled.push(label); continue;
     }
+    // answers the user saved in their profile (never guessed, never agreement boxes)
+    if (!info.value && info.type !== "checkbox" && info.type !== "radio" && info.type !== "file") {
+      const ans = pickAnswer(t);
+      if (ans && (await setAnswer(el, info, ans))) { filled.push(label); continue; }
+    }
     // anything required that we don't know how to answer: stop, don't guess
-    if (info.required && !info.value && !info.checked && info.type !== "file") missing.push(t.slice(0, 100) || "(unlabeled required field)");
+    // (unlabeled required inputs are the hidden twins of dropdowns — not real questions)
+    if (t && info.required && !info.value && !info.checked && info.type !== "file") missing.push(t.slice(0, 160));
   }
 
   await page.screenshot({ path: "bot/out/form.png", fullPage: true });

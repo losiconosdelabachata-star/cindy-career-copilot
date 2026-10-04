@@ -37,7 +37,16 @@ export async function onRequestPost({ request, env }) {
       name: clip(p.name, 200), email: clip(p.email, 200), phone: clip(p.phone, 60),
       location: clip(p.location, 200), linkedin: clip(p.linkedin, 500), website: clip(p.website, 500)
     },
-    resume: clip(b.resume, 20000), coverLetter: clip(b.coverLetter, 10000)
+    resume: clip(b.resume, 20000), coverLetter: clip(b.coverLetter, 10000),
+    // the user's saved answers to common application questions (strings only, small)
+    answers: (function () {
+      const out = {};
+      const a = b.answers && typeof b.answers === "object" ? b.answers : {};
+      ["workAuth", "sponsor", "relocate", "heard", "salary", "notice", "country", "over18", "gender", "race", "veteran", "disability"].forEach(function (k) {
+        if (typeof a[k] === "string" && a[k].trim()) out[k] = a[k].trim().slice(0, 120);
+      });
+      return out;
+    })()
   };
   if (!packet.profile.name || !packet.profile.email || !packet.resume) {
     return json({ error: "incomplete", message: "Name, email and a résumé are required." }, 400);
