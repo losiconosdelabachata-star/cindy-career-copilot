@@ -1897,7 +1897,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
 
   // ---------- Import + green-light queue ----------
   function isBlockedHost(u){
-    try { return /(^|\.)(linkedin|indeed|adzuna|ziprecruiter|glassdoor|monster|simplyhired)\.(com|co\.uk)$/i.test(new URL(u).hostname); } catch(e){ return true; }
+    try { return /(^|\.)(linkedin|indeed|adzuna|ziprecruiter|glassdoor|monster|simplyhired|remotive|remoteok|jobicy|himalayas|weworkremotely|themuse|arbeitnow|flexjobs)\.(com|co\.uk|io|app)$/i.test(new URL(u).hostname); } catch(e){ return true; }
   }
   // the page the bot is allowed to apply on: the company's own link, never LinkedIn/Indeed
   function botUrl(j){
@@ -2813,7 +2813,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
             '<div><label for="m-what">'+esc(t("matchesWhatLabel"))+'</label><input id="m-what" value="'+esc(m.what)+'" placeholder="Customer Success, AI Engineer…"></div>' +
             '<div><label for="m-where">'+esc(t("matchesWhereLabel"))+'</label><input id="m-where" value="'+esc(m.where)+'" placeholder="Miami, FL"></div>' +
           '</div>' +
-          '<label class="chk"><input type="checkbox" id="m-remote"'+(m.remote?" checked":"")+'> Remote jobs only (ignores location)</label>' +
+          '<label class="chk"><input type="checkbox" id="m-remote"'+(m.remote?" checked":"")+'> Remote jobs only (ignores location) — also searches Remotive, RemoteOK, Jobicy, Himalayas and We Work Remotely</label>' +
           '<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">' +
             '<div><label for="m-type">Job type</label><select id="m-type">' + [["","Any"],["full_time","Full-time"],["part_time","Part-time"],["contract","Contract"]].map(function(x){ return '<option value="'+x[0]+'"'+((m.type||"")===x[0]?" selected":"")+'>'+x[1]+'</option>'; }).join("") + '</select></div>' +
             '<div><label for="m-days">Posted</label><select id="m-days">' + [["","Any time"],["1","Last 24 hours"],["7","Last 7 days"],["30","Last 30 days"]].map(function(x){ return '<option value="'+x[0]+'"'+((m.days||"")===x[0]?" selected":"")+'>'+x[1]+'</option>'; }).join("") + '</select></div>' +
@@ -2890,7 +2890,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       '<div class="job-head">' +
         '<div>' +
           '<h3>'+esc(r.title)+'</h3>' +
-          '<div class="job-co">'+esc(r.company)+ (r.location ? " · " + esc(r.location) : "") +'</div>' +
+          '<div class="job-co">'+esc(r.company)+ (r.location ? " · " + esc(r.location) : "") + (r.source ? ' · <span class="age">via '+esc(r.source)+'</span>' : "") +'</div>' +
         '</div>' +
       '</div>' +
       '<div class="job-meta">' + salary + (r.created ? '<span class="age">'+esc(t("addedAgo"))+esc(agoLabel(new Date(r.created).getTime()))+'</span>' : "") + '</div>' +

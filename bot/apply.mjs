@@ -25,7 +25,7 @@ const P = packet.profile;
 const [first, ...rest] = P.name.trim().split(/\s+/);
 const last = rest.join(" ") || first;
 
-if (/(^|\.)(linkedin|indeed|adzuna|ziprecruiter|glassdoor|monster|simplyhired)\.(com|co\.uk)$/i.test(new URL(packet.url).hostname)) {
+if (/(^|\.)(linkedin|indeed|adzuna|ziprecruiter|glassdoor|monster|simplyhired|remotive|remoteok|jobicy|himalayas|weworkremotely|themuse|arbeitnow|flexjobs)\.(com|co\.uk|io|app)$/i.test(new URL(packet.url).hostname)) {
   await report("needs_you", "Job boards like LinkedIn, Indeed and Adzuna don't allow bots. Open the job, click Apply there, and save the company's own apply link on the job instead.");
   process.exit(0);
 }

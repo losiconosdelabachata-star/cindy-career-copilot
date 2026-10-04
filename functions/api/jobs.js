@@ -19,6 +19,8 @@ function json(data, status) {
   });
 }
 
+import { fetchMoreSources } from "../_lib/jobsources.js";
+
 export async function onRequestOptions() {
   return new Response(null, { headers: CORS });
 }
@@ -67,8 +69,15 @@ export async function onRequestGet(context) {
     return res.json();
   };
 
+  // Extra free sources (remote boards). Only used for remote searches — they have no local jobs.
+  const moreP = remote && url.searchParams.get("more") !== "0"
+    ? fetchMoreSources(terms).catch(function () { return []; })
+    : Promise.resolve([]);
+
   try {
-    const datas = await Promise.all(terms.map(one));
+    const datas = await Promise.all(terms.map(function (t) { return one(t).catch(function (e) { return { results: [], _err: e }; }); }));
+    const extra = await moreP;
+    if (datas.every(function (d) { return d._err; }) && !extra.length) throw datas[0]._err;
     const seen = {};
     const raw = [];
     datas.forEach(function (d) {
@@ -79,8 +88,7 @@ export async function onRequestGet(context) {
         if (!remote || isRemote(r)) raw.push(r);
       });
     });
-    raw.sort(function (x, y) { return String(y.created || "").localeCompare(String(x.created || "")); });
-    const results = raw.slice(0, 40).map(function (r) {
+    const adz = raw.map(function (r) {
       return {
         title: r.title || "",
         company: (r.company && r.company.display_name) || "",
@@ -89,9 +97,22 @@ export async function onRequestGet(context) {
         created: r.created || "",
         description: (r.description || "").slice(0, 1500),
         salaryMin: r.salary_min || null,
-        salaryMax: r.salary_max || null
+        salaryMax: r.salary_max || null,
+        source: "Adzuna"
       };
     });
+    // merge, drop duplicates (same company + title), apply the "posted within N days" filter, newest first
+    const seenJ = {}, merged = [];
+    const cutoff = days ? Date.now() - days * 86400000 : 0;
+    adz.concat(extra).forEach(function (j) {
+      const k = (j.company + "|" + j.title).toLowerCase();
+      if (seenJ[k]) return;
+      seenJ[k] = 1;
+      if (cutoff && j.created && new Date(j.created).getTime() < cutoff) return;
+      merged.push(j);
+    });
+    merged.sort(function (x, y) { return String(y.created || "").localeCompare(String(x.created || "")); });
+    const results = merged.slice(0, 60);
     return json({ count: results.length, results: results });
   } catch (err) {
     return json({ error: "adzuna_error", message: String(err && err.message || err) }, 502);
