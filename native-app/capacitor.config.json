@@ -1,0 +1,30 @@
+{
+  "appId": "com.cindycareercopilot.app",
+  "appName": "Cindy Career Copilot",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#eef2f5",
+    "limitsNavigationsToAppBoundDomains": false,
+    "scheme": "Cindy"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#eef2f5",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DEFAULT",
+      "backgroundColor": "#eef2f5"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_cindy",
+      "iconColor": "#2B6B88"
+    }
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

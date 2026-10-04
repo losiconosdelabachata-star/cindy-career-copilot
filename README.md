@@ -1,3 +1,8 @@
+<p align="center"><img src="assets/logo-full.png" alt="Cindy Career Copilot — Your next move starts here." width="320"></p>
+
+> **© 2026 Cindy Santos. All rights reserved.** Cindy Career Copilot — its code, design, name, logo and mascot — is proprietary.
+> See [LICENSE](LICENSE). No use, copying, modification or distribution without written permission.
+
 # Career Copilot — Job Search Deck
 
 A private, per-person job-search command deck. The page (`index.html`) is a single static

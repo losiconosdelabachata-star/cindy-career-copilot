@@ -299,6 +299,9 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   .wrap{padding-top:8px;}
 }
 
+.copyright{display:flex; align-items:center; justify-content:center; gap:12px; margin:20px auto 6px; padding:14px 16px; max-width:420px; border-top:1px solid var(--border); font-size:12.5px; color:var(--muted); text-align:left; line-height:1.5;}
+.copyright .copy-logo{width:44px; height:auto; flex:none;}
+.copyright span{font-weight:600; color:var(--ink);}
 .foot{margin-top:26px; font-family:var(--mono); font-size:11px; color:var(--faint); text-align:center; line-height:1.7;}
 
 @media (prefers-reduced-motion:no-preference){
@@ -813,6 +816,11 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   // ---------- render ----------
   var app = $("#app");
 
+  function copyrightHtml(){
+    return '<div class="copyright"><img class="copy-logo" src="assets/logo-badge.png" alt="Cindy Career Copilot logo">' +
+      '<div>© 2026 Cindy Santos. All rights reserved.<br><span>Cindy Career Copilot</span></div></div>';
+  }
+
   // ---------- auth ----------
   function renderAuth(){
     var isRegister = authState.mode === "register";
@@ -842,7 +850,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
             '<a href="#" id="auth-switch">'+ (isRegister ? esc(t("loginLink")) : esc(t("registerLink"))) +'</a>' +
           '</div>' +
         '</div>' +
-      '</div>';
+      '</div>' + copyrightHtml();
 
     var submit = function(){ isRegister ? handleRegister() : handleLogin(); };
     $("#auth-submit").onclick = submit;
@@ -1027,7 +1035,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       '<div class="foot">' +
         '<a href="privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="terms.html" target="_blank" rel="noopener">Terms</a> · <a href="delete-account.html" target="_blank" rel="noopener">Delete account</a><br>' +
         'Not legal, financial or career advice.' +
-      '</div>';
+      '</div>' + copyrightHtml();
 
     $("#theme-btn").onclick = toggleTheme;
     $("#lang-btn").onclick = toggleLang;
@@ -3770,7 +3778,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     var B = plug("NativeBiometric");
     try {
       var av = B && await B.isAvailable({ useFallback:true });
-      if (!av || !av.isAvailable){ toast("Face ID / Touch ID isn’t set up on this phone. Turn it on in the iPhone Settings first."); return false; }
+      if (!av || !av.isAvailable){ toast("Face ID / Touch ID isn’t set up on this phone. Turn it on in your phone’s Settings first."); return false; }
       await B.verifyIdentity({ reason:"Turn on the Cindy lock", title:"Turn on lock", useFallback:true });
     } catch(e){ toast("Couldn’t verify it’s you — the lock wasn’t turned on."); return false; }
     p.lock = true; saveDevPrefs(p);
@@ -3824,12 +3832,12 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       perm = await LN.requestPermissions();
       if (perm && perm.display === "granted") return true;
     } catch(e){}
-    toast("Notifications are off for Cindy. Turn them on in the iPhone Settings → Notifications → Cindy.");
+    toast("Notifications are off for Cindy. Turn them on in your phone’s Settings → Notifications → Cindy.");
     return false;
   }
 
   function deviceCardHtml(){
-    if (!NATIVE) return '<div class="card"><h3>Lock &amp; reminders</h3><div class="lede">Face ID lock and reminder notifications are available in the Cindy iPhone app.</div></div>';
+    if (!NATIVE) return '<div class="card"><h3>Lock &amp; reminders</h3><div class="lede">Face ID lock and reminder notifications are available in the Cindy mobile app (iPhone and Android).</div></div>';
     var p = devPrefs();
     function chk(id, label, on){ return '<label class="chk"><input type="checkbox" id="'+id+'"'+(on ? " checked" : "")+'> '+esc(label)+'</label>'; }
     return '<div class="card"><h3>Lock &amp; reminders</h3>' +
@@ -3880,7 +3888,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   }
 
   // offline-capable shell (also what lets the Android app open instantly)
-  if ("serviceWorker" in navigator && location.protocol === "https:") {
+  if (!NATIVE && "serviceWorker" in navigator && location.protocol === "https:") {
     window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
   }
 })();

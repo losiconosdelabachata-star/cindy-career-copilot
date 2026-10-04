@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cindy Career Copilot</string>
+    <string name="title_activity_main">Cindy Career Copilot</string>
+    <string name="package_name">com.cindycareercopilot.app</string>
+    <string name="custom_url_scheme">com.cindycareercopilot.app</string>
+</resources>

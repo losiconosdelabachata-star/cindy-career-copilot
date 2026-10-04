@@ -1,24 +1,24 @@
 name: ios-build-check
 # Proves the iPhone app compiles (unsigned, simulator build) on a free macOS runner.
-# The signed App Store build is done later, once an Apple Developer account exists (see ios-app/APP-STORE-GUIDE.md).
+# The signed App Store build is done later, once an Apple Developer account exists (see native-app/APP-STORE-GUIDE.md).
 on:
   workflow_dispatch:
 jobs:
   build:
-    runs-on: macos-14
-    timeout-minutes: 40
+    runs-on: macos-15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - name: Install and sync the web app into the iOS project
-        working-directory: ios-app
+        with: { node-version: 22 }
+      - name: Copy the web app into the native project and apply Cindy's settings
+        working-directory: native-app
         run: |
           npm ci
           npm run sync
       - name: Build for the iOS simulator (no signing)
-        working-directory: ios-app/ios/App
+        working-directory: native-app/ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug \
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build | tail -40

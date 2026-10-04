@@ -1,0 +1,26 @@
+{
+  "name": "cindy-career-copilot-native",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "Capacitor wrapper that packages Cindy Career Copilot as native iPhone and Android apps",
+  "scripts": {
+    "build:www": "node build-www.mjs",
+    "configure": "node configure-native.mjs",
+    "sync": "npm run build:www && npx cap sync && npm run configure"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.5.0",
+    "@capacitor/local-notifications": "^8.3.0",
+    "@capacitor/share": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@capgo/capacitor-native-biometric": "^8.7.0"
+  }
+}

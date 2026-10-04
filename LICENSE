@@ -1,0 +1,17 @@
+Copyright (c) 2026 Cindy Santos. All rights reserved.
+
+This repository and everything in it — the Cindy Career Copilot source code, text, design, name,
+logo and mascot artwork — is proprietary. No license or permission is granted to use, copy, modify,
+merge, publish, distribute, sublicense, sell, or create derivative works from any part of it
+without prior written permission from Cindy Santos.
+
+The only exceptions are the rights GitHub's Terms of Service give users to view the repository
+and to fork it within GitHub.
+
+Third-party components used by this project (for example Capacitor, Playwright, Pillow and the open-source
+tools linked from the app) remain under their own licenses and are not covered by this notice.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THE
+SOFTWARE.
