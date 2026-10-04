@@ -1275,10 +1275,41 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     "Keep a running list of accomplishments as they happen — it's much harder to remember them 6 months later at résumé time.",
     "A short, warm note to someone at the company beats a cold application almost every time."
   ];
-  function cindyTip(){
-    var i = state.cindy.tipIdx % CINDY_TIPS.length;
-    cindyPush("cindy", CINDY_TIPS[i]);
-    state.cindy.tipIdx = i + 1;
+  var CREDIT_TIPS = [
+    "You can pull your reports from all three bureaus for free at annualcreditreport.com — check them for errors before anything else.",
+    "Keep card balances under 30% of the limit, and under 10% if you can. Utilization is one of the fastest things to improve.",
+    "Payment history is the biggest part of your score — set autopay for at least the minimum on every account.",
+    "Don't close your oldest card. Age of accounts helps you, and closing it can raise your utilization.",
+    "A collector must send you validation info if you ask in writing within 30 days of their first notice. Ask before you pay anything.",
+    "Paying a collection doesn't automatically remove it. Get any pay-for-delete or settlement terms in writing before you send money.",
+    "Errors are common — if something on your report isn't yours or isn't right, dispute it with the bureau and the company that reported it.",
+    "A secured card or credit-builder loan can start a thin file. Use it for one small bill and pay it in full every month.",
+    "Avoid anyone who guarantees a score increase or asks for money up front to “fix” credit — that's illegal under the Credit Repair Organizations Act.",
+    "Be wary of “CPNs” or new credit identities. They're a scam, and using one can be federal fraud.",
+    "Several hard inquiries for the same kind of loan inside a short window usually count as one when you're rate shopping.",
+    "Most negative items fall off after 7 years (bankruptcies up to 10). Write down the dates so you know when to expect it."
+  ];
+  var GRANT_TIPS = [
+    "Real grants and assistance never charge a fee to apply. If someone asks you to pay to “release” money, it's a scam.",
+    "If a “government agent” contacts you first about a grant, hang up — agencies don't cold-call to give out money.",
+    "Dial 211 or visit 211.org for local help with rent, utilities, food, and more — it's free and covers every state.",
+    "Gather your documents first: ID, proof of income, proof of address, and recent bills. Most applications ask for the same things.",
+    "If you're denied SNAP, Medicaid, or similar benefits, you have the right to a fair hearing — the denial letter explains how to ask.",
+    "Federal grants.gov listings are mostly for organizations. As an individual, look at state programs, benefits.gov, and 211 first.",
+    "Apply to more than one program — assistance is usually separate for food, utilities, housing, and health.",
+    "Deadlines matter. Put every application date on your calendar the day you find the program.",
+    "Free tax help (IRS VITA sites) makes sure you claim credits like the EITC and Child Tax Credit you may be owed.",
+    "Keep copies of everything you submit and write down who you spoke to and when."
+  ];
+  function cindyTip(kind){
+    var pool = kind === "credit" ? CREDIT_TIPS : kind === "grants" ? GRANT_TIPS : CINDY_TIPS.concat(CREDIT_TIPS, GRANT_TIPS);
+    var last = state.cindy.lastTip, tip;
+    for (var n = 0; n < 6; n++){
+      tip = pool[Math.floor(Math.random() * pool.length)];
+      if (tip !== last) break;
+    }
+    state.cindy.lastTip = tip;
+    cindyPush("cindy", tip);
     persistMain(); render();
   }
 
@@ -1510,6 +1541,8 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       cindyPush("cindy", "Cover letters come together fastest once a specific job's on your Pipeline — add it there and hit Tailor, and I'll draft one alongside your résumé once the AI backend's connected.");
     } else if (/next|what should i do/.test(t)){ cindyNextSteps(); return; }
     else if (/pep|motivat|discourag|down|tired/.test(t)){ cindyPepTalk(); return; }
+    else if (/credit|score|collection|debt/.test(t)){ cindyTip("credit"); return; }
+    else if (/grant|assistance|benefit|help paying/.test(t)){ cindyTip("grants"); return; }
     else if (/tip/.test(t)){ cindyTip(); return; }
     else {
       cindyPush("cindy", "I run on built-in guidance on this static build, so I do best with the buttons below — but I can build a résumé, look at your pipeline, or talk you off the ledge. What sounds useful?");
@@ -1928,6 +1961,129 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
 
   // ---------- Credit repair plan + Grants finder ----------
   var STATES = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"];
+  // ---------- Dispute / validation letter templates (plain templates — based on the CFPB's free sample letters and FCRA §611 / FDCPA §809(b)) ----------
+  var BUREAUS = [
+    { name:"Equifax",    addr:"Equifax Information Services LLC\nP.O. Box 740256\nAtlanta, GA 30374-0256",  url:"https://www.equifax.com/personal/credit-report-services/credit-dispute/" },
+    { name:"Experian",   addr:"Experian\nP.O. Box 4500\nAllen, TX 75013",                                       url:"https://www.experian.com/disputes/main.html" },
+    { name:"TransUnion", addr:"TransUnion LLC Consumer Dispute Center\nP.O. Box 2000\nChester, PA 19016",      url:"https://dispute.transunion.com/" }
+  ];
+  var LETTER_TYPES = [
+    { key:"dispute",  label:"Dispute an error with a credit bureau", to:"bureau" },
+    { key:"furnisher",label:"Dispute directly with the company that reported it", to:"company" },
+    { key:"validate", label:"Debt validation (a collector contacted me)", to:"company" },
+    { key:"goodwill", label:"Goodwill request (ask to remove a late payment)", to:"company" }
+  ];
+  var dispCache = { type:"dispute", bureau:"Equifax", name:"", address:"", company:"", account:"", detail:"", text:"" };
+
+  function disputeCardHtml(){
+    var d = dispCache;
+    if (!d.name) d.name = state.profile.name || "";
+    if (!d.address) d.address = state.profile.location || "";
+    var lt = LETTER_TYPES.filter(function(x){ return x.key===d.type; })[0];
+    return '<div class="card"><h3>Dispute &amp; validation letters</h3>' +
+      '<div class="lede">Free templates based on the CFPB’s sample letters. Send by certified mail with return receipt, and keep copies. Only dispute things that are actually wrong — never dispute accurate information.</div>' +
+      '<div class="stack">' +
+        '<div><label for="dl-type">Letter type</label><select id="dl-type">'+LETTER_TYPES.map(function(x){ return '<option value="'+x.key+'"'+(d.type===x.key?" selected":"")+'>'+esc(x.label)+'</option>'; }).join("")+'</select></div>' +
+        (lt.to==="bureau"
+          ? '<div><label for="dl-bureau">Which bureau</label><select id="dl-bureau">'+BUREAUS.map(function(x){ return '<option'+(d.bureau===x.name?" selected":"")+'>'+esc(x.name)+'</option>'; }).join("")+'</select></div>'
+          : '<div><label for="dl-company">Company / collector name &amp; address</label><textarea id="dl-company" rows="3" placeholder="Name&#10;Street&#10;City, ST ZIP">'+esc(d.company)+'</textarea></div>') +
+        '<div class="grid2">' +
+          '<div><label for="dl-name">Your full name</label><input id="dl-name" value="'+esc(d.name)+'"></div>' +
+          '<div><label for="dl-acct">Account / reference # <span style="text-transform:none; font-weight:400;">(last 4 digits is fine)</span></label><input id="dl-acct" value="'+esc(d.account)+'"></div>' +
+        '</div>' +
+        '<div><label for="dl-addr">Your mailing address</label><textarea id="dl-addr" rows="3" placeholder="Street&#10;City, ST ZIP">'+esc(d.address)+'</textarea></div>' +
+        '<div><label for="dl-detail">'+(d.type==="goodwill" ? "What happened and when (be honest and brief)" : d.type==="validate" ? "Anything else to include (optional)" : "What’s wrong, and the account name")+'</label><textarea id="dl-detail" rows="3" placeholder="'+(d.type==="goodwill" ? "I missed the March 2024 payment because…" : "The account shows a balance of $X, but I paid it in full on…")+'">'+esc(d.detail)+'</textarea></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="dl-go">Make my letter</button></div>' +
+      '</div>' +
+      (d.text ? '<div class="out-h">Your letter</div><div class="out">'+esc(d.text)+'</div>' +
+        '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="dl-copy">Copy</button><button class="btn-ghost" id="dl-dl">Download .txt</button>' +
+        (lt.to==="bureau" ? '<a class="btn-ghost" style="text-decoration:none; padding:9px 14px; border-radius:6px;" target="_blank" rel="noopener noreferrer" href="'+esc(BUREAUS.filter(function(x){ return x.name===d.bureau; })[0].url)+'">Or dispute online ↗</a>' : "") +
+        '</div><div class="age" style="margin-top:8px;">Attach copies (never originals) of proof, plus a copy of your ID and a recent bill with your address. Mailing addresses change — confirm on the bureau’s website before sending.</div>' : "") +
+    '</div>';
+  }
+
+  function readDispute(){
+    var d = dispCache;
+    d.type = $("#dl-type").value;
+    var bu = $("#dl-bureau"); if (bu) d.bureau = bu.value;
+    var co = $("#dl-company"); if (co) d.company = co.value.trim();
+    d.name = $("#dl-name").value.trim(); d.account = $("#dl-acct").value.trim();
+    d.address = $("#dl-addr").value.trim(); d.detail = $("#dl-detail").value.trim();
+  }
+
+  function buildLetter(d){
+    var date = new Date().toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" });
+    var head = d.name + "\n" + d.address + "\n\n" + date + "\n\n";
+    var acct = d.account ? "Account/reference: " + d.account + "\n\n" : "\n";
+    var to, body;
+    if (d.type === "dispute"){
+      to = BUREAUS.filter(function(x){ return x.name===d.bureau; })[0].addr + "\n\n";
+      body = "RE: Dispute of inaccurate information on my credit report\n" + acct +
+        "To whom it may concern:\n\nI am writing under Section 611 of the Fair Credit Reporting Act to dispute information in my credit file that is inaccurate or cannot be verified:\n\n" +
+        (d.detail || "[Describe the item, the account name, and what is wrong.]") + "\n\n" +
+        "Please conduct a reasonable investigation, correct or delete the information if it is inaccurate, incomplete, or cannot be verified, and send me the results in writing along with an updated copy of my report. I have enclosed copies of supporting documents.\n\nSincerely,\n" + d.name;
+    } else if (d.type === "furnisher"){
+      to = (d.company || "[Company name and address]") + "\n\n";
+      body = "RE: Dispute of inaccurate information reported to credit bureaus\n" + acct +
+        "To whom it may concern:\n\nI am disputing information you reported to the consumer reporting agencies, which I believe is inaccurate:\n\n" +
+        (d.detail || "[Describe the item and what is wrong.]") + "\n\n" +
+        "Under the Fair Credit Reporting Act, please investigate, correct or delete anything inaccurate or unverifiable, notify each credit bureau you reported to, and send me written confirmation of the result.\n\nSincerely,\n" + d.name;
+    } else if (d.type === "validate"){
+      to = (d.company || "[Collector name and address]") + "\n\n";
+      body = "RE: Request for validation of debt\n" + acct +
+        "To whom it may concern:\n\nI received a communication from you about a debt. Under Section 809(b) of the Fair Debt Collection Practices Act, I request validation of this debt. Please send me, in writing: the amount you claim I owe and how it was calculated; the name of the original creditor and the account number; proof that you are authorized to collect it; and a copy of any agreement or statement showing I owe it.\n\n" +
+        "Until you provide this, please stop collection activity and do not report this debt to any credit bureau. This letter is not an admission that I owe the debt. " + (d.detail || "") + "\n\nSincerely,\n" + d.name;
+    } else {
+      to = (d.company || "[Creditor name and address]") + "\n\n";
+      body = "RE: Goodwill adjustment request\n" + acct +
+        "Dear Customer Relations,\n\nI have been a customer and I value the relationship. I am writing to ask for a goodwill adjustment on a late payment on this account:\n\n" +
+        (d.detail || "[Briefly and honestly explain what happened.]") + "\n\n" +
+        "Since then I have kept the account in good standing. I would be grateful if you would remove the late-payment mark from my credit reports as a courtesy. Thank you for considering this.\n\nSincerely,\n" + d.name;
+    }
+    return head + to + body;
+  }
+
+  function wireDispute(){
+    var t = $("#dl-type"); if (!t) return;
+    t.onchange = function(){ readDispute(); dispCache.text = ""; renderCredit($("#tab-body")); };
+    $("#dl-go").onclick = function(){
+      readDispute();
+      if (!dispCache.name || !dispCache.address){ toast("Add your name and mailing address."); return; }
+      dispCache.text = buildLetter(dispCache);
+      renderCredit($("#tab-body"));
+    };
+    var c = $("#dl-copy"); if (c) c.onclick = function(){ copyText(dispCache.text); };
+    var dl = $("#dl-dl"); if (dl) dl.onclick = function(){ saveFile("dispute-letter-" + dispCache.type + ".txt", dispCache.text); };
+  }
+
+  // ---------- US laws & rights (plain-language summaries; not legal advice) ----------
+  var CREDIT_LAWS = [
+    { n:"Fair Credit Reporting Act (FCRA)", d:"You can get free reports, dispute errors, and bureaus must investigate (generally within 30 days). Negative items generally age off after 7 years (bankruptcy up to 10).", u:"https://www.consumerfinance.gov/consumer-tools/credit-reports-and-scores/" },
+    { n:"Fair Debt Collection Practices Act (FDCPA)", d:"Collectors can't harass or lie to you, and you can demand written validation of a debt within 30 days of their first notice.", u:"https://www.consumerfinance.gov/consumer-tools/debt-collection/" },
+    { n:"Fair Credit Billing Act (FCBA)", d:"You can dispute billing errors on credit cards in writing within 60 days of the statement.", u:"https://www.consumerfinance.gov/ask-cfpb/" },
+    { n:"Equal Credit Opportunity Act (ECOA)", d:"Lenders can't discriminate by race, sex, religion, national origin, marital status, age, or because you receive public assistance.", u:"https://www.consumerfinance.gov/compliance/compliance-resources/other-applicable-requirements/equal-credit-opportunity-act/" },
+    { n:"Credit Repair Organizations Act (CROA)", d:"Credit repair companies can't charge before they've done the work or promise results — and you can do everything they do yourself for free.", u:"https://consumer.ftc.gov/articles/credit-repair-how-do-it-yourself-and-how-spot-scam" },
+    { n:"Truth in Lending Act (TILA)", d:"Lenders must clearly disclose APR, fees, and total cost of loans and cards.", u:"https://www.consumerfinance.gov/rules-policy/regulations/1026/" },
+    { n:"Military Lending Act (MLA)", d:"Caps interest on most consumer loans to active-duty service members and their families at 36% MAPR.", u:"https://www.consumerfinance.gov/consumer-tools/educator-tools/servicemembers/" },
+    { n:"Where to complain", d:"If a bureau or company won't fix a problem, file a free complaint with the CFPB. Your state attorney general's office also takes complaints.", u:"https://www.consumerfinance.gov/complaint/" }
+  ];
+  var GRANT_LAWS = [
+    { n:"Your right to a fair hearing", d:"If benefits like SNAP, Medicaid, or cash assistance are denied, cut, or ended, you can appeal. The notice must explain how and by when — watch the deadline.", u:"https://www.benefits.gov/" },
+    { n:"Civil Rights Act, Title VI", d:"Programs that receive federal money can't discriminate based on race, color, or national origin. They must give meaningful language access.", u:"https://www.justice.gov/crt/title-vi-civil-rights-act-1964" },
+    { n:"Americans with Disabilities Act (ADA) & Section 504", d:"You can ask for reasonable accommodations (extra time, accessible forms, help applying) from government programs.", u:"https://www.ada.gov/" },
+    { n:"Fair Housing Act", d:"Housing providers can't discriminate by race, color, religion, sex, national origin, disability, or family status.", u:"https://www.hud.gov/program_offices/fair_housing_equal_opp" },
+    { n:"Privacy Act & program confidentiality", d:"Agencies must protect what's in your records and can only share it as the law allows. Never give your SSN to someone who contacted you first.", u:"https://www.justice.gov/opcl/privacy-act-1974" },
+    { n:"FTC rules on grant scams", d:"It's illegal to charge you to “guarantee” a grant. Report grant scams to the FTC.", u:"https://reportfraud.ftc.gov/" },
+    { n:"Uniform Guidance (2 CFR 200)", d:"The federal rules for how organizations spend and report grant money. It matters if you apply as a business or nonprofit and receive federal funds.", u:"https://www.ecfr.gov/current/title-2/subtitle-A/chapter-II/part-200" },
+    { n:"Free legal help", d:"If you're stuck, local legal aid offices help with benefits, debt, and housing at no cost if you qualify.", u:"https://www.lsc.gov/about-lsc/what-legal-aid/get-legal-help" }
+  ];
+  function lawsCardHtml(title, list){
+    return '<div class="card"><details><summary style="cursor:pointer; font-weight:600;">'+esc(title)+'</summary>' +
+      '<div class="age" style="margin:8px 0;">Plain-language summaries for education — not legal advice. Tap a link for the official source.</div>' +
+      list.map(function(l){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(l.n)+'</b><br>'+esc(l.d)+'</span><a class="btn-ghost" style="text-decoration:none; font-size:12px; padding:5px 10px; border-radius:6px;" href="'+esc(l.u)+'" target="_blank" rel="noopener noreferrer">Source ↗</a></div>'; }).join("") +
+      '</details></div>';
+  }
+
   var CREDIT_ISSUES = ["Collections","Late payments","High card balances","Charge-offs","Errors on my report","Few or no accounts (thin file)","Recent bankruptcy","Too many inquiries","Student loans in default"];
   var CREDIT_SCORES = ["Below 500","500-579","580-669","670-739","740+","Don't know"];
   var creditBusy = false;
@@ -1953,6 +2109,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
           '<div class="btn-row"><button class="btn-primary" id="cr-go"'+(AI_ENABLED?"":" disabled")+'>'+(plan ? "Rebuild my plan" : "Build my plan")+'</button>' +
           '<a class="btn-ghost" style="text-decoration:none; padding:9px 14px; border-radius:6px;" href="https://www.annualcreditreport.com" target="_blank" rel="noopener noreferrer">Get my free reports ↗</a></div>' +
         '</div></div>' +
+      disputeCardHtml() +
       (plan ? (
         '<div class="card"><h3>Your plan</h3><div class="lede">'+esc(plan.summary || "")+'</div>' +
         plan.steps.map(function(st,i){
@@ -1961,8 +2118,10 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
             '<span class="v"'+(done?' style="opacity:.55; text-decoration:line-through;"':"")+'><b>'+esc(st.title)+'</b><br>'+esc(st.detail)+'</span><span class="age">'+esc(st.when)+'</span></div>';
         }).join("") +
         '<div class="age" style="margin-top:10px;">Free tools: annualcreditreport.com (reports), consumerfinance.gov/complaint (if a bureau won’t fix an error), and your state’s free credit counseling via nfcc.org.</div></div>'
-      ) : "");
+      ) : "") +
+      lawsCardHtml("Your credit rights — US laws in plain English", CREDIT_LAWS);
     $("#cr-go").onclick = onBuildCredit;
+    wireDispute();
     Array.prototype.forEach.call(b.querySelectorAll(".cr-done"), function(cb){
       cb.onchange = async function(){ creditData().done[cb.dataset.i] = cb.checked; await persistMain(); renderCredit(b); };
     });
@@ -1995,6 +2154,50 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     { key:"business",  label:"Starting or growing a small business" },
     { key:"education", label:"School / training" }
   ];
+  // ---------- "What might I qualify for?" (PolicyEngine open-source benefits model) ----------
+  var qualCache = { state:"", adults:"1", kids:"", income:"", result:null, busy:false, error:"" };
+  function money(n){ return "$" + Math.round(n).toLocaleString(); }
+
+  function qualifyCardHtml(){
+    var q = qualCache;
+    if (!q.state) q.state = state.profile.stateName || "";
+    var out = "";
+    if (q.error) out = '<div class="age" style="margin-top:10px;">'+esc(q.error)+'</div>';
+    else if (q.result){
+      out = q.result.items.length
+        ? '<div class="out-h">Programs you may qualify for (estimates per year)</div>' +
+          q.result.items.map(function(i){
+            var amt = i.key.indexOf("medicaid")===0 ? "health coverage (valued at about "+money(i.yearly)+")" : i.chip && !i.yearly ? "CHIP eligible" : money(i.yearly)+" a year (about "+money(i.yearly/12)+"/mo)";
+            return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(i.label)+'</b> — '+esc(amt)+'<br><span class="age">'+esc(i.where)+'</span></span></div>';
+          }).join("") +
+          '<div class="age" style="margin-top:10px;">These are estimates from the open-source PolicyEngine model using federal and state rules. Only the agency can confirm eligibility, and you may need to meet extra rules (citizenship, assets, work). Never pay anyone to apply.</div>'
+        : '<div class="age" style="margin-top:10px;">Nothing came up at that income and household size — that doesn’t rule out local or one-time help. Use the options below.</div>';
+    }
+    return '<div class="card"><h3>What might I qualify for?</h3>' +
+      '<div class="lede">Answer four quick questions. This uses PolicyEngine’s open-source benefits model — no names, no SSN, nothing saved on their side.</div>' +
+      '<div class="stack"><div class="grid2">' +
+        '<div><label for="q-state">State</label><select id="q-state"><option value="">Choose…</option>'+STATES.map(function(x){ return '<option'+(q.state===x?" selected":"")+'>'+esc(x)+'</option>'; }).join("")+'</select></div>' +
+        '<div><label for="q-adults">Adults in the household</label><select id="q-adults"><option value="1"'+(q.adults==="1"?" selected":"")+'>1</option><option value="2"'+(q.adults==="2"?" selected":"")+'>2</option></select></div>' +
+      '</div><div class="grid2">' +
+        '<div><label for="q-kids">Kids’ ages <span style="text-transform:none; font-weight:400;">(comma-separated, blank if none)</span></label><input id="q-kids" value="'+esc(q.kids)+'" placeholder="6, 2"></div>' +
+        '<div><label for="q-income">Yearly household income (before taxes)</label><input id="q-income" inputmode="numeric" value="'+esc(q.income)+'" placeholder="18000"></div>' +
+      '</div><div class="btn-row"><button class="btn-primary" id="q-go">Check my options</button></div>' + out + '</div></div>';
+  }
+
+  async function onQualify(){
+    var q = qualCache;
+    q.state = $("#q-state").value; q.adults = $("#q-adults").value; q.kids = $("#q-kids").value; q.income = $("#q-income").value;
+    if (!q.state){ toast("Choose your state."); return; }
+    var kidAges = q.kids.split(/[,\s]+/).filter(Boolean).map(function(x){ return parseInt(x,10); }).filter(function(x){ return !isNaN(x); });
+    var btn = $("#q-go"); btn.disabled = true; btn.textContent = "Checking…";
+    q.error = ""; q.result = null;
+    try {
+      q.result = await aiRequest("/api/qualify", { state:q.state, adults:parseInt(q.adults,10), kidAges:kidAges, income:parseFloat(q.income.replace(/[^0-9.]/g,"")) || 0 });
+      state.profile.stateName = q.state; persistMain();
+    } catch(e){ q.error = (e && e.message) || "That didn’t go through. Try again."; }
+    renderGrants($("#tab-body"));
+  }
+
   var grantsCache = { state:"", cats:[], situation:"", result:null, statement:"", busy:false };
 
   function grantLinks(st, cats){
@@ -2032,6 +2235,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     if (!g.state) g.state = (state.profile.stateName || "");
     var res = g.result;
     b.innerHTML =
+      qualifyCardHtml() +
       '<div class="card"><h3>Grants &amp; assistance by state</h3>' +
         '<div class="lede">Pick your state and what you need. You’ll get official places to look and apply, a prep checklist, and a drafted statement of need. Applications ask for private details (SSN, bank, income), so you submit those yourself — Cindy never enters them for you.</div>' +
         '<div class="stack">' +
@@ -2051,8 +2255,10 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<div class="card"><h3>Statement of need</h3><div class="lede">A short draft built only from what you wrote above. Edit it so it’s true and in your voice before using it.</div>' +
           (g.statement ? '<div class="out">'+esc(g.statement)+'</div><div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="g-copy">Copy</button></div>' : "") +
           '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="g-stmt"'+(AI_ENABLED?"":" disabled")+'>'+(g.statement ? "Rewrite" : "Draft my statement")+'</button></div></div>'
-      ) : "");
+      ) : "") +
+      lawsCardHtml("Your rights when applying for aid — US laws in plain English", GRANT_LAWS);
     $("#g-go").onclick = onFindGrants;
+    var qg = $("#q-go"); if (qg) qg.onclick = onQualify;
     var stb = $("#g-stmt"); if (stb) stb.onclick = onGrantStatement;
     var cp = $("#g-copy"); if (cp) cp.onclick = function(){ copyText(g.statement); };
   }
