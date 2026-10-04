@@ -5,8 +5,8 @@
 import { json } from "../../_lib/cors.js";
 
 function authed(request, env) {
-  const a = request.headers.get("x-bot-secret") || "";
-  const b = env.BOT_SECRET || "";
+  const a = (request.headers.get("x-bot-secret") || "").trim();
+  const b = String(env.BOT_SECRET || "").trim();
   if (!b || a.length !== b.length) return false;
   let out = 0;
   for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
