@@ -97,8 +97,8 @@ try {
     else if (/e-?mail/.test(t)) val = P.email;
     else if (/phone|mobile/.test(t)) val = P.phone;
     else if (/linkedin/.test(t)) val = P.linkedin;
-    else if (/website|portfolio|github|url/.test(t)) val = P.website;
-    else if (/location|city|address/.test(t)) val = P.location;
+    else if (/website|portfolio|github|url/.test(t) && !/\?/.test(t)) val = P.website;
+    else if (/location \(city\)|^location|^city|city/.test(t) && !/\?/.test(t)) val = P.location;
     else if (info.tag === "textarea" && /cover|letter|why|message|additional/.test(t)) val = packet.coverLetter;
 
     const label = t.slice(0, 60) || info.type;
