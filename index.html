@@ -875,6 +875,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         tabBtn("cindy",t("tabCindy")) +
         tabBtn("pipeline",t("tabPipeline"), state.jobs.length ? String(state.jobs.length) : "") +
         tabBtn("matches",t("tabMatches")) +
+        tabBtn("freelance","Freelance") +
         tabBtn("money","Money help") +
         tabBtn("profile",t("tabProfile")) +
         tabBtn("activity",t("tabActivity"), unread ? String(unread) : "") +
@@ -912,6 +913,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     if (activeTab==="cindy") return renderCindy(b);
     if (activeTab==="pipeline") return renderPipeline(b);
     if (activeTab==="matches") return renderMatches(b);
+    if (activeTab==="freelance") return renderFreelance(b);
     if (activeTab==="money") return renderMoney(b);
     if (activeTab==="profile") return renderProfile(b);
     if (activeTab==="activity") return renderActivity(b);
@@ -1706,7 +1708,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     var j = findJob(id);
     if (!j) return;
     if (!AI_ENABLED){ toast("This static site can’t run AI tailoring — draft it yourself or ask an AI assistant directly."); return; }
-    var resume = state.profile.resumeText || "";
+    var resume = resumeWithCerts();
     if (!resume.trim()){ toast("Add your résumé in the Profile tab first."); activeTab="profile"; render(); return; }
 
     btn.disabled = true; btn.textContent = "Tailoring…";
@@ -1736,7 +1738,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
   async function onCoverLetter(id, btn, tone){
     var j = findJob(id);
     if (!j) return;
-    var resume = state.profile.resumeText || "";
+    var resume = resumeWithCerts();
     if (!resume.trim()){ toast("Add your résumé in the Profile tab first."); activeTab="profile"; render(); return; }
     btn.disabled = true; btn.textContent = "Writing…";
     try {
@@ -1910,7 +1912,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
 
   async function ensureMaterials(j){
     if (j.tailoredResume && j.coverLetter) return true;
-    var resume = state.profile.resumeText || "";
+    var resume = resumeWithCerts();
     if (!resume.trim()) return false;
     var d = await aiRequest("/api/tailor", { resume:resume.slice(0, 6500), title:j.title, company:j.company, description:(j.description || "").slice(0, 6500) });
     j.tailoredResume = String(d && d.resume || "").trim();
@@ -2089,6 +2091,305 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       '<div class="age" style="margin:8px 0;">Plain-language summaries for education — not legal advice. Tap a link for the official source.</div>' +
       list.map(function(l){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(l.n)+'</b><br>'+esc(l.d)+'</span><a class="btn-ghost" style="text-decoration:none; font-size:12px; padding:5px 10px; border-radius:6px;" href="'+esc(l.u)+'" target="_blank" rel="noopener noreferrer">Source ↗</a></div>'; }).join("") +
       '</details></div>';
+  }
+
+  // ---------- Freelance & Creator University ----------
+  var FREELANCE_PLATFORMS = [
+    { cat:"General marketplaces", n:"Upwork", u:"https://www.upwork.com", d:"Biggest client pool for writing, design, development, marketing, admin and more. Fees vary by contract — check current terms." },
+    { cat:"General marketplaces", n:"Fiverr", u:"https://www.fiverr.com", d:"Gig-based: you list a service and clients find you. Good for creative and digital services. Takes about a 20% commission." },
+    { cat:"General marketplaces", n:"Freelancer.com", u:"https://www.freelancer.com", d:"Bid-based marketplace with lots of small projects and contests." },
+    { cat:"General marketplaces", n:"PeoplePerHour", u:"https://www.peopleperhour.com", d:"UK-based marketplace; good for marketing, writing and design." },
+    { cat:"General marketplaces", n:"Contra", u:"https://contra.com", d:"Portfolio-first network; freelancers pay no commission (clients cover the fee)." },
+    { cat:"General marketplaces", n:"Guru", u:"https://www.guru.com", d:"Long-running marketplace with workrooms and milestone payments." },
+    { cat:"Vetted / expert", n:"Mercor", u:"https://www.mercor.com/experts", d:"Pays professionals (doctors, lawyers, analysts, engineers, writers) for contract work evaluating and training AI models. Apply with a profile and an AI-led interview." },
+    { cat:"Vetted / expert", n:"Toptal", u:"https://www.toptal.com", d:"Top ~3% vetted network for senior engineers, designers, finance and product people. Higher rates; a screening process." },
+    { cat:"Vetted / expert", n:"Braintrust", u:"https://www.usebraintrust.com", d:"Talent-owned network of tech and design freelancers with no fees taken from talent." },
+    { cat:"AI training & micro-tasks", n:"DataAnnotation", u:"https://www.dataannotation.tech", d:"Paid AI-training tasks (writing, coding, review). Pass an assessment first." },
+    { cat:"AI training & micro-tasks", n:"Outlier", u:"https://outlier.ai", d:"Expert tasks that train AI models, by subject (coding, math, languages, more)." },
+    { cat:"AI training & micro-tasks", n:"Clickworker", u:"https://www.clickworker.com", d:"Small online tasks (data, surveys, text). Low pay per task but easy to start." },
+    { cat:"AI training & micro-tasks", n:"UserTesting", u:"https://www.usertesting.com", d:"Get paid to test websites and apps and talk through what you see." },
+    { cat:"Remote job boards (contract & freelance)", n:"We Work Remotely", u:"https://weworkremotely.com", d:"Large remote board; free to browse, with freelance and contract listings." },
+    { cat:"Remote job boards (contract & freelance)", n:"Remote OK", u:"https://remoteok.com", d:"Remote jobs and contracts, searchable by skill." },
+    { cat:"Remote job boards (contract & freelance)", n:"Working Nomads", u:"https://www.workingnomads.com", d:"Curated remote jobs with freelance categories." },
+    { cat:"Remote job boards (contract & freelance)", n:"FlexJobs", u:"https://www.flexjobs.com", d:"Paid subscription that screens listings for scams. Free job boards above cover most of the same ground." },
+    { cat:"Creative portfolios & design", n:"99designs", u:"https://99designs.com", d:"Logo, brand and packaging design — contests and direct projects." },
+    { cat:"Creative portfolios & design", n:"Behance", u:"https://www.behance.net", d:"Show your creative work and get found by studios and clients." },
+    { cat:"Creative portfolios & design", n:"Contently", u:"https://contently.com", d:"Content and writing network for brand storytelling work." },
+    { cat:"Teaching & language", n:"Wyzant", u:"https://www.wyzant.com", d:"Set your own rate as a tutor in school and test-prep subjects." },
+    { cat:"Teaching & language", n:"Preply", u:"https://preply.com", d:"Teach languages online to students around the world." },
+    { cat:"Teaching & language", n:"ProZ", u:"https://www.proz.com", d:"Translators and interpreters find clients and projects." },
+    { cat:"Local & hands-on", n:"Thumbtack", u:"https://www.thumbtack.com", d:"Get leads for local services — cleaning, repairs, photography, lessons." },
+    { cat:"Local & hands-on", n:"TaskRabbit", u:"https://www.taskrabbit.com", d:"Local tasks like moving help, assembly, errands and handyman work." },
+    { cat:"Local & hands-on", n:"Rover", u:"https://www.rover.com", d:"Pet sitting and dog walking." }
+  ];
+  var FREELANCE_STEPS = [
+    "Pick one service you can describe in a sentence: “I help [who] get [result] with [skill].”",
+    "Build a tiny portfolio: 3 samples. No clients yet? Make mock projects or redo a real brand's page.",
+    "Set up 2 profiles, not 10 — one big marketplace plus one niche or vetted option.",
+    "Write a clear headline, a short bio with proof (results, years, tools), and a professional photo.",
+    "Send 5 short, tailored proposals a day for your first two weeks. Reference the client's exact problem.",
+    "Price for the first job slightly low to collect reviews, then raise your rate with every 3-5 completed jobs.",
+    "Keep every client on the platform until you've built trust — it protects your payment and your reviews.",
+    "Track income and set money aside for taxes — you're self-employed now."
+  ];
+  var FREELANCE_SCAMS = [
+    "Anyone who asks you to pay to get hired, “unlock” a job, or buy equipment from them.",
+    "Checks or payments sent in advance with a request to send some of it back (overpayment scam).",
+    "A recruiter who messages first on Telegram, WhatsApp or text and wants to move off the platform fast.",
+    "Jobs that are vague about the work but promise very high pay for simple tasks.",
+    "Requests for your SSN, bank login, or ID before a verified contract and payment is set up on the platform.",
+    "“Tests” that are actually free real work for the client's project."
+  ];
+  var FREELANCE_TOOLS = [
+    { n:"Kimai", u:"https://github.com/kimai/kimai", d:"Open-source time tracking and invoicing for freelancers (AGPL; self-host)." },
+    { n:"Dolibarr", u:"https://github.com/Dolibarr/dolibarr", d:"Open-source business toolkit: clients, quotes, invoices, expenses (GPL)." },
+    { n:"Postiz", u:"https://github.com/gitroomhq/postiz-app", d:"Open-source social media scheduler for planning and posting across platforms (AGPL)." },
+    { n:"OBS Studio", u:"https://obsproject.com", d:"Free, open-source screen and camera recording and live streaming." },
+    { n:"Kdenlive", u:"https://kdenlive.org", d:"Free, open-source video editor." },
+    { n:"Shotcut", u:"https://shotcut.org", d:"Free, open-source video editor that works on Windows, Mac and Linux." },
+    { n:"Audacity", u:"https://www.audacityteam.org", d:"Free audio recording and editing for podcasts and voiceovers." },
+    { n:"GIMP", u:"https://www.gimp.org", d:"Free image editor for thumbnails and graphics." },
+    { n:"Inkscape", u:"https://inkscape.org", d:"Free vector graphics for logos and illustrations." },
+    { n:"Penpot", u:"https://penpot.app", d:"Open-source design and prototyping, a free alternative to Figma." },
+    { n:"DaVinci Resolve (free)", u:"https://www.blackmagicdesign.com/products/davinciresolve", d:"Pro-level video editing and color, with a free version (not open-source)." },
+    { n:"Canva (free)", u:"https://www.canva.com", d:"Easy thumbnails, social graphics and media kits (not open-source)." }
+  ];
+
+  var CREATOR_MODULES = [
+    { t:"1. Pick your niche and your promise", pts:[
+      "Use this sentence: “I help [who] [get result] by [method].” If you can't fill it in, narrow it.",
+      "Choose something you could make 100 videos about, where you have some experience or real curiosity.",
+      "Test 2-3 niches for two weeks each, then keep the one with the best saves, shares and comments — not just views.",
+      "Positioning beats posting: a clear niche gets followed; a random feed gets skipped."] },
+    { t:"2. Choose one or two platforms", pts:[
+      "YouTube: searchable and long-lasting, best long-term monetization. Shorts feed it.",
+      "TikTok, Reels, Shorts: fastest discovery for brand-new accounts. Great for hooks and trends.",
+      "Instagram: strong for community and brand deals. LinkedIn: best for professional and B2B topics.",
+      "Newsletter or podcast: an audience you own. Start it once you have a few hundred followers.",
+      "Go deep on one platform for 90 days before adding another."] },
+    { t:"3. Set up for almost nothing", pts:[
+      "Your phone camera is enough. Film near a window for soft light, and hold the phone steady.",
+      "Audio matters more than video — a $20 clip-on mic beats a fancy camera with bad sound.",
+      "Free editors: CapCut, DaVinci Resolve (free), Kdenlive, Shotcut. Free graphics: Canva, GIMP.",
+      "Always add captions — most people watch with the sound off.",
+      "Use your platform's licensed music library only, so your videos aren't muted or taken down."] },
+    { t:"4. Hooks and formats that work", pts:[
+      "Win the first 1-3 seconds: show the result, ask a bold question, or state the problem.",
+      "One idea per video. Cut every second that doesn't move the viewer forward.",
+      "Proven formats: how-to, story, before/after, myth vs fact, series, day in the life, reaction.",
+      "Open a loop (“by the end you'll see…”) and pay it off to keep people watching.",
+      "Turn one idea into 5 pieces: a long video, 2-3 clips, a carousel, a post, a newsletter."] },
+    { t:"5. A consistency system", pts:[
+      "Batch: film 3-5 videos in one sitting, edit another day, schedule the posts.",
+      "Short-form: aim for 3-5 posts a week. Long-form: 1 solid video a week beats 5 rushed ones.",
+      "Keep an ideas list on your phone. Save posts you love and note why they worked.",
+      "Expect 6-12 months of steady posting before results feel real. Judge each post by what you learned."] },
+    { t:"6. Read your analytics", pts:[
+      "Watch retention (where people leave), shares, saves and replies — they matter more than likes.",
+      "Find your top 10% posts and make more like them. Fix or drop the bottom 10%.",
+      "Test one thing at a time: the hook, the length, the thumbnail or the title.",
+      "Check what you rank for in search: use clear titles and keywords people actually type."] },
+    { t:"7. Grow faster", pts:[
+      "Collaborate with creators at your size — duets, stitches, guest spots and shout-outs.",
+      "Reply to comments with videos. Spend 20 minutes a day on other people's posts in your niche.",
+      "Use trends by adding your own angle; don't copy. Use your own footage and credit sources.",
+      "Pin a post that shows exactly who you help, and make your bio say what to follow you for."] },
+    { t:"8. The monetization ladder", pts:[
+      "Early on: affiliate links (always disclose), freelance services (editing, scripts, UGC for brands), digital products.",
+      "UGC: brands pay creators for videos made for the brand's own ads — no big audience needed.",
+      "Next: sponsorships, paid communities or memberships, coaching, courses.",
+      "Platform payouts (YouTube Partner Program, creator funds) have follower or watch-time requirements that change — check the current rules.",
+      "Diversify: no single platform should be your whole income."] },
+    { t:"9. Brand deals the right way", pts:[
+      "Build a one-page media kit: who you are, audience, top posts, rates and contact.",
+      "Quote a rate for deliverables, usage rights and time period. Get everything in a written contract.",
+      "Payment terms: ask for a deposit and don't agree to open-ended “exposure.”",
+      "Disclose paid and gifted posts clearly (#ad or a paid-partnership label) — the FTC requires it.",
+      "Only promote things you've used or believe in. Your trust is the asset."] },
+    { t:"10. Business, legal and safety basics", pts:[
+      "Open a separate bank account for creator income and keep records of income and expenses.",
+      "Creator income is self-employment income: set money aside for taxes and talk to a tax pro about quarterly payments.",
+      "An LLC is optional at the start — ask a professional what makes sense in your state.",
+      "Get written permission before showing other people's faces, products or music. Know fair use is narrow.",
+      "Protect your privacy (no home address in shots) and your mental health — take breaks and block harassment."] }
+  ];
+  var CREATOR_LINKS = [
+    { n:"YouTube Creators (official)", u:"https://www.youtube.com/creators/" },
+    { n:"TikTok Creator Academy", u:"https://www.tiktok.com/creator-academy" },
+    { n:"Instagram for Creators", u:"https://creators.instagram.com/" },
+    { n:"FTC: endorsement and influencer disclosure rules", u:"https://www.ftc.gov/business-guidance/advertising-marketing/endorsements-influencers-reviews" },
+    { n:"Canva Design School (free)", u:"https://www.canva.com/designschool/" },
+    { n:"IRS: self-employed individuals tax center", u:"https://www.irs.gov/businesses/small-businesses-self-employed/self-employed-individuals-tax-center" }
+  ];
+
+  var freelanceSub = "work", flCat = "All", flProposal = "", creatorIdeas = null, flBusy = false;
+
+  function creatorData(){
+    state.profile.creator = state.profile.creator || { done:{}, niche:"", platform:"", audience:"" };
+    return state.profile.creator;
+  }
+
+  function renderFreelance(b){
+    var subs = [["work","Find freelance work"],["creator","Creator University"],["tools","Free & open-source tools"]];
+    b.innerHTML = '<div class="btn-row" style="margin-bottom:12px;">' +
+      subs.map(function(x){ return '<button class="'+(freelanceSub===x[0]?"btn-primary":"btn-ghost")+' fl-pill" data-s="'+x[0]+'">'+esc(x[1])+'</button>'; }).join("") +
+      '</div><div id="fl-body"></div>';
+    Array.prototype.forEach.call(b.querySelectorAll(".fl-pill"), function(btn){ btn.onclick = function(){ freelanceSub = btn.dataset.s; renderFreelance(b); }; });
+    var host = $("#fl-body");
+    if (freelanceSub === "work") renderFreelanceWork(host);
+    else if (freelanceSub === "creator") renderCreatorU(host);
+    else renderFreelanceTools(host);
+  }
+
+  function linkBtn(u, label){
+    return '<a class="btn-ghost" style="text-decoration:none; font-size:12px; padding:5px 10px; border-radius:6px;" href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(label || "Open")+' ↗</a>';
+  }
+
+  function renderFreelanceWork(host){
+    var cats = ["All"];
+    FREELANCE_PLATFORMS.forEach(function(x){ if (cats.indexOf(x.cat) === -1) cats.push(x.cat); });
+    var list = FREELANCE_PLATFORMS.filter(function(x){ return flCat === "All" || x.cat === flCat; });
+    host.innerHTML =
+      '<div class="card"><h3>Start freelancing</h3>' +
+        '<div class="lede">Places to find paid freelance and contract work. Free to join unless noted — never pay to get hired. Terms and fees change, so check each site.</div>' +
+        '<ol class="apply-steps">' + FREELANCE_STEPS.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("") + '</ol></div>' +
+      '<div class="card"><h3>Where to find work</h3>' +
+        '<div class="stack"><select id="fl-cat">' + cats.map(function(c){ return '<option'+(flCat===c?" selected":"")+'>'+esc(c)+'</option>'; }).join("") + '</select></div>' +
+        list.map(function(x){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(x.n)+'</b> <span class="age">'+esc(x.cat)+'</span><br>'+esc(x.d)+'</span>'+linkBtn(x.u)+'</div>'; }).join("") +
+      '</div>' +
+      '<div class="card"><h3>Proposal writer</h3>' +
+        '<div class="lede">Paste a client’s job post and your background. Cindy drafts a short proposal from your real experience — edit it before sending.</div>' +
+        '<div class="stack"><textarea id="fl-post" rows="4" placeholder="Paste the client’s job post…"></textarea>' +
+        '<textarea id="fl-bg" rows="3" placeholder="Your relevant skills and experience (or leave blank to use your résumé)">'+esc("")+'</textarea>' +
+        '<div class="btn-row"><button class="btn-primary" id="fl-go"'+(AI_ENABLED?"":" disabled")+'>Write my proposal</button></div>' +
+        (flProposal ? '<div class="out">'+esc(flProposal)+'</div><div class="btn-row"><button class="btn-ghost" id="fl-copy">Copy</button></div>' : "") +
+        '</div></div>' +
+      '<div class="card"><h3>Red flags — freelance scams</h3><ul class="apply-steps">' + FREELANCE_SCAMS.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("") + '</ul></div>';
+    $("#fl-cat").onchange = function(){ flCat = $("#fl-cat").value; renderFreelanceWork(host); };
+    $("#fl-go").onclick = onProposal;
+    var cp = $("#fl-copy"); if (cp) cp.onclick = function(){ copyText(flProposal); };
+  }
+
+  async function onProposal(){
+    var post = ($("#fl-post").value || "").trim();
+    var bg = ($("#fl-bg").value || "").trim() || (state.profile.resumeText || "").slice(0, 2500);
+    if (post.length < 30){ toast("Paste the client’s job post first."); return; }
+    if (!bg){ toast("Add your résumé in Profile, or type your background."); return; }
+    var btn = $("#fl-go"); btn.disabled = true; btn.textContent = "Writing…";
+    try {
+      var d = await aiRequest("/api/money", { kind:"proposal", post:post, background:bg, name:state.profile.name || "" });
+      flProposal = String(d.proposal || "").trim();
+    } catch(e){ toast((e && e.message) || "That didn’t go through. Try again."); }
+    renderFreelance($("#tab-body"));
+  }
+
+  function renderCreatorU(host){
+    var c = creatorData();
+    var total = CREATOR_MODULES.length, done = CREATOR_MODULES.filter(function(m,i){ return c.done[i]; }).length;
+    host.innerHTML =
+      '<div class="card"><h3>Creator University</h3>' +
+        '<div class="lede">A free, step-by-step course on becoming a content creator — built from common best practices. '+done+' of '+total+' modules done.</div>' +
+        CREATOR_MODULES.map(function(m,i){
+          return '<details style="border-top:1px solid var(--border); padding:10px 0;"><summary style="cursor:pointer; font-weight:600;">'+(c.done[i] ? "✓ " : "")+esc(m.t)+'</summary>' +
+            '<ul class="apply-steps">'+m.pts.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' +
+            '<label class="chk" style="display:inline-flex !important;"><input type="checkbox" class="cu-done" data-i="'+i+'"'+(c.done[i]?" checked":"")+'> Mark module complete</label></details>';
+        }).join("") +
+      '</div>' +
+      '<div class="card"><h3>Content idea generator</h3>' +
+        '<div class="lede">Tell Cindy your niche and get 10 hooks to film this week.</div>' +
+        '<div class="stack"><div class="grid2">' +
+          '<div><label for="cu-niche">Your niche</label><input id="cu-niche" value="'+esc(c.niche)+'" placeholder="Budget meal prep, Miami real estate…"></div>' +
+          '<div><label for="cu-plat">Platform</label><select id="cu-plat">'+["TikTok","Instagram Reels","YouTube Shorts","YouTube (long)","LinkedIn"].map(function(x){ return '<option'+(c.platform===x?" selected":"")+'>'+x+'</option>'; }).join("")+'</select></div>' +
+        '</div><div><label for="cu-aud">Who is it for? <span style="text-transform:none; font-weight:400;">(optional)</span></label><input id="cu-aud" value="'+esc(c.audience)+'" placeholder="Busy parents, first-time buyers…"></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="cu-go"'+(AI_ENABLED?"":" disabled")+'>Give me ideas</button></div></div>' +
+        (creatorIdeas ? '<div class="out-h">Your ideas</div>' + creatorIdeas.map(function(x){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>“'+esc(x.hook)+'”</b><br><span class="age">'+esc(x.format)+'</span></span></div>'; }).join("") : "") +
+      '</div>' +
+      '<div class="card"><h3>Official lessons and rules</h3>' +
+        CREATOR_LINKS.map(function(l){ return '<div class="apply-row"><span class="v">'+esc(l.n)+'</span>'+linkBtn(l.u)+'</div>'; }).join("") + '</div>';
+    Array.prototype.forEach.call(host.querySelectorAll(".cu-done"), function(cb){
+      cb.onchange = async function(){ creatorData().done[cb.dataset.i] = cb.checked; await persistMain(); renderCreatorU(host); };
+    });
+    $("#cu-go").onclick = onCreatorIdeas;
+  }
+
+  async function onCreatorIdeas(){
+    var c = creatorData();
+    c.niche = $("#cu-niche").value.trim(); c.platform = $("#cu-plat").value; c.audience = $("#cu-aud").value.trim();
+    if (!c.niche){ toast("Tell me your niche first."); return; }
+    var btn = $("#cu-go"); btn.disabled = true; btn.textContent = "Thinking…";
+    try {
+      var d = await aiRequest("/api/money", { kind:"ideas", niche:c.niche, platform:c.platform, audience:c.audience });
+      creatorIdeas = d.ideas || [];
+      await persistMain();
+    } catch(e){ toast((e && e.message) || "That didn’t go through. Try again."); }
+    renderFreelance($("#tab-body"));
+  }
+
+  function renderFreelanceTools(host){
+    host.innerHTML =
+      '<div class="card"><h3>Free &amp; open-source tools</h3>' +
+        '<div class="lede">Tools freelancers and creators can use without a subscription. Open-source ones show their license; “self-host” options need some technical setup.</div>' +
+        FREELANCE_TOOLS.map(function(x){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(x.n)+'</b><br>'+esc(x.d)+'</span>'+linkBtn(x.u)+'</div>'; }).join("") +
+      '</div>';
+  }
+
+  // ---------- Certificates & licenses (Profile) ----------
+  function certList(){ state.profile.certs = state.profile.certs || []; return state.profile.certs; }
+  function certStatus(c){
+    if (!c.expires) return { label:"No expiry", cls:"" };
+    var days = Math.round((new Date(c.expires + "T00:00:00").getTime() - Date.now()) / 86400000);
+    if (days < 0) return { label:"Expired", cls:"warn" };
+    if (days <= 60) return { label:"Expires in " + days + " days", cls:"warn" };
+    return { label:"Valid", cls:"" };
+  }
+  function resumeWithCerts(){
+    var base = (state.profile.resumeText || "").slice(0, 6000);
+    var items = certList().filter(function(c){ return certStatus(c).label !== "Expired"; }).map(function(c){
+      return c.name + (c.issuer ? " (" + c.issuer + ")" : "") + (c.issued ? ", " + c.issued.slice(0,4) : "");
+    });
+    return items.length ? base + "\n\nCERTIFICATIONS & LICENSES: " + items.join("; ").slice(0, 480) : base;
+  }
+  function certsCardHtml(){
+    var list = certList();
+    return '<div class="card"><h3>Certificates &amp; licenses</h3>' +
+      '<div class="lede">Keep your credentials in one place. Active ones are added to your tailored résumés automatically, and Cindy flags any that are about to expire.</div>' +
+      (list.length ? list.map(function(c,i){
+        var st = certStatus(c);
+        return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(c.name)+'</b>'+(c.issuer ? ' · '+esc(c.issuer) : '')+'<br><span class="age">'+
+          (c.number ? 'ID '+esc(c.number)+' · ' : '')+(c.issued ? 'Issued '+esc(c.issued)+' · ' : '')+(c.expires ? 'Expires '+esc(c.expires)+' · ' : '')+
+          '<b'+(st.cls ? ' style="color:var(--danger, #b3261e);"' : '')+'>'+esc(st.label)+'</b></span></span>' +
+          (c.url ? linkBtn(c.url, "View") : '') +
+          '<button class="btn-danger cert-del" data-i="'+i+'" style="padding:5px 10px; font-size:12px;">Remove</button></div>';
+      }).join("") : '<div class="empty">Nothing added yet.</div>') +
+      '<details style="margin-top:12px;"' + (list.length ? "" : " open") + '><summary class="age" style="cursor:pointer;">Add a certificate or license</summary><div class="stack" style="margin-top:10px;">' +
+        '<div class="grid2"><div><label for="ct-name">Name</label><input id="ct-name" placeholder="Real Estate License, CompTIA A+, CPR…"></div>' +
+        '<div><label for="ct-issuer">Issued by</label><input id="ct-issuer" placeholder="State of Florida, CompTIA…"></div></div>' +
+        '<div class="grid2"><div><label for="ct-num">License / ID number <span style="text-transform:none; font-weight:400;">(optional)</span></label><input id="ct-num"></div>' +
+        '<div><label for="ct-link">Verification link <span style="text-transform:none; font-weight:400;">(optional)</span></label><input id="ct-link" placeholder="https://…"></div></div>' +
+        '<div class="grid2"><div><label for="ct-issued">Date earned</label><input id="ct-issued" type="date"></div>' +
+        '<div><label for="ct-exp">Expires <span style="text-transform:none; font-weight:400;">(blank if never)</span></label><input id="ct-exp" type="date"></div></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="ct-add">Add</button></div>' +
+      '</div></details></div>';
+  }
+  function wireCerts(){
+    var add = $("#ct-add"); if (!add) return;
+    add.onclick = async function(){
+      var name = $("#ct-name").value.trim();
+      if (!name){ toast("Add the certificate or license name."); return; }
+      var link = $("#ct-link").value.trim();
+      if (link && !/^https:\/\//i.test(link)) link = "";
+      certList().push({ id:uid(), name:name, issuer:$("#ct-issuer").value.trim(), number:$("#ct-num").value.trim(),
+        url:link, issued:$("#ct-issued").value, expires:$("#ct-exp").value });
+      await persistMain();
+      render();
+    };
+    Array.prototype.forEach.call(document.querySelectorAll(".cert-del"), function(b){
+      b.onclick = async function(){
+        if (!confirm("Remove this from your list?")) return;
+        certList().splice(parseInt(b.dataset.i, 10), 1);
+        await persistMain(); render();
+      };
+    });
   }
 
   var moneySub = "credit";
@@ -2795,6 +3096,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<textarea id="p-resume" rows="16" placeholder="Paste your résumé here…">'+esc(p.resumeText||"")+'</textarea>' +
         '<div class="btn-row" style="margin-top:12px;"><button class="btn-primary" id="p-save-resume">'+esc(t("saveResumeBtn"))+'</button><span class="saveflash" id="r-flash"></span></div>' +
       '</div>' +
+      certsCardHtml() +
       '<div class="card">' +
         '<h3>'+esc(t("coverLetterCardH"))+'</h3>' +
         '<div class="lede">'+esc(t("coverLetterCardLede"))+'</div>' +
@@ -2868,6 +3170,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       } catch(err){ toast((err && err.message) || "Couldn’t read that file."); }
       e.target.value = "";
     };
+    wireCerts();
     $("#p-save-cl").onclick = async function(){
       state.profile.coverLetterText = $("#p-coverletter").value;
       await persistMain();

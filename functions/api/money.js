@@ -72,6 +72,25 @@ export async function onRequestPost({ request, env }) {
       if (!text) return json({ error: "ai_error", message: "Empty reply." }, 502);
       return json({ statement: text });
     }
+    if (b.kind === "proposal") {
+      const system =
+        "Write a short, specific freelance proposal (under 170 words) answering a client's job post. Open with the client's problem in one sentence, " +
+        "show 1-2 relevant proof points taken ONLY from the freelancer's background, outline a simple 3-step approach, and end with one clear question or next step. " +
+        "No fluff, no invented clients or numbers. Output only the proposal text.";
+      const user = "JOB POST:\n" + String(b.post || "").slice(0, 3000) + "\n\nFREELANCER BACKGROUND:\n" + String(b.background || "").slice(0, 2500) + "\nName: " + String(b.name || "").slice(0, 100);
+      const text = await ask(env, system, user, 500);
+      if (!text) return json({ error: "ai_error", message: "Empty reply." }, 502);
+      return json({ proposal: text });
+    }
+    if (b.kind === "ideas") {
+      const system =
+        "You are a short-form and long-form content strategist. Give 10 specific, original content ideas for a beginner creator. For each: a scroll-stopping hook line (first 3 seconds) and the format. " +
+        "Reply with ONLY JSON: {\"ideas\":[{\"hook\":\"...\",\"format\":\"...\"}]}";
+      const user = "Niche: " + String(b.niche || "").slice(0, 120) + "\nPlatform: " + String(b.platform || "").slice(0, 60) + "\nAudience: " + String(b.audience || "").slice(0, 150);
+      const o = parseObj(await ask(env, system, user, 1200));
+      if (!o || !Array.isArray(o.ideas)) return json({ error: "parse", message: "Couldn't come up with ideas. Try again." }, 502);
+      return json({ ideas: o.ideas.slice(0, 12).map(function (i) { return { hook: String(i.hook || "").slice(0, 200), format: String(i.format || "").slice(0, 80) }; }) });
+    }
     return json({ error: "bad_kind" }, 400);
   } catch (err) {
     return json({ error: "ai_error", message: "That didn't go through. Try again." }, 502);
