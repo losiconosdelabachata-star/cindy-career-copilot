@@ -44,27 +44,43 @@ const resumePdf = "bot/out/resume.pdf", coverPdf = "bot/out/cover-letter.pdf";
 await toPdf(packet.resume, resumePdf);
 if (packet.coverLetter) await toPdf(packet.coverLetter, coverPdf);
 
-const page = await (await browser.newContext({ viewport: { width: 1280, height: 1800 } })).newPage();
+const context = await browser.newContext({ viewport: { width: 1280, height: 1800 } });
+let page = await context.newPage();
+let popup = null;
+context.on("page", p => { popup = p; });
 try {
   await report("running", "Opening the application…");
   await page.goto(packet.url, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.waitForTimeout(2500);
 
-  // jump to the form if the posting page has an Apply button/tab first (only a VISIBLE file or
-  // first-name field counts as "already on the form")
-  async function onForm() {
-    for (const sel of ["input[type=file]", "input[name*=first i]", "input[id*=first i]", "input[autocomplete=given-name]"]) {
-      const loc = page.locator(sel);
-      for (let i = 0; i < Math.min(await loc.count(), 5); i++) if (await loc.nth(i).isVisible().catch(() => false)) return true;
-    }
-    return false;
+  // How many visible inputs a frame has — the frame with the most is the application form (some
+  // companies embed the form in an iframe). A visible file or first-name field means "on the form".
+  async function visibleCount(fr) {
+    const els = await fr.locator("input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=search]), textarea, select").elementHandles().catch(() => []);
+    let n = 0;
+    for (const el of els) if (await el.isVisible().catch(() => false)) n++;
+    return n;
   }
-  for (let attempt = 0; attempt < 2 && !(await onForm()); attempt++) {
-    const re = /^\s*(apply( now| for this (job|position|role))?|application|start application)\s*$/i;
+  async function bestFrame() {
+    let best = page.mainFrame(), bestN = await visibleCount(best);
+    for (const fr of page.frames()) {
+      if (fr === page.mainFrame()) continue;
+      const n = await visibleCount(fr);
+      if (n > bestN) { best = fr; bestN = n; }
+    }
+    return { frame: best, n: bestN };
+  }
+  async function onForm() { return (await bestFrame()).n >= 4; }
+
+  // jump to the form if the posting page has an Apply button/tab first; follow it if it opens a new tab
+  for (let attempt = 0; attempt < 3 && !(await onForm()); attempt++) {
+    const re = /^\s*(apply( now| for this (job|position|role)| here)?|application|start application)\s*$/i;
     const btn = page.getByRole("link", { name: re }).or(page.getByRole("button", { name: re })).or(page.getByRole("tab", { name: re })).first();
     if (!(await btn.count())) break;
+    popup = null;
     await btn.click({ timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(4000);
+    if (popup) { page = popup; await page.waitForLoadState("domcontentloaded").catch(() => {}); await page.waitForTimeout(3000); }
   }
   const bodyText = (await page.locator("body").innerText().catch(() => "")).toLowerCase();
   if (/suspicious (behaviou?r|activity)|unusual (traffic|behaviou?r)|verify you are (a )?human|access denied|are you a robot/.test(bodyText)) {
@@ -75,9 +91,8 @@ try {
     await report("needs_you", "This form has a CAPTCHA, so a bot can't finish it. Apply by hand — your materials are in the Apply assistant.");
     process.exit(0);
   }
-  // greenhouse embeds the form in an iframe
-  const gh = page.frames().find(f => /greenhouse\.io/.test(f.url()) && f !== page.mainFrame());
-  const root = gh || page;
+  const gh = (await bestFrame()).frame;
+  const root = gh === page.mainFrame() ? page : gh;
 
   const filled = [], missing = [];
   const fields = await root.locator("input:not([type=hidden]):not([type=submit]):not([type=button]), textarea, select").elementHandles();
