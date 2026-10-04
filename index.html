@@ -875,9 +875,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         tabBtn("cindy",t("tabCindy")) +
         tabBtn("pipeline",t("tabPipeline"), state.jobs.length ? String(state.jobs.length) : "") +
         tabBtn("matches",t("tabMatches")) +
-        tabBtn("credit","Credit") +
-        tabBtn("grants","Grants") +
-        tabBtn("loans","Loans") +
+        tabBtn("money","Money help") +
         tabBtn("profile",t("tabProfile")) +
         tabBtn("activity",t("tabActivity"), unread ? String(unread) : "") +
       '</div>' +
@@ -914,9 +912,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     if (activeTab==="cindy") return renderCindy(b);
     if (activeTab==="pipeline") return renderPipeline(b);
     if (activeTab==="matches") return renderMatches(b);
-    if (activeTab==="credit") return renderCredit(b);
-    if (activeTab==="grants") return renderGrants(b);
-    if (activeTab==="loans") return renderLoans(b);
+    if (activeTab==="money") return renderMoney(b);
     if (activeTab==="profile") return renderProfile(b);
     if (activeTab==="activity") return renderActivity(b);
   }
@@ -1558,27 +1554,23 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     b.innerHTML =
       queueCardHtml() +
       '<div class="card">' +
-        '<h3>Import a job from LinkedIn, Indeed or an email alert</h3>' +
-        '<div class="lede">Paste the posting text. If the posting sends you to the company’s own site, paste that link too — that’s the only kind the bot can apply to.</div>' +
+        '<h3>Add a job</h3>' +
+        '<div class="lede">Paste the job posting from anywhere — Cindy fills in the title and company for you.</div>' +
         '<div class="stack">' +
-          '<textarea id="imp-text" rows="5" placeholder="Paste the job posting here…"></textarea>' +
-          '<div class="grid2">' +
-            '<div><label for="imp-url">Posting link</label><input id="imp-url" placeholder="https://www.linkedin.com/jobs/…"></div>' +
-            '<div><label for="imp-apply">Company’s apply link <span style="text-transform:none; font-weight:400;">(optional)</span></label><input id="imp-apply" placeholder="https://boards.greenhouse.io/…"></div>' +
-          '</div>' +
-          '<div class="btn-row"><button class="btn-primary" id="imp-go"'+ (AI_ENABLED ? "" : " disabled") +'>Import job</button></div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="card">' +
-        '<h3>'+esc(t("addRoleTitle"))+'</h3>' +
-        '<div class="stack">' +
-          '<div class="grid2">' +
-            '<div><label for="j-title">'+esc(t("jobTitleLabel"))+'</label><input id="j-title" placeholder="Customer Success Manager"></div>' +
-            '<div><label for="j-company">'+esc(t("companyLabel"))+'</label><input id="j-company" placeholder="Acme Health"></div>' +
-          '</div>' +
-          '<div><label for="j-url">'+esc(t("postingUrlLabel"))+'<span style="text-transform:none; font-weight:400;">'+esc(t("optionalWord"))+'</span></label><input id="j-url" placeholder="https://…"></div>' +
-          '<div><label for="j-desc">'+esc(t("jobDescLabel"))+'<span style="text-transform:none; font-weight:400;">'+esc(t("jobDescHint"))+'</span></label><textarea id="j-desc" rows="5" placeholder="Paste the full posting text here…"></textarea></div>' +
-          '<div class="btn-row"><button class="btn-primary" id="j-add">'+esc(t("addToPipeline"))+'</button></div>' +
+          '<textarea id="imp-text" rows="4" placeholder="Paste the job posting here…"></textarea>' +
+          '<div><label for="imp-url">Link to the job <span style="text-transform:none; font-weight:400;">(optional — lets the bot apply if it’s the company’s own site)</span></label><input id="imp-url" placeholder="https://…"></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="imp-go"'+ (AI_ENABLED ? "" : " disabled") +'>Add job</button></div>' +
+          '<details><summary class="age" style="cursor:pointer;">Or type it in yourself</summary>' +
+            '<div class="stack" style="margin-top:10px;">' +
+              '<div class="grid2">' +
+                '<div><label for="j-title">'+esc(t("jobTitleLabel"))+'</label><input id="j-title" placeholder="Customer Success Manager"></div>' +
+                '<div><label for="j-company">'+esc(t("companyLabel"))+'</label><input id="j-company" placeholder="Acme Health"></div>' +
+              '</div>' +
+              '<div><label for="j-url">'+esc(t("postingUrlLabel"))+'</label><input id="j-url" placeholder="https://…"></div>' +
+              '<div><label for="j-desc">'+esc(t("jobDescLabel"))+'</label><textarea id="j-desc" rows="4" placeholder="Paste the full posting text here…"></textarea></div>' +
+              '<div class="btn-row"><button class="btn-ghost" id="j-add">'+esc(t("addToPipeline"))+'</button></div>' +
+            '</div>' +
+          '</details>' +
         '</div>' +
       '</div>' +
       '<div id="jobs-list">' +
@@ -1609,17 +1601,22 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       '</div>' +
       (j.description ? '<details><summary>'+esc(t("jobDescSummary"))+'</summary><div class="desc">'+esc(j.description)+'</div></details>' : "") +
       '<div class="job-actions">' +
-        '<button class="btn-primary j-tailor"'+ (AI_ENABLED ? "" : " disabled") +'>'+ esc(j.tailoredResume ? t("retailorBtn") : t("tailorBtn")) +'</button>' +
-        '<select class="j-tone" aria-label="Cover letter tone"><option value="warm">Warm</option><option value="formal">Formal</option><option value="concise">Concise</option><option value="confident">Confident</option></select>' +
-        '<button class="btn-ghost j-cover"'+ (AI_ENABLED ? "" : " disabled") +'>Write cover letter</button>' +
-        (botUrl(j)
-          ? '<label class="chk"><input type="checkbox" class="j-approve"'+(j.approved ? " checked" : "")+(s==="applied" ? " disabled" : "")+'> Approved for auto-apply</label>'
-          : '<span class="age">Apply by hand (no company link)</span>') +
         '<button class="btn-primary j-apply"'+ (AI_ENABLED ? "" : " disabled") +'>Apply →</button>' +
         '<select class="j-status" aria-label="'+esc(t("statusAria"))+'">' +
           STAGES.map(function(st){ return '<option value="'+st.key+'"'+(s===st.key?" selected":"")+'>'+esc(stageLabel(st.key))+'</option>'; }).join("") +
         '</select>' +
       '</div>' +
+      '<details style="margin-top:8px;"><summary class="age" style="cursor:pointer;">More options</summary>' +
+        '<div class="job-actions">' +
+          '<button class="btn-ghost j-tailor"'+ (AI_ENABLED ? "" : " disabled") +'>'+ esc(j.tailoredResume ? t("retailorBtn") : t("tailorBtn")) +'</button>' +
+          '<select class="j-tone" aria-label="Cover letter tone"><option value="warm">Warm</option><option value="formal">Formal</option><option value="concise">Concise</option><option value="confident">Confident</option></select>' +
+          '<button class="btn-ghost j-cover"'+ (AI_ENABLED ? "" : " disabled") +'>Write cover letter</button>' +
+          (botUrl(j)
+            ? '<label class="chk"><input type="checkbox" class="j-approve"'+(j.approved ? " checked" : "")+(s==="applied" ? " disabled" : "")+'> Let the bot apply for me</label>'
+            : '<span class="age">Apply by hand — no company link</span>') +
+        '</div>' +
+      '</details>' +
+      (j.tailoredResume || j.coverLetter ? '<details style="margin-top:8px;"><summary class="age" style="cursor:pointer;">View résumé &amp; cover letter</summary>' : "") +
       (j.tailoredResume ? (
         '<div class="out-h">'+esc(t("tailoredResumeH"))+'</div>' +
         '<div class="out">'+esc(j.tailoredResume)+'</div>' +
@@ -1636,6 +1633,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
           '<button class="btn-ghost j-dl-c" style="font-size:12px; padding:6px 12px;">'+esc(t("downloadTxtBtn"))+'</button>' +
         '</div>'
       ) : "") +
+      (j.tailoredResume || j.coverLetter ? '</details>' : "") +
     '</div>';
   }
 
@@ -1863,7 +1861,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
   async function onImportJob(){
     var text = ($("#imp-text").value || "").trim();
     var url = ($("#imp-url").value || "").trim();
-    var applyUrl = ($("#imp-apply").value || "").trim();
+    var applyUrl = (url && !isBlockedHost(url)) ? url : "";
     if (text.length < 40){ toast("Paste the job posting text first."); return; }
     var btn = $("#imp-go"); btn.disabled = true; btn.textContent = "Reading it…";
     try {
@@ -2047,12 +2045,12 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
 
   function wireDispute(){
     var t = $("#dl-type"); if (!t) return;
-    t.onchange = function(){ readDispute(); dispCache.text = ""; renderCredit($("#tab-body")); };
+    t.onchange = function(){ readDispute(); dispCache.text = ""; renderCredit(moneyHost()); };
     $("#dl-go").onclick = function(){
       readDispute();
       if (!dispCache.name || !dispCache.address){ toast("Add your name and mailing address."); return; }
       dispCache.text = buildLetter(dispCache);
-      renderCredit($("#tab-body"));
+      renderCredit(moneyHost());
     };
     var c = $("#dl-copy"); if (c) c.onclick = function(){ copyText(dispCache.text); };
     var dl = $("#dl-dl"); if (dl) dl.onclick = function(){ saveFile("dispute-letter-" + dispCache.type + ".txt", dispCache.text); };
@@ -2084,6 +2082,20 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       '<div class="age" style="margin:8px 0;">Plain-language summaries for education — not legal advice. Tap a link for the official source.</div>' +
       list.map(function(l){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(l.n)+'</b><br>'+esc(l.d)+'</span><a class="btn-ghost" style="text-decoration:none; font-size:12px; padding:5px 10px; border-radius:6px;" href="'+esc(l.u)+'" target="_blank" rel="noopener noreferrer">Source ↗</a></div>'; }).join("") +
       '</details></div>';
+  }
+
+  var moneySub = "credit";
+  function moneyHost(){ return $("#money-body") || $("#tab-body"); }
+  function renderMoney(b){
+    var subs = [["credit","Fix my credit"],["grants","Find help & grants"],["loans","Get a loan"]];
+    b.innerHTML = '<div class="btn-row" style="margin-bottom:12px;">' +
+      subs.map(function(x){ return '<button class="'+(moneySub===x[0]?"btn-primary":"btn-ghost")+' mn-pill" data-s="'+x[0]+'">'+esc(x[1])+'</button>'; }).join("") +
+      '</div><div id="money-body"></div>';
+    Array.prototype.forEach.call(b.querySelectorAll(".mn-pill"), function(btn){ btn.onclick = function(){ moneySub = btn.dataset.s; renderMoney(b); }; });
+    var host = $("#money-body");
+    if (moneySub === "credit") renderCredit(host);
+    else if (moneySub === "grants") renderGrants(host);
+    else renderLoans(host);
   }
 
   // ---------- Loans: personal, business, and low-/no-documentation options (education + official sources; not lender recommendations) ----------
@@ -2234,7 +2246,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       toast((e && e.message) || "That didn’t go through. Try again.");
     }
     creditBusy = false;
-    renderCredit($("#tab-body"));
+    renderCredit(moneyHost());
   }
 
   var GRANT_CATS = [
@@ -2285,7 +2297,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       q.result = await aiRequest("/api/qualify", { state:q.state, adults:parseInt(q.adults,10), kidAges:kidAges, income:parseFloat(q.income.replace(/[^0-9.]/g,"")) || 0 });
       state.profile.stateName = q.state; persistMain();
     } catch(e){ q.error = (e && e.message) || "That didn’t go through. Try again."; }
-    renderGrants($("#tab-body"));
+    renderGrants(moneyHost());
   }
 
   var grantsCache = { state:"", cats:[], situation:"", result:null, statement:"", busy:false };
@@ -2371,7 +2383,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       prep = await aiRequest("/api/money", { kind:"grants", state:g.state, categories:g.cats, situation:g.situation });
     } catch(e){ toast("Links are ready; the checklist didn’t load — try again for tips."); }
     g.result = { links:grantLinks(g.state, g.cats), prep:prep.prep || [], tips:prep.tips || [], scams:prep.scams || [] };
-    renderGrants($("#tab-body"));
+    renderGrants(moneyHost());
   }
 
   async function onGrantStatement(){
@@ -2383,7 +2395,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         category:g.cats.map(function(k){ return (GRANT_CATS.filter(function(c){ return c.key===k; })[0] || {}).label; }).join("; "), situation:g.situation });
       g.statement = String(d.statement || "").trim();
     } catch(e){ toast((e && e.message) || "That didn’t go through. Try again."); }
-    renderGrants($("#tab-body"));
+    renderGrants(moneyHost());
   }
 
   // ---------- Job Matches (real listings via Adzuna proxy) ----------

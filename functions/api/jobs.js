@@ -39,27 +39,43 @@ export async function onRequestGet(context) {
     return json({ error: "missing_query", message: "Add target roles/keywords in your Profile first." }, 400);
   }
 
-  const adzunaUrl = new URL("https://api.adzuna.com/v1/api/jobs/" + country + "/search/" + page);
-  adzunaUrl.searchParams.set("app_id", env.ADZUNA_APP_ID);
-  adzunaUrl.searchParams.set("app_key", env.ADZUNA_APP_KEY);
-  adzunaUrl.searchParams.set("results_per_page", remote ? "50" : "20");
-  adzunaUrl.searchParams.set("what", remote ? what + " remote" : what);
-  if (remote) adzunaUrl.searchParams.set("sort_by", "date");
-  else if (where.trim()) adzunaUrl.searchParams.set("where", where);
-  adzunaUrl.searchParams.set("content-type", "application/json");
+  // Profile keyword lists are comma-separated ("data entry, admin, ecommerce…"). Adzuna ANDs every
+  // word in one query, so a long list matches nothing — search each of the first few terms and merge.
+  const terms = what.split(/[,;]+/).map(function (t) { return t.trim(); }).filter(Boolean).slice(0, 4);
+  const isRemote = function (r) {
+    return /remote|work from home|work-from-home|telecommut|virtual|anywhere/i.test((r.title || "") + " " + (r.description || "") + " " + ((r.location && r.location.display_name) || ""));
+  };
+  const one = async function (term) {
+    const u = new URL("https://api.adzuna.com/v1/api/jobs/" + country + "/search/" + page);
+    u.searchParams.set("app_id", env.ADZUNA_APP_ID);
+    u.searchParams.set("app_key", env.ADZUNA_APP_KEY);
+    u.searchParams.set("results_per_page", remote ? "50" : "20");
+    u.searchParams.set("what", remote ? term + " remote" : term);
+    if (remote) u.searchParams.set("sort_by", "date");
+    else if (where.trim()) u.searchParams.set("where", where);
+    u.searchParams.set("content-type", "application/json");
+    const res = await fetch(u.toString());
+    if (!res.ok) {
+      const msg = await res.text().catch(function () { return ""; });
+      throw new Error("Job search failed (" + res.status + "). " + msg.slice(0, 200));
+    }
+    return res.json();
+  };
 
   try {
-    const res = await fetch(adzunaUrl.toString());
-    if (!res.ok) {
-      const msg = await res.text().catch(function(){ return ""; });
-      return json({ error: "adzuna_error", message: "Job search failed (" + res.status + "). " + msg.slice(0,200) }, 502);
-    }
-    const data = await res.json();
-    const isRemote = function(r) {
-      return /remote|work from home|work-from-home|telecommut|virtual|anywhere/i.test((r.title || "") + " " + (r.description || "") + " " + ((r.location && r.location.display_name) || ""));
-    };
-    const raw = (data.results || []).filter(function(r) { return !remote || isRemote(r); });
-    const results = raw.map(function(r) {
+    const datas = await Promise.all(terms.map(one));
+    const seen = {};
+    const raw = [];
+    datas.forEach(function (d) {
+      (d.results || []).forEach(function (r) {
+        const k = r.id || r.redirect_url;
+        if (seen[k]) return;
+        seen[k] = 1;
+        if (!remote || isRemote(r)) raw.push(r);
+      });
+    });
+    raw.sort(function (x, y) { return String(y.created || "").localeCompare(String(x.created || "")); });
+    const results = raw.slice(0, 40).map(function (r) {
       return {
         title: r.title || "",
         company: (r.company && r.company.display_name) || "",
@@ -71,7 +87,7 @@ export async function onRequestGet(context) {
         salaryMax: r.salary_max || null
       };
     });
-    return json({ count: data.count || results.length, results: results });
+    return json({ count: results.length, results: results });
   } catch (err) {
     return json({ error: "adzuna_error", message: String(err && err.message || err) }, 502);
   }
