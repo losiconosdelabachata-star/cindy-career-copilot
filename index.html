@@ -2,10 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cindy">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
 <title>Cindy Career Copilot — Your next move starts here</title>
 <meta name="description" content="Cindy Career Copilot: find jobs, tailor your résumé, apply faster, fix your credit, and find help and income — all in one place.">
-<meta name="theme-color" content="#2b6b88">
+<meta name="theme-color" content="#eef2f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1a22" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -222,6 +229,75 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
   background:var(--ink); color:var(--ground); font-size:13px; font-family:var(--body);
   padding:9px 16px; border-radius:var(--radius); box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:50; max-width:90vw;}
 #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* ---- phones & tablets (iOS / Android) ---- */
+html{-webkit-text-size-adjust:100%; text-size-adjust:100%; -webkit-tap-highlight-color:rgba(43,107,136,.15);}
+body{overflow-x:hidden; overscroll-behavior-y:none;}
+.wrap{padding-left:max(20px, env(safe-area-inset-left)); padding-right:max(20px, env(safe-area-inset-right)); padding-bottom:calc(96px + env(safe-area-inset-bottom));}
+.out,.desc,.cindy-bubble,.apply-row .v{overflow-wrap:anywhere;}
+#toast{bottom:calc(24px + env(safe-area-inset-bottom));}
+.apply-backdrop{padding-top:max(24px, env(safe-area-inset-top)); padding-bottom:max(24px, env(safe-area-inset-bottom));}
+
+/* tabs: one swipeable row instead of wrapping */
+.tabs{overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; scroll-snap-type:x proximity;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{white-space:nowrap; flex:none; scroll-snap-align:start;}
+
+/* touch devices: comfortable tap targets, and 16px inputs so iOS Safari never zooms in on focus */
+@media (pointer:coarse){
+  button, .btn-ghost, .btn-primary, .btn-danger, .iconbtn, .tab, select, a.btn-ghost, a.btn-primary{min-height:44px;}
+  .chk{min-height:44px;}
+  input[type=checkbox], input[type=radio]{min-width:20px; min-height:20px;}
+}
+@media (max-width:820px){
+  input, textarea, select{font-size:16px;}
+}
+
+/* tablets */
+@media (min-width:600px) and (max-width:1024px){
+  :root{--maxw:860px;}
+  .wrap{padding-top:22px;}
+}
+
+/* phones */
+@media (max-width:560px){
+  body{font-size:15px;}
+  .wrap{padding-top:14px; padding-left:max(14px, env(safe-area-inset-left)); padding-right:max(14px, env(safe-area-inset-right));}
+  .masthead{gap:8px; margin-bottom:12px;}
+  .masthead .btn-row{width:100%; justify-content:flex-start;}
+  .brand-logo{width:44px;}
+  .brand-text h1{font-size:17px;}
+  .card{padding:15px; border-radius:12px;}
+  .tabs{margin-left:-14px; margin-right:-14px; padding-left:14px; padding-right:14px; margin-bottom:16px;}
+  .tab{padding:10px 12px; font-size:13px;}
+  .grid2{grid-template-columns:1fr !important;}
+  .btn-row{gap:8px;}
+  .btn-row > button, .btn-row > a.btn-ghost, .btn-row > a.btn-primary{flex:1 1 auto; text-align:center;}
+  .job-actions{gap:8px;}
+  .job-actions > button, .job-actions > select, .job-actions > a{flex:1 1 140px;}
+  .job-head{flex-wrap:wrap;}
+  .apply-row{flex-wrap:wrap;}
+  .apply-row .age{max-width:100%; text-align:left; flex-basis:100%;}
+  .apply-row > a.btn-ghost, .apply-row > button{margin-left:auto;}
+  .chk-grid{grid-template-columns:1fr;}
+  .cindy-bubble{max-width:92%;}
+  /* the Apply window becomes a full-height sheet */
+  .apply-backdrop{padding:0; align-items:stretch;}
+  .apply-modal{border-radius:0; border-left:none; border-right:none; max-width:none; min-height:100%; padding:16px max(14px, env(safe-area-inset-left)) calc(24px + env(safe-area-inset-bottom));}
+  .apply-modal h2{font-size:18px;}
+  .stage-group > summary{font-size:14px;}
+  h1{font-size:20px;}
+}
+/* very small phones */
+@media (max-width:360px){
+  .tab{padding:10px 9px; font-size:12px;}
+  .brand-text .tag{display:none;}
+}
+/* landscape phones: don't let the share sheet hog the screen */
+@media (max-height:480px) and (orientation:landscape){
+  .apply-backdrop{padding:0;}
+  .wrap{padding-top:8px;}
+}
 
 .foot{margin-top:26px; font-family:var(--mono); font-size:11px; color:var(--faint); text-align:center; line-height:1.7;}
 
