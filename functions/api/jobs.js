@@ -111,8 +111,16 @@ export async function onRequestGet(context) {
       if (cutoff && j.created && new Date(j.created).getTime() < cutoff) return;
       merged.push(j);
     });
-    merged.sort(function (x, y) { return String(y.created || "").localeCompare(String(x.created || "")); });
-    const results = merged.slice(0, 60);
+    // newest first within each source, then take turns between sources so one board can't crowd out the rest
+    const bySource = {};
+    merged.forEach(function (j) { (bySource[j.source] = bySource[j.source] || []).push(j); });
+    const queues = Object.keys(bySource).map(function (s) {
+      return bySource[s].sort(function (x, y) { return String(y.created || "").localeCompare(String(x.created || "")); });
+    });
+    const results = [];
+    for (let i = 0; results.length < 60 && queues.some(function (q) { return i < q.length; }); i++) {
+      queues.forEach(function (q) { if (i < q.length && results.length < 60) results.push(q[i]); });
+    }
     return json({ count: results.length, results: results });
   } catch (err) {
     return json({ error: "adzuna_error", message: String(err && err.message || err) }, 502);
