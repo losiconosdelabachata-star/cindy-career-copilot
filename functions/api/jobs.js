@@ -29,6 +29,7 @@ export async function onRequestGet(context) {
   const what = (url.searchParams.get("what") || "").slice(0, 200);
   const where = (url.searchParams.get("where") || "").slice(0, 200);
   const country = (url.searchParams.get("country") || "us").toLowerCase().replace(/[^a-z]/g, "").slice(0, 2) || "us";
+  const remote = url.searchParams.get("remote") === "1";
   const page = Math.max(1, Math.min(10, parseInt(url.searchParams.get("page"), 10) || 1));
 
   if (!env.ADZUNA_APP_ID || !env.ADZUNA_APP_KEY) {
@@ -41,9 +42,10 @@ export async function onRequestGet(context) {
   const adzunaUrl = new URL("https://api.adzuna.com/v1/api/jobs/" + country + "/search/" + page);
   adzunaUrl.searchParams.set("app_id", env.ADZUNA_APP_ID);
   adzunaUrl.searchParams.set("app_key", env.ADZUNA_APP_KEY);
-  adzunaUrl.searchParams.set("results_per_page", "20");
-  adzunaUrl.searchParams.set("what", what);
-  if (where.trim()) adzunaUrl.searchParams.set("where", where);
+  adzunaUrl.searchParams.set("results_per_page", remote ? "50" : "20");
+  adzunaUrl.searchParams.set("what", remote ? what + " remote" : what);
+  if (remote) adzunaUrl.searchParams.set("sort_by", "date");
+  else if (where.trim()) adzunaUrl.searchParams.set("where", where);
   adzunaUrl.searchParams.set("content-type", "application/json");
 
   try {
@@ -53,7 +55,11 @@ export async function onRequestGet(context) {
       return json({ error: "adzuna_error", message: "Job search failed (" + res.status + "). " + msg.slice(0,200) }, 502);
     }
     const data = await res.json();
-    const results = (data.results || []).map(function(r) {
+    const isRemote = function(r) {
+      return /remote|work from home|work-from-home|telecommut|virtual|anywhere/i.test((r.title || "") + " " + (r.description || "") + " " + ((r.location && r.location.display_name) || ""));
+    };
+    const raw = (data.results || []).filter(function(r) { return !remote || isRemote(r); });
+    const results = raw.map(function(r) {
       return {
         title: r.title || "",
         company: (r.company && r.company.display_name) || "",

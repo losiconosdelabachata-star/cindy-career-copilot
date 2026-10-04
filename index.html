@@ -485,7 +485,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
   var cindyBusy = false;
   var storeReady = false;
   var planCache = { text:"", running:false, ctl:null };
-  var matchesCache = { what:"", where:"", easyApply:false, running:false, error:"", results:null };
+  var matchesCache = { what:"", where:"", remote:false, easyApply:false, running:false, error:"", results:null };
 
   // ---------- accounts (separate, password-gated data per person — all still
   // local to this browser; there's no server, so this is data separation +
@@ -844,7 +844,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     state = { profile:{ links:{} }, activity:[], jobs:[], cindy:cindyDefault() };
     activeTab = "today";
     planCache = { text:"", running:false, ctl:null };
-    matchesCache = { what:"", where:"", easyApply:false, running:false, error:"", results:null };
+    matchesCache = { what:"", where:"", remote:false, easyApply:false, running:false, error:"", results:null };
     cindyBusy = false;
     authState = { mode:"login", error:"", username:"" };
     renderAuth();
@@ -877,6 +877,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         tabBtn("matches",t("tabMatches")) +
         tabBtn("credit","Credit") +
         tabBtn("grants","Grants") +
+        tabBtn("loans","Loans") +
         tabBtn("profile",t("tabProfile")) +
         tabBtn("activity",t("tabActivity"), unread ? String(unread) : "") +
       '</div>' +
@@ -915,6 +916,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
     if (activeTab==="matches") return renderMatches(b);
     if (activeTab==="credit") return renderCredit(b);
     if (activeTab==="grants") return renderGrants(b);
+    if (activeTab==="loans") return renderLoans(b);
     if (activeTab==="profile") return renderProfile(b);
     if (activeTab==="activity") return renderActivity(b);
   }
@@ -2084,6 +2086,94 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       '</details></div>';
   }
 
+  // ---------- Loans: personal, business, and low-/no-documentation options (education + official sources; not lender recommendations) ----------
+  var LOAN_GUIDES = {
+    personal: {
+      label:"Personal loans",
+      intro:"Unsecured loans for bills, debt consolidation, or emergencies. Lenders mostly look at credit score, income, and debt-to-income ratio.",
+      options:[
+        { n:"Credit union loans", d:"Often the lowest rates and the most flexible on credit. Federal credit unions offer Payday Alternative Loans (PALs) capped at 28% APR for $200-$2,000 (PAL II up to $2,000).", u:"https://mapping.ncua.gov/" },
+        { n:"Bank & online lender loans", d:"Check the rate with a soft pull (“pre-qualify”) first — it doesn't hurt your score. Compare APR, not just the monthly payment, and look for origination fees.", u:"https://www.consumerfinance.gov/consumer-tools/personal-loans/" },
+        { n:"Secured loans (savings or car as collateral)", d:"Easier to get with fair or poor credit and usually cheaper, but you can lose the collateral if you can't pay.", u:"https://www.consumerfinance.gov/ask-cfpb/" },
+        { n:"Co-signer or joint loan", d:"A trusted co-signer with better credit can unlock a lower rate — but they're fully on the hook if you miss payments.", u:"https://www.consumerfinance.gov/ask-cfpb/" },
+        { n:"Nonprofit help first", d:"If you're behind on bills, a nonprofit credit counselor (NFCC) can negotiate payment plans and consolidate with no new loan.", u:"https://www.nfcc.org/" }
+      ]
+    },
+    business: {
+      label:"Business loans",
+      intro:"Lenders want to see time in business, revenue, and a plan. New businesses usually start with SBA-backed loans, microloans, or community lenders.",
+      options:[
+        { n:"SBA-backed loans (7(a), Express, 504)", d:"The government guarantees part of the loan so banks say yes more often. Documentation is lighter on SBA Express and small-dollar loans, but it's never zero.", u:"https://www.sba.gov/funding-programs/loans" },
+        { n:"SBA Microloans (up to $50,000)", d:"Made through nonprofit intermediaries, good for startups and people with limited credit history. They often include free coaching.", u:"https://www.sba.gov/funding-programs/loans/microloans" },
+        { n:"SBA Lender Match", d:"Tell SBA about your business and get connected to lenders that make SBA loans — free.", u:"https://www.sba.gov/funding-programs/loans/lender-match" },
+        { n:"CDFIs (community development lenders)", d:"Mission-driven lenders who serve borrowers banks turn down, including newer and lower-credit businesses.", u:"https://www.cdfifund.gov/locator" },
+        { n:"Business line of credit / equipment financing", d:"Revolving credit or loans secured by the equipment itself — often easier to qualify for than a general loan.", u:"https://www.sba.gov/funding-programs/loans" },
+        { n:"Free business advising (SBDC / SCORE)", d:"Free help building the loan package and cash-flow projections lenders ask for.", u:"https://americassbdc.org/small-business-consulting-and-training/find-your-sbdc/" }
+      ]
+    },
+    nodoc: {
+      label:"Low-doc / no-doc loans",
+      intro:"True “no documentation” loans mostly vanished for home loans after 2010 — federal rules (Ability-to-Repay) require lenders to verify income. What exists today is low-doc: you prove income a different way. Treat any offer of guaranteed approval with no checks as a red flag.",
+      options:[
+        { n:"Bank-statement loans (self-employed)", d:"Mortgage or business lenders use 12-24 months of bank deposits instead of tax returns. Expect higher rates and bigger down payments.", u:"https://www.consumerfinance.gov/owning-a-home/" },
+        { n:"DSCR loans (rental investors)", d:"For investment property: qualified on the rental income versus the payment, not your personal income. Rates and fees are higher than conventional loans.", u:"https://www.consumerfinance.gov/owning-a-home/" },
+        { n:"Asset-based / secured loans", d:"Savings, a CD, a vehicle, or equipment backs the loan, so lenders ask fewer questions about income.", u:"https://www.consumerfinance.gov/ask-cfpb/" },
+        { n:"Credit union PAL loans", d:"Small loans with a simple application and a hard APR cap of 28%.", u:"https://mapping.ncua.gov/" },
+        { n:"SBA Express & small-dollar loans", d:"Streamlined paperwork for smaller amounts — still need basic financials.", u:"https://www.sba.gov/funding-programs/loans" },
+        { n:"Be careful with: merchant cash advances", d:"Not technically loans; effective APRs can be extremely high and daily withdrawals can choke cash flow. Read the total payback amount.", u:"https://www.consumerfinance.gov/ask-cfpb/" }
+      ]
+    }
+  };
+  var LOAN_FLAGS = [
+    "Asks for a fee up front before you get the loan (FTC rules prohibit advance fees for loans a telemarketer promises).",
+    "“Guaranteed approval,” “no credit check,” and no questions asked — real lenders verify something.",
+    "Wants payment by gift card, wire, crypto, or Zelle.",
+    "Contacted you first, pressured you to act today, or won't give a physical address and license number.",
+    "Can't show you the APR, total cost, and payment schedule in writing before you sign (the Truth in Lending Act requires it).",
+    "Payday, title, or “rent-to-own” loans with APRs of 100%+ — look at the cheaper options first."
+  ];
+  var LOAN_LAWS = [
+    { n:"Truth in Lending Act (TILA)", d:"Lenders must disclose APR, finance charges, and total payments clearly before you commit.", u:"https://www.consumerfinance.gov/rules-policy/regulations/1026/" },
+    { n:"Equal Credit Opportunity Act (ECOA)", d:"No discrimination by race, sex, religion, national origin, marital status, age, or public-assistance income. You're entitled to the reason if you're denied.", u:"https://www.consumerfinance.gov/compliance/compliance-resources/other-applicable-requirements/equal-credit-opportunity-act/" },
+    { n:"Ability-to-Repay / Qualified Mortgage rule", d:"Mortgage lenders must verify your income and assets — why true no-doc mortgages are essentially gone.", u:"https://www.consumerfinance.gov/ask-cfpb/what-is-the-ability-to-repay-rule-en-1789/" },
+    { n:"Military Lending Act", d:"Caps interest at 36% MAPR on most consumer loans for active-duty service members and dependents.", u:"https://www.consumerfinance.gov/consumer-tools/educator-tools/servicemembers/" },
+    { n:"State usury & licensing laws", d:"Each state sets interest caps and requires lenders to be licensed. Check your state attorney general or banking regulator before borrowing.", u:"https://www.nmlsconsumeraccess.org/" },
+    { n:"Report a problem", d:"File a free complaint with the CFPB or FTC if a lender breaks the rules.", u:"https://www.consumerfinance.gov/complaint/" }
+  ];
+  var loanCache = { kind:"personal", amount:"10000", apr:"12", months:"36" };
+
+  function loanPayment(P, aprPct, n){
+    var r = aprPct/100/12;
+    if (!n) return 0;
+    return r ? P*r/(1-Math.pow(1+r,-n)) : P/n;
+  }
+
+  function renderLoans(b){
+    var c = loanCache, g = LOAN_GUIDES[c.kind];
+    var pay = loanPayment(parseFloat(c.amount)||0, parseFloat(c.apr)||0, parseInt(c.months,10)||0);
+    var total = pay*(parseInt(c.months,10)||0);
+    b.innerHTML =
+      '<div class="card"><h3>Loans</h3>' +
+        '<div class="lede">Where to look, what lenders want, and how to avoid predatory offers. Cindy doesn’t recommend or broker specific lenders — the links go to official or nonprofit sources. Education only, not financial advice.</div>' +
+        '<div class="btn-row">' + Object.keys(LOAN_GUIDES).map(function(k){ return '<button class="'+(c.kind===k?"btn-primary":"btn-ghost")+' ln-kind" data-k="'+k+'">'+esc(LOAN_GUIDES[k].label)+'</button>'; }).join("") + '</div>' +
+        '<div class="lede" style="margin-top:12px;">'+esc(g.intro)+'</div>' +
+        g.options.map(function(o){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(o.n)+'</b><br>'+esc(o.d)+'</span><a class="btn-ghost" style="text-decoration:none; font-size:12px; padding:5px 10px; border-radius:6px;" href="'+esc(o.u)+'" target="_blank" rel="noopener noreferrer">Open ↗</a></div>'; }).join("") +
+      '</div>' +
+      '<div class="card"><h3>Payment calculator</h3><div class="grid2">' +
+        '<div><label for="ln-amt">Loan amount ($)</label><input id="ln-amt" inputmode="numeric" value="'+esc(c.amount)+'"></div>' +
+        '<div><label for="ln-apr">APR (%)</label><input id="ln-apr" inputmode="decimal" value="'+esc(c.apr)+'"></div>' +
+      '</div><div class="grid2" style="margin-top:8px;">' +
+        '<div><label for="ln-mo">Term (months)</label><input id="ln-mo" inputmode="numeric" value="'+esc(c.months)+'"></div>' +
+        '<div><label>Estimated payment</label><div class="out" style="padding:9px 12px;">'+money(pay)+' / month · total '+money(total)+' · interest '+money(Math.max(0,total-(parseFloat(c.amount)||0)))+'</div></div>' +
+      '</div></div>' +
+      '<div class="card"><h3>Red flags — loan scams &amp; predatory offers</h3><ul class="apply-steps">' + LOAN_FLAGS.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("") + '</ul></div>' +
+      lawsCardHtml("Your borrower rights — US laws in plain English", LOAN_LAWS);
+    Array.prototype.forEach.call(b.querySelectorAll(".ln-kind"), function(btn){ btn.onclick = function(){ loanCache.kind = btn.dataset.k; renderLoans(b); }; });
+    ["amt","apr","mo"].forEach(function(k){
+      $("#ln-"+k).onchange = function(){ loanCache.amount = $("#ln-amt").value; loanCache.apr = $("#ln-apr").value; loanCache.months = $("#ln-mo").value; renderLoans(b); };
+    });
+  }
+
   var CREDIT_ISSUES = ["Collections","Late payments","High card balances","Charge-offs","Errors on my report","Few or no accounts (thin file)","Recent bankruptcy","Too many inquiries","Student loans in default"];
   var CREDIT_SCORES = ["Below 500","500-579","580-669","670-739","740+","Don't know"];
   var creditBusy = false;
@@ -2311,6 +2401,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
             '<div><label for="m-what">'+esc(t("matchesWhatLabel"))+'</label><input id="m-what" value="'+esc(m.what)+'" placeholder="Customer Success, AI Engineer…"></div>' +
             '<div><label for="m-where">'+esc(t("matchesWhereLabel"))+'</label><input id="m-where" value="'+esc(m.where)+'" placeholder="Miami, FL"></div>' +
           '</div>' +
+          '<label class="chk"><input type="checkbox" id="m-remote"'+(m.remote?" checked":"")+'> Remote jobs only (ignores location)</label>' +
           '<div class="btn-row">' +
             '<button class="btn-primary" id="m-search">'+ esc(m.running ? t("matchesSearching") : t("matchesSearchBtn")) +'</button>' +
           '</div>' +
@@ -2330,6 +2421,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       '<div id="m-results">' + matchesResultsHtml() + '</div>';
 
     $("#m-search").onclick = onSearchMatches;
+    $("#m-remote").onchange = function(){ matchesCache.remote = $("#m-remote").checked; updateQuickLinks(); };
     $("#m-easy").onchange = function(){ matchesCache.easyApply = $("#m-easy").checked; updateQuickLinks(); };
     $("#m-what").oninput = function(){ matchesCache.what = $("#m-what").value; updateQuickLinks(); };
     $("#m-where").oninput = function(){ matchesCache.where = $("#m-where").value; updateQuickLinks(); };
@@ -2339,17 +2431,17 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
 
   function updateQuickLinks(){
     var what = (matchesCache.what || "").trim();
-    var where = (matchesCache.where || "").trim();
+    var where = matchesCache.remote ? "" : (matchesCache.where || "").trim();
     var li = $("#m-linkedin"), ind = $("#m-indeed");
     if (li){
       var liUrl = "https://www.linkedin.com/jobs/search/?keywords=" + encodeURIComponent(what) +
         (where ? "&location=" + encodeURIComponent(where) : "") +
-        (matchesCache.easyApply ? "&f_AL=true" : "");
+        (matchesCache.easyApply ? "&f_AL=true" : "") + (matchesCache.remote ? "&f_WT=2" : "");
       li.href = liUrl;
     }
     if (ind){
-      var indUrl = "https://www.indeed.com/jobs?q=" + encodeURIComponent(what) +
-        (where ? "&l=" + encodeURIComponent(where) : "");
+      var indUrl = "https://www.indeed.com/jobs?q=" + encodeURIComponent(what + (matchesCache.remote ? " remote" : "")) +
+        (where ? "&l=" + encodeURIComponent(where) : (matchesCache.remote ? "&l=remote" : ""));
       ind.href = indUrl;
     }
   }
@@ -2405,13 +2497,13 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
   async function onSearchMatches(){
     var what = ($("#m-what").value || "").trim();
     var where = ($("#m-where").value || "").trim();
-    matchesCache.what = what; matchesCache.where = where;
+    matchesCache.what = what; matchesCache.where = where; matchesCache.remote = $("#m-remote").checked;
     if (!what){ toast(t("matchesNoQuery")); return; }
 
     matchesCache.running = true; matchesCache.error = ""; matchesCache.results = null;
     renderMatches($("#tab-body"));
     try {
-      var url = AI_BASE + "/api/jobs?what=" + encodeURIComponent(what) + (where ? "&where=" + encodeURIComponent(where) : "");
+      var url = AI_BASE + "/api/jobs?what=" + encodeURIComponent(what) + (where && !matchesCache.remote ? "&where=" + encodeURIComponent(where) : "") + (matchesCache.remote ? "&remote=1" : "");
       var res = await fetch(url);
       var data = await res.json().catch(function(){ return null; });
       if (!res.ok || !data || data.error){
