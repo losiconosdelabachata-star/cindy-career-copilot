@@ -1,13 +1,15 @@
 # Cindy Career Copilot — iPhone App Store guide
 
-Status: **the iPhone app is built and verified to compile** (GitHub Actions → "ios-build-check" → BUILD SUCCEEDED).
+**© 2026 Cindy Santos. All rights reserved.**
+
+Status: **the iPhone app is built and verified to compile on Capacitor 8** (GitHub Actions → "ios-build-check" → BUILD SUCCEEDED).
 What's left needs an Apple Developer account and a Mac (or a cloud Mac) to sign and upload.
 
 ## What's in this folder
 
 | Item | Where |
 |---|---|
-| Native iOS project (Capacitor 6, iPhone-only, iOS 13+) | `native-app/ios/App` |
+| Native iOS project (Capacitor 8, iPhone-only) | `native-app/ios/App` |
 | App icon 1024×1024 (opaque, as Apple requires) | already installed; copy at `play-store/native-app-icon-1024.png` |
 | Launch screen with the logo | installed in `Assets.xcassets/Splash.imageset` |
 | Native touches (in-app browser for links, haptics, Share button) | inside `index.html`, active only in the app |
@@ -32,7 +34,7 @@ git clone https://github.com/losiconosdelabachata-star/cindy-career-copilot
 cd cindy-career-copilot/native-app
 npm ci
 npm run sync
-npm run open          # opens Xcode
+npx cap open ios      # opens Xcode
 ```
 In Xcode: select the **App** target → *Signing & Capabilities* → choose your Team (automatic signing) →
 set the destination to *Any iOS Device* → **Product → Archive** → *Distribute App → App Store Connect → Upload*.
@@ -54,7 +56,7 @@ App Store Connect API key and a distribution certificate. Once you have the Appl
 - **Marketing URL:** https://cindy-career-copilot.pages.dev
 - **Privacy Policy URL:** https://cindy-career-copilot.pages.dev/privacy
 - **Screenshots:** upload `play-store/ios-screenshots/6.9-inch-1320x2868/*.png` (6.9" slot) and, if asked, the 6.5" set.
-- **Copyright:** 2026 + your name.
+- **Copyright:** © 2026 Cindy Santos
 
 ## Step 4 — App Privacy ("nutrition label")
 Answer *Yes, we collect data*, **no tracking**, nothing sold. Data types, all **linked to the user**, purpose **App Functionality** (and Account management):
@@ -85,3 +87,6 @@ Answer *Yes, we collect data*, **no tracking**, nothing sold. Data types, all **
 - [ ] Privacy label, age rating, screenshots, URLs, demo login filled in
 - [ ] Submit for review → typically 1–3 days
 - [ ] Later updates: bump the version/build in Xcode (General tab), `npm run sync`, archive, upload
+
+## Same app as Android
+The iPhone and Android apps are one codebase (`native-app/`). Both include the Face ID / fingerprint lock and reminder notifications. Android is built by GitHub (see `play-store/LAUNCH-GUIDE.md`).

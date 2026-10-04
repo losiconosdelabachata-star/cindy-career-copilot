@@ -128,3 +128,17 @@ Cloudflare Pages URL explicitly rather than a relative path.
 
 It's one file: `index.html`, plain HTML/CSS/JS, no build step. Edit it and push to `main` —
 GitHub Pages redeploys automatically in under a minute.
+
+
+## Publishing the website
+```
+node scripts/build-site.mjs
+npx wrangler pages deploy site --project-name cindy-career-copilot --branch main
+```
+Only the website files (`site/`) are published; the native app projects, store graphics and bot stay out of the public site.
+
+## Mobile apps
+`native-app/` builds the iPhone and Android apps from this same web app (Capacitor 8). Guides: `play-store/LAUNCH-GUIDE.md` (Google Play) and `native-app/APP-STORE-GUIDE.md` (App Store).
+
+---
+© 2026 Cindy Santos. All rights reserved.

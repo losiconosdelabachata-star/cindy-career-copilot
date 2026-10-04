@@ -1,67 +1,62 @@
 # Cindy Career Copilot — Google Play launch guide
 
-Cindy is a web app that's now installable (PWA). For Google Play we wrap it as a **Trusted Web Activity (TWA)** — a
-thin Android app that opens the website full-screen, no browser bar. Updating the website updates the app instantly;
-you only publish a new Play release if you change the app's icon, name, or package settings.
+**© 2026 Cindy Santos. All rights reserved.**
 
-## What's already done (in this repo)
+The Play Store app is now the **native build** (Capacitor 8, targets Android 16 / API 36 as Google requires). It's the same app as the
+iPhone version: it ships its own copy of the web app (opens instantly), talks to the same servers, and includes the
+**Face ID / fingerprint lock** and **reminder notifications**. GitHub builds it for you — nothing to install on your PC.
 
-| Need | File / URL |
+## What's already done
+
+| Need | Where |
 |---|---|
-| Installable web app + offline shell | `manifest.webmanifest`, `sw.js` (live at https://cindy-career-copilot.pages.dev) |
+| Native Android project (API 36, minSdk 24, allowBackup off) | `native-app/android` |
+| App icon (adaptive + legacy) and launch screen from the logo | `native-app/resources/android` |
+| Build pipeline — tested, produced a real 7.5 MB `.aab` | GitHub → Actions → **android-build** |
 | Privacy policy URL | https://cindy-career-copilot.pages.dev/privacy |
 | Terms URL | https://cindy-career-copilot.pages.dev/terms |
 | **Account-deletion URL** (Play requires one) | https://cindy-career-copilot.pages.dev/delete-account — plus in-app: Profile → Delete my account |
-| App icon 512×512 | `play-store/app-icon-512.png` |
+| Play icon 512×512 | `play-store/app-icon-512.png` |
 | Feature graphic 1024×500 | `play-store/feature-graphic-1024x500.png` |
 | 6 phone screenshots (1080×2160) | `play-store/screenshots/` |
-| Android wrapper settings | `play-store/twa-manifest.json` |
-| Domain-verification file (needs your fingerprint) | `.well-known/assetlinks.json` |
+| Copyright / ownership notice | `LICENSE`, README, app footer (with logo), privacy/terms pages |
 
 ## What only you can do
 
-1. **Create a Google Play Developer account** — https://play.google.com/console — one-time $25 fee and identity verification.
-   Note: *personal* developer accounts created recently must run a **closed test with a minimum number of testers
-   (currently 12) for 14 days** before they can publish to production. Check the current rule in Play Console.
-   Organization accounts skip that but need a D-U-N-S number.
-2. **Build the app bundle (.aab)** — **recommended: let GitHub build it for you** (already set up and tested — it produced a real 3.6 MB .aab):
-   1. On your PC, make your **upload key** once (PowerShell, in a safe folder — it asks you for a password and some details; at "key password" just press Enter):
-      ```
-      keytool -genkeypair -v -keystore cindy-upload-key.keystore -alias cindy-upload -keyalg RSA -keysize 2048 -validity 10000
-      ```
-      **Back this file up somewhere safe (cloud drive + USB) and never share it.** Google can reset a lost upload key if you use Play App Signing, but it's a hassle.
-   2. Copy the key into your clipboard as text:
-      ```
-      [Convert]::ToBase64String([IO.File]::ReadAllBytes("cindy-upload-key.keystore")) | Set-Clipboard
-      ```
-   3. GitHub → the repo → *Settings → Secrets and variables → Actions → New repository secret*, add three secrets:
-      `ANDROID_KEYSTORE_BASE64` (paste), `ANDROID_KEYSTORE_PASSWORD` (the password you chose), `ANDROID_KEY_ALIAS` (`cindy-upload`).
-   4. GitHub → *Actions → android-build → Run workflow* (leave version code `1`; use `2`, `3`… for each later upload).
-   5. When it's green, open the run, download the artifact `cindy-android-real-key`, and unzip it: **`app-release-bundle.aab` is what you upload to Play.**
-      (Without the three secrets it builds with a throwaway test key — useful for a trial run, but Play will reject it.)
+### 1. Google Play Developer account
+https://play.google.com/console — one-time $25 fee plus identity verification. Use the name **Cindy Santos** (or her business) as the developer name.
+Note: *personal* accounts created recently must run a **closed test with a minimum number of testers (currently 12) for 14 days** before publishing
+to production — check the current rule in Play Console. Organization accounts skip that but need a D-U-N-S number.
 
-   Other ways, if you prefer:
-   - **Easiest — PWABuilder:** go to https://www.pwabuilder.com, enter `https://cindy-career-copilot.pages.dev`,
-     click *Package for stores → Android*, use package ID `com.cindycareercopilot.app`, and download the package.
-     It generates the signing key for you — **keep that file and its password safe; you can't publish updates without it.**
-   - **Command line — Bubblewrap** (needs JDK 17; it can download the Android SDK for you):
-     ```
-     npm i -g @bubblewrap/cli
-     bubblewrap init --manifest=https://cindy-career-copilot.pages.dev/manifest.webmanifest
-     bubblewrap build
-     ```
-     It asks you to create a keystore and passwords — you type those, nobody else should have them.
-     The result is `app-release-bundle.aab`.
-3. **Upload the .aab** in Play Console → *Testing → Closed testing → Create release* (use *Play App Signing* when asked).
-4. **Verify the domain** (this removes the browser address bar inside the app):
-   - Play Console → *Setup → App signing* → copy the **SHA-256 certificate fingerprint** of the *App signing key*.
-   - Paste it into `.well-known/assetlinks.json` (replace `REPLACE_WITH_SHA256_FROM_GOOGLE_PLAY_APP_SIGNING`).
-     If you also sideload builds signed with your upload key, add that fingerprint as a second entry.
-   - Tell me and I'll redeploy, or run `npx wrangler pages deploy . --project-name cindy-career-copilot`.
-   - Check it: https://developers.google.com/digital-asset-links/tools/generator
-5. **Fill in the store listing** (copy below), upload the graphics, and answer the policy forms (notes below).
-6. **Create a demo account** (a fresh username/password, not yours) and enter it under *App content → App access*
-   so Google's reviewers can sign in.
+### 2. Make your upload key (once)
+PowerShell, in a safe folder. It asks you to choose a password and answer a few questions; at "key password" just press Enter:
+```
+keytool -genkeypair -v -keystore cindy-upload-key.keystore -alias cindy-upload -keyalg RSA -keysize 2048 -validity 10000
+```
+**Back this file up (cloud drive + USB) and never share it or its password.**
+
+### 3. Give GitHub the key (3 secrets)
+Copy the key into your clipboard as text:
+```
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("cindy-upload-key.keystore")) | Set-Clipboard
+```
+GitHub → the repo → *Settings → Secrets and variables → Actions → New repository secret*:
+`ANDROID_KEYSTORE_BASE64` (paste), `ANDROID_KEYSTORE_PASSWORD` (your password), `ANDROID_KEY_ALIAS` (`cindy-upload`).
+
+### 4. Build the app
+GitHub → *Actions → android-build → Run workflow* (version code `1`; use `2`, `3`… for every later upload).
+When it's green, open the run → download **`cindy-android-real-key`** → unzip → upload **`bundle/release/app-release.aab`** to Play.
+(`apk/release/app-release.apk` is for installing on your own Android phone to try it. Without the three secrets the build uses a throwaway
+test key — good for a trial run, but Play will reject it.)
+
+### 5. Upload and test
+Play Console → create the app (name *Cindy Career Copilot*, default language English (US), App, Free) → *Testing → Closed testing → Create release*
+→ use **Play App Signing** when asked → upload the `.aab` → add testers (an email list) → roll out.
+Install it from the testers' link on a real phone and check: sign-in, Apply window, Job Matches, Profile → Lock & reminders (turn on, allow notifications,
+send a test reminder), Profile → Delete my account (with a throwaway account), links opening in the in-app browser.
+
+### 6. Create a demo account
+A fresh username/password (not yours) for *App content → App access*, so Google's reviewers can sign in.
 
 ## Store listing copy (paste-ready)
 
@@ -92,11 +87,17 @@ FREELANCE & CREATOR
 • Creator University: free lessons on growing as a content creator, editing videos with CapCut, and going live on Twitch, Kick and YouTube
 • A content-idea generator and tips from Cindy
 
+PRIVATE & HELPFUL
+• Lock the app with your fingerprint or face
+• Reminders to follow up, send applications, and renew licenses — created on your phone and kept there
+
 Works on phones and tablets, available in English and Spanish (more Spanish coming).
 
 Important: Cindy provides general education and tools. It is not legal, financial, tax or career advice, doesn't make or broker loans, and can't guarantee jobs, benefits, or credit-score changes. The auto-apply helper only runs when you tap it, never accepts agreements for you, and stops at CAPTCHAs and questions it can't answer.
 
 Your data stays yours: no ads, no data selling, and you can delete your account anytime in the app.
+
+© 2026 Cindy Santos. All rights reserved.
 ```
 
 **Category:** Business (alternatively Productivity) · **Tags:** job search, résumé, career
@@ -110,44 +111,36 @@ Your data stays yours: no ads, no data selling, and you can delete your account 
 - **Ads:** No ads.
 - **Data safety → collected & processed:**
   - Personal info: name, email address, phone number (typed in by the user), user IDs (username).
-  - Financial info: *none collected* (the app never asks for bank, card or SSN; credit-score *range* and income are optional tool inputs sent only for the user's own plan/estimate — choose the option that matches Google's current definitions and say they're optional).
+  - Financial info: *none collected* (the app never asks for bank, card or SSN; credit-score *range* and income are optional tool inputs used only for the user's own plan/estimate — choose the option that matches Google's current definitions and say they're optional).
   - Other user content: résumé, cover letter, job lists, notes, chats; app activity: in-app actions saved to the user's account.
+  - **Biometrics are not collected** — the lock uses Android's own fingerprint/face prompt; Cindy never receives biometric data.
+  - Notifications are local reminders created on the phone.
   - Purpose: app functionality, account management. **Not sold. Not used for ads.**
   - Shared with third-party service providers to run features: Cloudflare (hosting + AI), job-listing providers (search words/location only), PolicyEngine (household size/income/state, no name).
   - Encrypted in transit: **Yes**. Users can request deletion: **Yes** (URL above and in-app).
 - **App access:** provide the demo account from step 6.
-- **Financial features declaration:** the app provides *educational information and links* about credit and loans and
-  does **not** offer, broker, or originate loans or credit repair services. Answer accordingly and read
-  Google's Financial Services policy before submitting.
-- **Content rating (IARC):** no violence, no sexual content, no gambling, no user-to-user chat, no location sharing.
-  It links to external websites. Expect an "Everyone"/"Everyone 10+"-type rating.
-- **News/health/COVID/government apps:** not applicable (the app isn't affiliated with any government agency; it links to official sources).
+- **Financial features declaration:** the app provides *educational information and links* about credit and loans and does **not** offer, broker, or originate loans or credit repair services. Answer accordingly and read Google's Financial Services policy before submitting.
+- **Content rating (IARC):** no violence, no sexual content, no gambling, no user-to-user chat, no location sharing. It links to external websites. Expect an "Everyone"/"Everyone 10+"-type rating.
+- **Permissions you'll be asked about:** notifications (reminders) and biometrics (lock) — both optional features the user turns on.
 
 ## Graphics to upload
-
 - App icon: `play-store/app-icon-512.png`
 - Feature graphic: `play-store/feature-graphic-1024x500.png`
 - Phone screenshots (upload all 6, in order): `play-store/screenshots/1-signin.png` … `6-creator-university.png`
-- Tablet screenshots (optional but recommended): tell me and I'll generate 7-inch and 10-inch sets.
+- Tablet screenshots (optional but recommended): ask me and I'll generate 7-inch and 10-inch sets.
+
+## Updating the app later
+- **Server-side changes** (AI, job search, auto-apply bot, accounts) reach everyone instantly — no new release.
+- **Changes to the screens** (the web app bundled in the Android app): run **android-build** again with the next version code and upload the new `.aab`.
+  (The website itself updates instantly for web users; the installed app updates when they get your new release.)
 
 ## Release checklist
-
 - [ ] Developer account verified
-- [ ] .aab built and uploaded to Closed testing
-- [ ] SHA-256 added to `.well-known/assetlinks.json` and redeployed; Digital Asset Links check passes
-- [ ] Opening the installed app shows **no address bar**
-- [ ] Demo account works; Data safety + App content forms complete
+- [ ] Upload key created, backed up, and the 3 secrets added to GitHub
+- [ ] android-build run with your key; `.aab` uploaded to Closed testing
+- [ ] Tested on a real Android phone (lock, reminders, delete account)
+- [ ] Demo account, Data safety and App content forms complete
 - [ ] 12+ testers opted in for 14 days (personal accounts) → apply for production access → promote release
-- [ ] For later updates: bump `appVersionCode` (and `appVersion`) in `twa-manifest.json`, rebuild, upload
 
-## Face ID lock and reminders on Android
-The Play Store app (a Trusted Web Activity) shows the website, so **Face ID/fingerprint lock and reminder notifications are in the iPhone app only for now**
-(they need native code). If you want them on Android too, the clean way is to switch the Play app to the same Capacitor build as iPhone
-(biometric lock + local notifications work the same way). Same package ID and signing key, so it replaces the first version as an update.
-Recommended order: **upload the current build now to start the closed-test clock, then swap in the Capacitor Android build** when ready.
-
-## iPhone note
-
-iPhone users can already add Cindy to their home screen (Safari → Share → *Add to Home Screen*) and it runs full-screen.
-A real App Store listing needs a different wrapper (for example Capacitor) and an Apple Developer account ($99/year) —
-say the word and I'll set that up next.
+## iPhone
+See `native-app/APP-STORE-GUIDE.md`.
