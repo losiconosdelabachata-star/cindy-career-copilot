@@ -1864,7 +1864,10 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
           try {
             var s2 = await apiRequest("/api/autoapply?id=" + r.id, { token:authToken });
             var done = ["submitted","dry_run_ok","needs_you","failed"].indexOf(s2.status) !== -1;
-            stEl.textContent = s2.message + (s2.missing && s2.missing.length ? " Needs you: " + s2.missing.join("; ") : "");
+            var secs = tries * 4;
+            stEl.textContent = s2.message + (s2.status === "queued" ? " (" + secs + "s — starting the bot takes about a minute; status can lag a bit)" : "") +
+              (s2.filled && s2.filled.length ? " Filled: " + s2.filled.length + " fields." : "") +
+              (s2.missing && s2.missing.length ? " Questions for you: " + s2.missing.filter(function(x){ return x !== "(unlabeled required field)"; }).join("; ") : "");
             if (done || tries > 90){
               clearInterval(iv); setBtns(false);
               if (s2.status === "submitted"){ await onStatusChange(j.id, "applied"); toast("Submitted — logged as applied."); }
