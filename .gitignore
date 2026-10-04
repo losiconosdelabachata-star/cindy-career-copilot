@@ -1,3 +1,7 @@
 claude-design-prompt.md
 bot/out/
 node_modules/
+ios-app/node_modules/
+ios-app/www/
+ios-app/ios/App/Pods/
+ios-app/ios/App/build/

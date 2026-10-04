@@ -3515,12 +3515,18 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
         '</div>' +
       '</div>' +
       '<div class="card">' +
+        '<h3>Tell a friend about Cindy</h3>' +
+        '<div class="lede">Know someone job-hunting or trying to get their money on track? Send them the link.</div>' +
+        '<div class="btn-row"><button class="btn-ghost" id="p-share">Share Cindy</button></div>' +
+      '</div>' +
+      '<div class="card">' +
         '<h3>Delete my account</h3>' +
         '<div class="lede">Permanently deletes your account and everything stored for it (profile, résumé, pipeline, saved answers, chats). This can’t be undone — download a backup first if you want a copy.</div>' +
         '<div class="btn-row"><button class="btn-danger" id="p-delete-acct">Delete my account…</button></div>' +
       '</div>';
 
     $("#p-delete-acct").onclick = onDeleteAccount;
+    $("#p-share").onclick = shareCindy;
     $("#p-save").onclick = async function(){
       state.profile.name = $("#p-name").value.trim();
       state.profile.location = $("#p-loc").value.trim();
@@ -3691,6 +3697,31 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       var rb = document.getElementById("offline-retry"); if (rb) rb.onclick = function(){ location.reload(); };
     });
   })();
+
+  // ---------- native app extras (iPhone app via Capacitor). The website ignores all of this. ----------
+  var NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  if (NATIVE){
+    var NP = window.Capacitor.Plugins || {};
+    document.documentElement.classList.add("native-app");
+    // links that open a new tab → the in-app browser sheet (relative links are resolved against the live site)
+    document.addEventListener("click", function(e){
+      var a = e.target.closest && e.target.closest("a[href]");
+      if (!a || a.target !== "_blank" || !NP.Browser) return;
+      e.preventDefault();
+      var url; try { url = new URL(a.getAttribute("href"), "https://cindy-career-copilot.pages.dev/").toString(); } catch(err){ return; }
+      NP.Browser.open({ url: url });
+    }, true);
+    // a light tap on tabs and main buttons
+    document.addEventListener("click", function(e){
+      if (NP.Haptics && e.target.closest && e.target.closest(".tab, .btn-primary")) { try { NP.Haptics.impact({ style: "LIGHT" }); } catch(err){} }
+    }, true);
+  }
+  function shareCindy(){
+    var data = { title:"Cindy Career Copilot", text:"Cindy helps with jobs, résumés, credit, and finding help and income. Try it:", url:"https://cindy-career-copilot.pages.dev/" };
+    if (NATIVE && window.Capacitor.Plugins && window.Capacitor.Plugins.Share){ window.Capacitor.Plugins.Share.share(data).catch(function(){}); return; }
+    if (navigator.share){ navigator.share(data).catch(function(){}); return; }
+    copyText(data.url); toast("Link copied — send it to a friend.");
+  }
 
   // offline-capable shell (also what lets the Android app open instantly)
   if ("serviceWorker" in navigator && location.protocol === "https:") {

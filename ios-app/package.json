@@ -1,0 +1,22 @@
+{
+  "name": "cindy-career-copilot-ios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor wrapper that packages Cindy Career Copilot as a native iPhone app",
+  "scripts": {
+    "build:www": "node build-www.mjs",
+    "sync": "npm run build:www && npx cap sync ios",
+    "open": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/browser": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/haptics": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/share": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0"
+  }
+}
