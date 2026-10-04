@@ -31,7 +31,10 @@ jobs:
           npm install -g @bubblewrap/cli
           mkdir -p ~/.bubblewrap
           printf '{"jdkPath":"%s","androidSdkPath":"%s"}' "$JAVA_HOME" "$ANDROID_HOME" > ~/.bubblewrap/config.json
+          sudo chmod -R a+rwX "$ANDROID_HOME"
+          mkdir -p "$ANDROID_HOME/tools"   # Bubblewrap's SDK check looks for this folder
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.1.0" > /dev/null
 
       - name: Prepare the project and the signing key
         env:
