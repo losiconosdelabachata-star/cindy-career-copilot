@@ -87,7 +87,7 @@ export async function onRequestGet(context) {
         location: (r.location && r.location.display_name) || "",
         url: r.redirect_url || "",
         created: r.created || "",
-        description: (r.description || "").slice(0, 400),
+        description: (r.description || "").slice(0, 1500),
         salaryMin: r.salary_min || null,
         salaryMax: r.salary_max || null
       };

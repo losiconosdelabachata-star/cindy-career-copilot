@@ -1632,6 +1632,9 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
           '<button class="btn-ghost j-cover"'+ (AI_ENABLED ? "" : " disabled") +'>Write cover letter</button>' +
           '<div style="flex-basis:100%;"><label>Company’s own apply link <span style="text-transform:none; font-weight:400;">(open the job, click Apply there, copy the address you land on)</span></label>' +
             '<div class="btn-row"><input class="j-applyurl" style="flex:1; min-width:200px;" placeholder="https://… (Greenhouse, Lever, company site)" value="'+esc(j.applyUrl||"")+'"><button class="btn-ghost j-saveurl">Save link</button></div></div>' +
+          '<div style="flex-basis:100%;"><label>Full job description <span style="text-transform:none; font-weight:400;">(paste the whole posting — the more Cindy sees, the better the tailoring)</span></label>' +
+            '<textarea class="j-fulldesc" rows="4" placeholder="Paste the full posting here…">'+esc(j.description||"")+'</textarea>' +
+            '<div class="btn-row" style="margin-top:6px;"><button class="btn-ghost j-savedesc">Save description</button></div></div>' +
           (botUrl(j)
             ? '<label class="chk"><input type="checkbox" class="j-approve"'+(j.approved ? " checked" : "")+(s==="applied" ? " disabled" : "")+'> Let the bot apply for me</label>'
             : '<span class="age">Apply by hand — no company link</span>') +
@@ -1666,6 +1669,10 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       var del = $(".j-del", el); if (del) del.onclick = function(){ onDeleteJob(id); };
       var sel = $(".j-status", el); if (sel) sel.onchange = function(){ onStatusChange(id, sel.value); };
       var apv = $(".j-approve", el); if (apv) apv.onchange = function(){ onApprove(id, apv.checked); };
+      var sd = $(".j-savedesc", el); if (sd) sd.onclick = async function(){
+        var j = findJob(id); j.description = ($(".j-fulldesc", el).value || "").trim().slice(0, 6000); j.updatedAt = now();
+        await persistJob(j); toast("Saved — hit Re-tailor (under More options) to use it."); render();
+      };
       var su = $(".j-saveurl", el); if (su) su.onclick = async function(){
         var u = ($(".j-applyurl", el).value || "").trim(); var j = findJob(id);
         if (u && (!/^https:\/\//i.test(u) || isBlockedHost(u))){ toast("Use the company’s own https:// application link — not LinkedIn, Indeed, Adzuna or other job boards."); return; }
@@ -2839,11 +2846,10 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
         '<a class="btn-ghost m-view" href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none; text-align:center;">'+esc(t("matchesViewBtn"))+'</a>' +
         (tracked
           ? '<button class="btn-ghost" disabled>'+esc(t("matchesAlreadyTracked"))+'</button>'
-          : '<button class="btn-ghost m-save">'+esc(t("matchesSaveBtn"))+'</button>' +
-            (isBlockedHost(r.url)
-              ? '<button class="btn-primary m-find">Find company apply page</button>'
-              : '<button class="btn-primary m-approve">Approve for auto-apply</button>')) +
+          : '<button class="btn-primary m-prep">Save &amp; get ready to apply</button>' +
+            '<button class="btn-ghost m-save">'+esc(t("matchesSaveBtn"))+'</button>') +
       '</div>' +
+      '<div class="age" style="margin-top:6px;">Save &amp; get ready: saves the job, finds the company’s own apply page if there is one, and writes your tailored résumé and cover letter.</div>' +
     '</div>';
   }
 
@@ -2853,7 +2859,7 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       var save = $(".m-save", el);
       if (save) save.onclick = function(){ onSaveMatch(idx, save, false); };
       var apr = $(".m-approve", el); if (apr) apr.onclick = function(){ onSaveMatch(idx, apr, true); };
-      var fnd = $(".m-find", el); if (fnd) fnd.onclick = function(){ onFindApply(idx, fnd); };
+      var prp = $(".m-prep", el); if (prp) prp.onclick = function(){ onSavePrepare(idx, prp); };
     });
   }
 
@@ -2913,6 +2919,33 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
       btn.disabled = false; btn.textContent = "Find company apply page";
       toast("Couldn’t find " + r.company + "’s own page. Open the posting, click Apply, and paste the company’s link into the Apply window.");
     }
+  }
+
+  // One tap: save the job, look for the company's own apply page, and write the tailored résumé + cover letter.
+  async function onSavePrepare(idx, btn){
+    var r = matchesCache.results && matchesCache.results[idx];
+    if (!r || alreadyTracked(r.url)) return;
+    if (!(state.profile.resumeText || "").trim()){ toast("Add your résumé in the Profile tab first."); activeTab="profile"; render(); return; }
+    btn.disabled = true; btn.textContent = "Saving…";
+    var job = { id:uid(), title:r.title, company:r.company, url:r.url,
+      description:(r.description || "").slice(0, 1500), approved:false,
+      status:"saved", tailoredResume:"", coverLetter:"", createdAt:now(), updatedAt:now(), appliedAt:null };
+    state.jobs.unshift(job);
+    await persistJob(job);
+    btn.textContent = "Finding apply page…";
+    var linkP = fetch(AI_BASE + "/api/findapply?company=" + encodeURIComponent(r.company) + "&title=" + encodeURIComponent(r.title))
+      .then(function(res){ return res.json(); }).catch(function(){ return null; });
+    btn.textContent = "Writing your materials…";
+    var matsOk = false;
+    try { matsOk = await ensureMaterials(job); } catch(e){}
+    var found = await linkP;
+    if (found && found.url){ job.applyUrl = found.url; }
+    if (matsOk && job.status === "saved") job.status = "tailored";
+    job.updatedAt = now();
+    await persistJob(job);
+    await pushActivity("Saved " + r.title + " at " + r.company + (matsOk ? ", wrote your materials" : "") + (found && found.url ? ", and found the company’s apply page (" + found.source + ")." : "."), job.id);
+    toast((matsOk ? "Ready — " : "Saved — ") + (found && found.url ? "company apply page found. " : "no company page found; you can add the link in the Apply window. ") + "Open it in Pipeline and hit Apply →.");
+    render();
   }
 
   async function onSaveMatch(idx, btn, approve){
