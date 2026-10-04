@@ -50,10 +50,21 @@ try {
   await page.goto(packet.url, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.waitForTimeout(2500);
 
-  // jump to the form if the posting page has an Apply button first
-  if (!(await page.locator("input[type=email], input[type=file]").count())) {
-    const btn = page.getByRole("link", { name: /^\s*apply( now| for this job)?\s*$/i }).or(page.getByRole("button", { name: /^\s*apply( now| for this job)?\s*$/i })).first();
-    if (await btn.count()) { await btn.click().catch(() => {}); await page.waitForTimeout(3000); }
+  // jump to the form if the posting page has an Apply button/tab first (only a VISIBLE file or
+  // first-name field counts as "already on the form")
+  async function onForm() {
+    for (const sel of ["input[type=file]", "input[name*=first i]", "input[id*=first i]", "input[autocomplete=given-name]"]) {
+      const loc = page.locator(sel);
+      for (let i = 0; i < Math.min(await loc.count(), 5); i++) if (await loc.nth(i).isVisible().catch(() => false)) return true;
+    }
+    return false;
+  }
+  for (let attempt = 0; attempt < 2 && !(await onForm()); attempt++) {
+    const re = /^\s*(apply( now| for this (job|position|role))?|application|start application)\s*$/i;
+    const btn = page.getByRole("link", { name: re }).or(page.getByRole("button", { name: re })).or(page.getByRole("tab", { name: re })).first();
+    if (!(await btn.count())) break;
+    await btn.click({ timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(4000);
   }
   if (await page.locator("iframe[src*=recaptcha], iframe[src*=hcaptcha], .g-recaptcha, .h-captcha, [data-sitekey]").count()) {
     await report("needs_you", "This form has a CAPTCHA, so a bot can't finish it. Apply by hand — your materials are in the Apply assistant.");
