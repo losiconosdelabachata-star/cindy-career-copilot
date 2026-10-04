@@ -149,11 +149,12 @@ try {
         await el.click();
         await page.waitForTimeout(500);
         // read the dropdown's real options and click the one that fits the saved answer
-        const optLoc = el.locator('xpath=ancestor::div[contains(@class,"select-shell")]//div[@role="option"]');
-        const n = Math.min(await optLoc.count().catch(() => 0), 400);
+        const shellH = await el.evaluateHandle(n => n.closest(".select-shell") || (n.closest(".select__control") && n.closest(".select__control").parentElement && n.closest(".select__control").parentElement.parentElement) || n.parentElement.parentElement.parentElement);
+        const optHandles = (await shellH.asElement().$$('[role="option"]').catch(() => [])).slice(0, 400);
+        const n = optHandles.length;
         if (n > 0) {
           const texts = [];
-          for (let i = 0; i < n; i++) texts.push(((await optLoc.nth(i).innerText().catch(() => "")) || "").trim());
+          for (const oh of optHandles) texts.push(((await oh.innerText().catch(() => "")) || "").trim());
           const want = ans.toLowerCase();
           const declineRe = /decline|prefer not|do not wish|don.t wish|choose not|not to (answer|disclose|say)|rather not/i;
           let idx = isDecline(ans)
@@ -162,7 +163,7 @@ try {
           if (idx < 0 && !isDecline(ans)) idx = texts.findIndex(o => o.toLowerCase().startsWith(want));
           if (idx < 0 && !isDecline(ans)) idx = texts.findIndex(o => o.toLowerCase().includes(want));
           if (idx >= 0) {
-            await optLoc.nth(idx).click();
+            await optHandles[idx].click();
             await page.waitForTimeout(300);
             return true;
           }
