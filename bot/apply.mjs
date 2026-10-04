@@ -147,6 +147,28 @@ try {
       }
       if (info.combo) {
         await el.click();
+        await page.waitForTimeout(500);
+        // read the dropdown's real options and click the one that fits the saved answer
+        const optLoc = el.locator('xpath=ancestor::div[contains(@class,"select-shell")]//div[@role="option"]');
+        const n = Math.min(await optLoc.count().catch(() => 0), 400);
+        if (n > 0) {
+          const texts = [];
+          for (let i = 0; i < n; i++) texts.push(((await optLoc.nth(i).innerText().catch(() => "")) || "").trim());
+          const want = ans.toLowerCase();
+          const declineRe = /decline|prefer not|do not wish|don.t wish|choose not|not to (answer|disclose|say)|rather not/i;
+          let idx = isDecline(ans)
+            ? texts.findIndex(o => declineRe.test(o))
+            : texts.findIndex(o => o.toLowerCase() === want);
+          if (idx < 0 && !isDecline(ans)) idx = texts.findIndex(o => o.toLowerCase().startsWith(want));
+          if (idx < 0 && !isDecline(ans)) idx = texts.findIndex(o => o.toLowerCase().includes(want));
+          if (idx >= 0) {
+            await optLoc.nth(idx).click();
+            await page.waitForTimeout(300);
+            return true;
+          }
+          await page.keyboard.press("Escape").catch(() => {});
+          return false;
+        }
         await page.keyboard.type(isDecline(ans) ? "Decline" : ans.slice(0, 40), { delay: 40 });
         await page.waitForTimeout(500);
         await page.keyboard.press("Enter");
