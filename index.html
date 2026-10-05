@@ -1269,6 +1269,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
       { key:"cindy",     label:t("tabCindy") },
       { key:"pipeline",  label:t("tabPipeline"), badge: state.jobs.length ? String(state.jobs.length) : "" },
       { key:"matches",   label:t("tabMatches") },
+      { key:"tools",     label:"Career tools" },
       { key:"freelance", label:"Freelance" },
       { key:"money",     label:"Money help" },
       { key:"profile",   label:t("tabProfile") },
@@ -1325,6 +1326,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
     if (activeTab==="cindy") return renderCindy(b);
     if (activeTab==="pipeline") return renderPipeline(b);
     if (activeTab==="matches") return renderMatches(b);
+    if (activeTab==="tools") return renderTools(b);
     if (activeTab==="freelance") return renderFreelance(b);
     if (activeTab==="money") return renderMoney(b);
     if (activeTab==="profile") return renderProfile(b);
@@ -2577,6 +2579,349 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
       '<div class="age" style="margin:8px 0;">Plain-language summaries for education — not legal advice. Tap a link for the official source.</div>' +
       list.map(function(l){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(l.n)+'</b><br>'+esc(l.d)+'</span><a class="btn-ghost" style="text-decoration:none; font-size:12px; padding:5px 10px; border-radius:6px;" href="'+esc(l.u)+'" target="_blank" rel="noopener noreferrer">Source ↗</a></div>'; }).join("") +
       '</details></div>';
+  }
+
+  // ---------- Career tools: interview practice, match score, offer compare, calendar, company research, stats ----------
+  var toolsSub = "interview";
+  var TOOLS_SUBS = [["interview","Interview practice"],["match","Résumé match score"],["offer","Compare offers"],["calendar","Calendar"],["research","Company research"],["stats","My stats"]];
+  var iv = { jobId:"", title:"", company:"", desc:"", kind:"mixed", questions:[], answers:{}, fb:{}, busy:false };
+  var BS = String.fromCharCode(92);
+
+  function jobPickerHtml(id, selected){
+    var opts = '<option value="">Paste a job description instead</option>' + state.jobs.map(function(j){
+      return '<option value="'+esc(j.id)+'"'+(j.id===selected?" selected":"")+'>'+esc((j.title||"Job")+(j.company?" — "+j.company:""))+'</option>';
+    }).join("");
+    return '<label for="'+id+'">Job from your Pipeline</label><select id="'+id+'">'+opts+'</select>';
+  }
+  function jobById(id){ return state.jobs.filter(function(j){ return j.id === id; })[0] || null; }
+
+  function renderTools(b){
+    b.innerHTML = '<div class="btn-row" style="margin-bottom:12px;">' +
+      TOOLS_SUBS.map(function(x){ return '<button class="'+(toolsSub===x[0]?"btn-primary":"btn-ghost")+' tl-pill" data-s="'+x[0]+'">'+esc(x[1])+'</button>'; }).join("") +
+      '</div><div id="tl-body"></div>';
+    Array.prototype.forEach.call(b.querySelectorAll(".tl-pill"), function(btn){ btn.onclick = function(){ toolsSub = btn.dataset.s; renderTools(b); }; });
+    var host = $("#tl-body");
+    if (toolsSub === "interview") renderInterview(host);
+    else if (toolsSub === "match") renderMatchScore(host);
+    else if (toolsSub === "offer") renderOffers(host);
+    else if (toolsSub === "calendar") renderCalendar(host);
+    else if (toolsSub === "research") renderResearch(host);
+    else renderStats(host);
+  }
+
+  // ----- Interview practice -----
+  function renderInterview(host){
+    var started = iv.questions.length > 0;
+    host.innerHTML =
+      '<div class="card"><h3>Interview practice</h3>' +
+        '<div class="lede">Cindy asks you realistic questions for a job, one at a time. Type your answer, get a score out of 10 and a stronger version. Practice only: it can’t predict how a real interview will go.</div>' +
+        '<div class="stack">' +
+          '<div>'+jobPickerHtml("iv-job", iv.jobId)+'</div>' +
+          '<div id="iv-custom"'+(iv.jobId?' hidden':'')+'><div class="grid2">' +
+            '<div><label for="iv-title">Job title</label><input id="iv-title" value="'+esc(iv.title)+'" placeholder="Customer Success Manager"></div>' +
+            '<div><label for="iv-company">Company (optional)</label><input id="iv-company" value="'+esc(iv.company)+'"></div></div>' +
+            '<div><label for="iv-desc">Job description (optional, makes the questions sharper)</label><textarea id="iv-desc" rows="4">'+esc(iv.desc)+'</textarea></div></div>' +
+          '<div><label for="iv-kind">Question style</label><select id="iv-kind">' +
+            [["mixed","Mixed"],["behavioral","Behavioral (tell me about a time…)"],["technical","Skills and job knowledge"]].map(function(k){ return '<option value="'+k[0]+'"'+(iv.kind===k[0]?" selected":"")+'>'+k[1]+'</option>'; }).join("") + '</select></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="iv-go"'+(AI_ENABLED?"":" disabled")+'>'+(started?"New set of questions":"Start practice")+'</button></div>' +
+        '</div></div>' +
+      '<div id="iv-list"></div>';
+    $("#iv-job").onchange = function(){
+      iv.jobId = this.value; var j = jobById(iv.jobId);
+      $("#iv-custom").hidden = !!iv.jobId;
+      if (j){ iv.title = j.title || ""; iv.company = j.company || ""; iv.desc = j.description || ""; }
+    };
+    $("#iv-kind").onchange = function(){ iv.kind = this.value; };
+    $("#iv-go").onclick = onInterviewStart;
+    drawInterviewList();
+  }
+  function ivRole(){
+    var j = jobById(iv.jobId);
+    if (j) return { title:j.title||"", company:j.company||"", desc:j.description||"" };
+    var t1 = $("#iv-title"), c1 = $("#iv-company"), d1 = $("#iv-desc");
+    return { title:t1?t1.value.trim():iv.title, company:c1?c1.value.trim():iv.company, desc:d1?d1.value.trim():iv.desc };
+  }
+  async function onInterviewStart(){
+    var r = ivRole();
+    if (!r.title && !r.desc){ toast("Pick a job or type a job title first."); return; }
+    iv.title = r.title; iv.company = r.company; iv.desc = r.desc;
+    var btn = $("#iv-go"); btn.disabled = true; btn.textContent = "Writing questions…";
+    try {
+      var d = await aiRequest("/api/interview", { mode:"questions", title:r.title, company:r.company, description:r.desc, resume:state.profile.resumeText || "", kind:iv.kind });
+      iv.questions = d.questions || []; iv.answers = {}; iv.fb = {};
+    } catch(e){ toast("Couldn’t write questions right now. Try again."); }
+    btn.disabled = false; btn.textContent = iv.questions.length ? "New set of questions" : "Start practice";
+    drawInterviewList();
+  }
+  function fbHtml(f){
+    return '<div class="out-h">Score: '+f.score+' / 10</div>' +
+      (f.strengths.length ? '<div class="age" style="margin-top:6px;">What worked</div><ul class="apply-steps">'+f.strengths.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' : "") +
+      (f.improve.length ? '<div class="age">To improve</div><ul class="apply-steps">'+f.improve.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' : "") +
+      (f.better ? '<div class="age">A stronger version (check that every detail is true for you)</div><div class="lede" style="white-space:pre-wrap; margin-top:4px;">'+esc(f.better)+'</div>' : "");
+  }
+  function drawInterviewList(){
+    var el = $("#iv-list"); if (!el) return;
+    if (!iv.questions.length){ el.innerHTML = ""; return; }
+    var scores = Object.keys(iv.fb).map(function(k){ return iv.fb[k].score; });
+    var avg = scores.length ? (scores.reduce(function(a,c){ return a + c; }, 0) / scores.length).toFixed(1) : null;
+    el.innerHTML = '<div class="card"><h3>Your questions'+(avg ? ' <span class="age">average '+avg+' / 10 over '+scores.length+' answered</span>' : '')+'</h3>' +
+      iv.questions.map(function(q,i){
+        return '<div style="border-top:1px solid var(--border); padding:12px 0;">' +
+          '<b>'+(i+1)+'. '+esc(q.q)+'</b>' + (q.tip ? '<div class="age" style="margin:4px 0 8px;">Tip: '+esc(q.tip)+'</div>' : '') +
+          '<textarea class="iv-ans" data-i="'+i+'" rows="4" placeholder="Type your answer as if you were speaking it…">'+esc(iv.answers[i]||"")+'</textarea>' +
+          '<div class="btn-row" style="margin-top:6px;"><button class="btn-ghost iv-score" data-i="'+i+'"'+(AI_ENABLED?"":" disabled")+'>Score my answer</button></div>' +
+          '<div class="iv-fb" id="iv-fb-'+i+'">'+(iv.fb[i] ? fbHtml(iv.fb[i]) : "")+'</div></div>';
+      }).join("") + '</div>';
+    Array.prototype.forEach.call(el.querySelectorAll(".iv-ans"), function(ta){ ta.oninput = function(){ iv.answers[ta.dataset.i] = ta.value; }; });
+    Array.prototype.forEach.call(el.querySelectorAll(".iv-score"), function(btn){
+      btn.onclick = async function(){
+        var i = btn.dataset.i, ans = (iv.answers[i] || "").trim();
+        if (ans.split(/\s+/).length < 8){ toast("Write a few sentences first — a real answer is more than a line."); return; }
+        btn.disabled = true; btn.textContent = "Scoring…";
+        try {
+          var f = await aiRequest("/api/interview", { mode:"feedback", title:iv.title, company:iv.company, question:iv.questions[i].q, answer:ans });
+          iv.fb[i] = f;
+          $("#iv-fb-"+i).innerHTML = fbHtml(f);
+          var h = el.querySelector("h3"); if (h){ var sc = Object.keys(iv.fb).map(function(k){ return iv.fb[k].score; }); h.innerHTML = 'Your questions <span class="age">average '+(sc.reduce(function(a,c){ return a + c; },0)/sc.length).toFixed(1)+' / 10 over '+sc.length+' answered</span>'; }
+        } catch(e){ toast("Couldn’t score that right now. Try again."); }
+        btn.disabled = false; btn.textContent = "Score my answer";
+      };
+    });
+  }
+
+  // ----- Résumé match score (runs on your device; no AI, no upload) -----
+  var MS_STOP = ("a able about above across after all also an and any are as at be been but by can could did do does each etc for from had has have her his how if in into is it its may more most must new no not of on one or our out over per such than that the their them then there these they this to up us use used using was we well were what when where which while who will with within without would you your " +
+    "need needs want wants job role position work working works team teams company candidate candidates ideal looking seeking responsible responsibilities requirements required preferred qualifications qualification strong ability experience years year plus including include includes etc like make help provide support ensure join opportunity benefits equal employer apply applicants applicant day days time full part salary").split(" ");
+  var MS_STOPSET = {}; MS_STOP.forEach(function(w){ MS_STOPSET[w] = 1; });
+  function msStem(w){
+    if (w.length > 5 && /ing$/.test(w)) return w.slice(0, -3);
+    if (w.length > 4 && /ies$/.test(w)) return w.slice(0, -3) + "y";
+    if (w.length > 4 && /ed$/.test(w)) return w.slice(0, -2);
+    if (w.length > 3 && /s$/.test(w) && !/ss$/.test(w)) return w.slice(0, -1);
+    return w;
+  }
+  function msTokens(text){
+    return (String(text || "").toLowerCase().match(/[a-z][a-z0-9+#]*/g) || []).filter(function(w){ return w.length >= 3 && !MS_STOPSET[w]; });
+  }
+  function matchScore(jd, resume){
+    var freq = {}, order = [], shown = {};
+    msTokens(jd).forEach(function(w){ var s = msStem(w); if (!freq[s]){ freq[s] = 0; order.push(s); shown[s] = w; } freq[s]++; });
+    var top = order.slice().sort(function(a,b){ return freq[b] - freq[a] || order.indexOf(a) - order.indexOf(b); }).slice(0, 30);
+    var have = {}; msTokens(resume).forEach(function(w){ have[msStem(w)] = 1; });
+    var hit = top.filter(function(k){ return have[k]; }), miss = top.filter(function(k){ return !have[k]; });
+    var pct = top.length ? Math.round(hit.length / top.length * 100) : 0;
+    var words = String(resume || "").trim().split(/\s+/).filter(Boolean).length;
+    var checks = [
+      [/@/.test(resume), "An email address is on the résumé"],
+      [/\(?\d{3}\)?[\s.-]*\d{3}[\s.-]*\d{4}/.test(resume), "A phone number is on the résumé"],
+      [/experience|employment|work history/i.test(resume), "An Experience section"],
+      [/education|school|university|college|degree/i.test(resume), "An Education section"],
+      [/skills/i.test(resume), "A Skills section"],
+      [(String(resume).match(/\d+%?/g) || []).length >= 5, "Numbers that show results (5 or more)"],
+      [words >= 250 && words <= 1000, "A reasonable length (about 250 to 1,000 words; yours: " + words + ")"]
+    ];
+    return { pct:pct, hit:hit.map(function(k){ return shown[k]; }), miss:miss.map(function(k){ return shown[k]; }), checks:checks, count:top.length };
+  }
+  function renderMatchScore(host){
+    host.innerHTML =
+      '<div class="card"><h3>Résumé match score</h3>' +
+        '<div class="lede">Paste a job description (or pick a Pipeline job) and see how many of its key words your résumé already uses. It runs on your device. This is a keyword check, not an official ATS score: employers’ systems differ.</div>' +
+        '<div class="stack"><div>'+jobPickerHtml("ms-job","")+'</div>' +
+        '<div><label for="ms-jd">Job description</label><textarea id="ms-jd" rows="6" placeholder="Paste the job posting here…"></textarea></div>' +
+        '<div><label for="ms-res">Résumé <span style="text-transform:none; font-weight:400;">(from your Profile; edit here for a one-off check)</span></label><textarea id="ms-res" rows="5">'+esc(state.profile.resumeText || "")+'</textarea></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="ms-go">Check my match</button></div></div></div><div id="ms-out"></div>';
+    $("#ms-job").onchange = function(){ var j = jobById(this.value); if (j) $("#ms-jd").value = j.description || ""; };
+    $("#ms-go").onclick = function(){
+      var jd = $("#ms-jd").value, res = $("#ms-res").value;
+      if (jd.trim().length < 80){ toast("Paste the job description first (a full posting works best)."); return; }
+      if (!res.trim()){ toast("Add your résumé in the Profile tab, or paste it here."); return; }
+      var r = matchScore(jd, res);
+      var color = r.pct >= 70 ? "var(--ok, #4ade80)" : (r.pct >= 45 ? "var(--warn, #fbbf24)" : "var(--danger, #f87171)");
+      var chip = function(w, c){ return '<span style="display:inline-block; margin:2px 4px 2px 0; padding:2px 8px; border-radius:999px; border:1px solid '+c+'; font-size:12px;">'+esc(w)+'</span>'; };
+      $("#ms-out").innerHTML =
+        '<div class="card"><h3>Match: <span style="color:'+color+';">'+r.pct+'%</span> <span class="age">'+r.hit.length+' of the top '+r.count+' job keywords found</span></h3>' +
+          '<div style="height:10px; border-radius:6px; background:var(--border); overflow:hidden;"><div style="width:'+r.pct+'%; height:100%; background:'+color+';"></div></div>' +
+          '<div class="out-h">Missing from your résumé</div><div>'+(r.miss.length ? r.miss.map(function(w){ return chip(w, "var(--danger, #f87171)"); }).join("") : "Nothing major. Nice.")+'</div>' +
+          '<div class="lede" style="margin-top:6px;">Add a missing word only where it’s true for you (a skill you really have, a tool you really used). Don’t stuff keywords.</div>' +
+          '<div class="out-h">Already on your résumé</div><div>'+r.hit.map(function(w){ return chip(w, "var(--ok, #4ade80)"); }).join("")+'</div>' +
+          '<div class="out-h">Quick checks</div><ul class="apply-steps">'+r.checks.map(function(c){ return '<li>'+(c[0] ? "✓ " : "✗ ")+esc(c[1])+'</li>'; }).join("")+'</ul>' +
+          '<div class="lede">Next: use the Tailor button on the job in your Pipeline to have Cindy rewrite your résumé for it.</div></div>';
+    };
+  }
+
+  // ----- Compare offers (before-tax estimate) -----
+  var offers = [{},{},{}];
+  var OFFER_FIELDS = [
+    ["name","Name (company)","text"],["base","Base salary ($/yr)","number"],["bonus","Bonus or commission ($/yr)","number"],
+    ["match","401(k) match (% of salary)","number"],["health","Your health insurance cost ($/yr)","number"],["pto","Paid days off (PTO + holidays)","number"],
+    ["remote","Remote days per week","number"],["commute","Commute cost ($/yr)","number"],["hours","Hours per week","number"]
+  ];
+  function offerCalc(o){
+    var base = +o.base || 0, bonus = +o.bonus || 0, match = (+o.match || 0) / 100 * base, health = +o.health || 0, commute = +o.commute || 0;
+    var hours = +o.hours || 40, pto = +o.pto || 0;
+    var total = base + bonus + match - health - commute;
+    var paidHours = Math.max(1, hours * 52 - pto * (hours / 5));
+    return { total:total, hourly: base ? base / (hours * 52) : 0, effective: total / Math.max(1, hours * 52), match:match };
+  }
+  function renderOffers(host){
+    var cols = [0,1,2];
+    host.innerHTML =
+      '<div class="card"><h3>Compare job offers</h3>' +
+        '<div class="lede">Enter up to three offers to compare the real yearly value, not just the base pay. Estimates are before income tax and aren’t tax or financial advice.</div>' +
+        '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; min-width:560px;"><tbody>' +
+        OFFER_FIELDS.map(function(f){
+          return '<tr><td style="padding:4px 8px 4px 0; font-size:13px; color:var(--muted); width:30%;">'+esc(f[1])+'</td>' + cols.map(function(c){
+            return '<td style="padding:4px;"><input class="of-in" data-c="'+c+'" data-f="'+f[0]+'" type="'+f[2]+'"'+(f[2]==="number"?' min="0" step="any" inputmode="decimal"':'')+' value="'+esc(offers[c][f[0]]==null?"":offers[c][f[0]])+'" style="width:100%;" aria-label="'+esc(f[1])+' offer '+(c+1)+'"></td>';
+          }).join("") + '</tr>';
+        }).join("") +
+        '</tbody></table></div>' +
+        '<div id="of-out"></div></div>' +
+      '<div class="card"><h3>Negotiation email draft</h3>' +
+        '<div class="lede">Writes a polite counter-offer you can edit. It’s a starting point; use only reasons that are true.</div>' +
+        '<div class="stack"><div class="grid2">' +
+          '<div><label for="ng-co">Company</label><input id="ng-co" placeholder="Acme Inc."></div>' +
+          '<div><label for="ng-role">Role</label><input id="ng-role" placeholder="Account Manager"></div>' +
+          '<div><label for="ng-cur">Their offer ($/yr)</label><input id="ng-cur" type="number" min="0" inputmode="decimal"></div>' +
+          '<div><label for="ng-want">Your target ($/yr)</label><input id="ng-want" type="number" min="0" inputmode="decimal"></div></div>' +
+          '<div><label for="ng-why">Your reasons (one short line)</label><input id="ng-why" placeholder="my 6 years of experience and the market rate for this role in my area"></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="ng-go">Draft the email</button></div>' +
+          '<textarea id="ng-out" rows="9" hidden></textarea><div class="btn-row"><button class="btn-ghost" id="ng-copy" hidden>Copy</button></div></div></div>';
+    function draw(){
+      var res = offers.map(function(o){ return (o.base || o.bonus) ? offerCalc(o) : null; });
+      if (!res.some(Boolean)){ $("#of-out").innerHTML = ""; return; }
+      var best = -1, bv = -1; res.forEach(function(r,i){ if (r && r.total > bv){ bv = r.total; best = i; } });
+      var money = function(n){ return "$" + Math.round(n).toLocaleString(); };
+      var row = function(label, fn){ return '<tr><td style="padding:6px 8px 6px 0; font-size:13px; color:var(--muted);">'+label+'</td>' + res.map(function(r,i){ return '<td style="padding:6px 4px;'+(i===best?' font-weight:700;':'')+'">'+(r ? fn(r) : "—")+'</td>'; }).join("") + '</tr>'; };
+      $("#of-out").innerHTML = '<div class="out-h">Estimated yearly value (before tax)</div><div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; min-width:560px;"><tbody>' +
+        row("Total value", function(r){ return money(r.total); }) +
+        row("Employer 401(k) match", function(r){ return money(r.match); }) +
+        row("Base pay per hour", function(r){ return "$" + r.hourly.toFixed(2); }) +
+        row("Total value per hour", function(r){ return "$" + r.effective.toFixed(2); }) +
+        '</tbody></table></div>' +
+        '<div class="lede" style="margin-top:8px;">Total value = base + bonus + 401(k) match − your insurance cost − commute cost. Highest total is bold. Also weigh growth, stability, culture, remote days and paid time off, which numbers don’t capture.</div>';
+    }
+    Array.prototype.forEach.call(host.querySelectorAll(".of-in"), function(inp){ inp.oninput = function(){ offers[+inp.dataset.c][inp.dataset.f] = inp.value; draw(); }; });
+    draw();
+    $("#ng-go").onclick = function(){
+      var co = $("#ng-co").value.trim() || "the team", role = $("#ng-role").value.trim() || "the role", cur = +$("#ng-cur").value, want = +$("#ng-want").value, why = $("#ng-why").value.trim() || "my experience and the market rate for this role";
+      if (!(want > 0)){ toast("Enter the salary you’re aiming for."); return; }
+      var name = (state.profile.name || "").trim();
+      var txt = "Subject: Thank you for the offer, " + role + "\n\nHi [Name],\n\nThank you so much for offering me the " + role + " position at " + co + ". I’m excited about the work and the team, and I’d love to make this happen.\n\n" +
+        "Based on " + why + ", I was hoping we could discuss a base salary of $" + Math.round(want).toLocaleString() + (cur > 0 ? " (the offer is $" + Math.round(cur).toLocaleString() + ")" : "") + ". " +
+        "Is there flexibility to get closer to that number? I’m also glad to talk about the full package, including bonus, start date and time off.\n\nThank you again, and I look forward to your thoughts.\n\nBest,\n" + (name || "[Your name]");
+      var ta = $("#ng-out"); ta.hidden = false; ta.value = txt; $("#ng-copy").hidden = false;
+    };
+    $("#ng-copy").onclick = function(){ var v = $("#ng-out").value; try { navigator.clipboard.writeText(v).then(function(){ toast("Copied."); }); } catch(e){ $("#ng-out").select(); } };
+  }
+
+  // ----- Calendar (.ics files open in Apple, Google and Outlook calendars) -----
+  function icsEscape(s){ return String(s || "").split(BS).join(BS+BS).replace(/;/g, BS+";").replace(/,/g, BS+",").replace(/[\r\n]+/g, BS+"n"); }
+  function icsStamp(d){ function p(n){ return (n < 10 ? "0" : "") + n; } return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + "T" + p(d.getHours()) + p(d.getMinutes()) + "00"; }
+  function icsDate(d){ function p(n){ return (n < 10 ? "0" : "") + n; } return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()); }
+  function icsEvent(ev){
+    var utc = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+    var L = ["BEGIN:VEVENT", "UID:" + uid() + "@cindy-career-copilot", "DTSTAMP:" + utc];
+    if (ev.allDay){ L.push("DTSTART;VALUE=DATE:" + icsDate(ev.start)); var e = new Date(ev.start.getTime() + 86400000); L.push("DTEND;VALUE=DATE:" + icsDate(e)); }
+    else { L.push("DTSTART:" + icsStamp(ev.start)); L.push("DTEND:" + icsStamp(new Date(ev.start.getTime() + (ev.minutes || 60) * 60000))); }
+    L.push("SUMMARY:" + icsEscape(ev.title));
+    if (ev.desc) L.push("DESCRIPTION:" + icsEscape(ev.desc));
+    if (ev.location) L.push("LOCATION:" + icsEscape(ev.location));
+    if (ev.alarm != null){ L.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + icsEscape(ev.title), "TRIGGER:-PT" + ev.alarm + "M", "END:VALARM"); }
+    L.push("END:VEVENT");
+    return L;
+  }
+  function icsFile(events){
+    var L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cindy Career Copilot//EN", "CALSCALE:GREGORIAN"];
+    events.forEach(function(ev){ L = L.concat(icsEvent(ev)); });
+    L.push("END:VCALENDAR");
+    return L.join("\r\n") + "\r\n";
+  }
+  function renderCalendar(host){
+    var appliedJobs = state.jobs.filter(function(j){ return j.status === "applied" && j.appliedAt; });
+    host.innerHTML =
+      '<div class="card"><h3>Add an interview or reminder to your calendar</h3>' +
+        '<div class="lede">Creates a calendar file (.ics) that opens in Apple Calendar, Google Calendar and Outlook, with a reminder before it starts. Nothing is sent anywhere.</div>' +
+        '<div class="stack"><div>'+jobPickerHtml("cal-job","")+'</div>' +
+        '<div><label for="cal-title">Title</label><input id="cal-title" placeholder="Interview: Customer Success Manager at Acme"></div>' +
+        '<div class="grid2"><div><label for="cal-date">Date</label><input id="cal-date" type="date"></div><div><label for="cal-time">Start time</label><input id="cal-time" type="time" value="10:00"></div>' +
+        '<div><label for="cal-len">Length</label><select id="cal-len"><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60" selected>1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option></select></div>' +
+        '<div><label for="cal-alarm">Remind me</label><select id="cal-alarm"><option value="15">15 minutes before</option><option value="30" selected>30 minutes before</option><option value="60">1 hour before</option><option value="1440">1 day before</option></select></div></div>' +
+        '<div><label for="cal-loc">Location or video link (optional)</label><input id="cal-loc" placeholder="Zoom link, address…"></div>' +
+        '<div><label for="cal-notes">Notes (optional)</label><textarea id="cal-notes" rows="3" placeholder="Interviewer name, things to bring, questions to ask…"></textarea></div>' +
+        '<div class="btn-row"><button class="btn-primary" id="cal-go">Download calendar file</button></div></div></div>' +
+      '<div class="card"><h3>Follow-up reminders</h3>' +
+        '<div class="lede">A reminder one week after you applied, for each application with no reply yet. '+(appliedJobs.length ? appliedJobs.length+' job'+(appliedJobs.length===1?'':'s')+' ready.' : 'Mark a job as Applied in your Pipeline first.')+'</div>' +
+        '<div class="btn-row"><button class="btn-ghost" id="cal-fu"'+(appliedJobs.length?'':' disabled')+'>Download follow-up reminders</button></div></div>';
+    $("#cal-job").onchange = function(){ var j = jobById(this.value); if (j){ $("#cal-title").value = "Interview: " + (j.title || "") + (j.company ? " at " + j.company : ""); } };
+    $("#cal-go").onclick = function(){
+      var title = $("#cal-title").value.trim(), date = $("#cal-date").value, time = $("#cal-time").value || "10:00";
+      if (!title || !date){ toast("Add a title and a date."); return; }
+      var p = date.split("-"), tm = time.split(":");
+      var start = new Date(+p[0], +p[1] - 1, +p[2], +tm[0], +tm[1], 0);
+      saveFile("interview-" + date + ".ics", icsFile([{ title:title, start:start, minutes:+$("#cal-len").value, location:$("#cal-loc").value.trim(), desc:$("#cal-notes").value.trim(), alarm:+$("#cal-alarm").value }]));
+      toast("Calendar file ready. Open it to add the event.");
+    };
+    $("#cal-fu").onclick = function(){
+      var evs = appliedJobs.map(function(j){
+        var s = new Date(new Date(j.appliedAt).getTime() + 7 * 86400000);
+        var d = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+        if (d.getTime() < Date.now() - 86400000) d = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1);
+        return { title:"Follow up: " + (j.title || "job") + (j.company ? " at " + j.company : ""), start:d, allDay:true, desc:"Send a short, polite follow-up about your application." + (j.url ? " " + j.url : "") };
+      });
+      saveFile("follow-ups.ics", icsFile(evs));
+      toast("Follow-up reminders ready.");
+    };
+  }
+
+  // ----- Company research checklist (links to official or public sources; Cindy has no internet) -----
+  function renderResearch(host){
+    host.innerHTML =
+      '<div class="card"><h3>Research a company before you apply or interview</h3>' +
+        '<div class="lede">Cindy can’t browse the internet, so this opens the right places for you to check. Search takes a few minutes and can save you from a bad job or a scam.</div>' +
+        '<div class="stack"><div>'+jobPickerHtml("rs-job","")+'</div>' +
+        '<div><label for="rs-name">Company name</label><input id="rs-name" placeholder="Acme Inc."></div></div><div id="rs-out"></div></div>' +
+      '<div class="card"><h3>What to look for</h3><ul class="apply-steps">' +
+        ["What the company really does, and how it makes money.", "News in the last year: layoffs, lawsuits, funding, new leadership.", "Employee reviews: look for patterns, not single angry posts.", "Is it registered in its state, with a real address and website?", "Complaints with the Better Business Bureau or the CFPB.", "Pay range for the role in your area, and what the benefits are.", "Red flags: you must pay anything, the recruiter only uses WhatsApp or Telegram, the pay is far above normal for little work."].map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("") +
+      '</ul></div>';
+    function draw(){
+      var n = $("#rs-name").value.trim(), out = $("#rs-out");
+      if (!n){ out.innerHTML = ""; return; }
+      var q = encodeURIComponent(n);
+      var L = [
+        ["Recent news", "https://www.google.com/search?q=" + q + "+news&tbm=nws"],
+        ["Layoffs and lawsuits", "https://www.google.com/search?q=" + q + "+layoffs+OR+lawsuit"],
+        ["Employee reviews on Glassdoor", "https://www.glassdoor.com/Search/results.htm?keyword=" + q],
+        ["Reviews on Indeed", "https://www.indeed.com/cmp?q=" + q],
+        ["Company on LinkedIn", "https://www.linkedin.com/search/results/companies/?keywords=" + q],
+        ["SEC filings (public companies)", "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=" + q + "&type=10-K"],
+        ["State business registration", "https://opencorporates.com/companies?q=" + q],
+        ["Better Business Bureau", "https://www.bbb.org/search?find_text=" + q],
+        ["Scam check", "https://www.google.com/search?q=" + q + "+scam+OR+fake+job+posting"]
+      ];
+      out.innerHTML = '<div class="out-h">Open these</div>' + L.map(function(l){ return '<div class="apply-row"><span class="v">'+esc(l[0])+'</span>'+linkBtn(l[1])+'</div>'; }).join("");
+    }
+    $("#rs-job").onchange = function(){ var j = jobById(this.value); if (j){ $("#rs-name").value = j.company || ""; draw(); } };
+    $("#rs-name").oninput = draw;
+  }
+
+  // ----- My stats (from your Pipeline) -----
+  function renderStats(host){
+    var jobs = state.jobs, total = jobs.length;
+    if (!total){ host.innerHTML = '<div class="card"><h3>My search stats</h3><div class="lede">Save and apply to a few jobs in your Pipeline and your numbers will show up here.</div></div>'; return; }
+    var by = {}; STAGES.forEach(function(s){ by[s.key] = 0; }); jobs.forEach(function(j){ if (by[j.status] != null) by[j.status]++; });
+    var sent = by.applied + by.interview + by.denied + by.closed;
+    var weeks = [], nowMs = Date.now(), wk = 7 * 86400000;
+    for (var i = 7; i >= 0; i--) weeks.push({ from: nowMs - (i + 1) * wk, to: nowMs - i * wk, n: 0, label: i === 0 ? "this wk" : i + "w ago" });
+    jobs.forEach(function(j){ if (!j.appliedAt) return; var tms = Date.parse(j.appliedAt); weeks.forEach(function(w){ if (tms > w.from && tms <= w.to) w.n++; }); });
+    var max = Math.max(1, Math.max.apply(null, weeks.map(function(w){ return w.n; })));
+    var bar = function(label, n, m, color){ return '<div style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:13px;"><span style="width:84px; color:var(--muted);">'+esc(label)+'</span><div style="flex:1; height:14px; background:var(--border); border-radius:4px; overflow:hidden;"><div style="width:'+(n/m*100)+'%; height:100%; background:'+color+';"></div></div><span class="mono" style="width:28px; text-align:right;">'+n+'</span></div>'; };
+    var rate = sent ? Math.round(by.interview / sent * 100) : 0;
+    host.innerHTML =
+      '<div class="card"><h3>My search stats</h3><div class="lede">Built from your Pipeline. '+total+' job'+(total===1?'':'s')+' tracked, '+sent+' applied.</div>' +
+        '<div class="out-h">Where your jobs are</div>' + STAGES.map(function(s){ return bar(stageLabel(s.key), by[s.key], Math.max(1,total), "var(--accent)"); }).join("") +
+        '<div class="out-h">Applications per week (last 8 weeks)</div>' + weeks.map(function(w){ return bar(w.label, w.n, max, "var(--accent)"); }).join("") +
+        '<div class="out-h">Interview rate</div><div class="lede">'+(sent ? rate+'% of your applications are at the interview stage right now ('+by.interview+' of '+sent+').' : 'Apply to a few jobs to see this.')+(sent && sent < 20 ? ' Small numbers swing a lot, so look at the trend after 20 or more applications.' : '')+'</div>' +
+        '<div class="lede">If you’re applying a lot and getting few interviews, check the Résumé match score tab and tailor each résumé to its job.</div></div>';
   }
 
   // ---------- Freelance & Creator University ----------
@@ -3922,7 +4267,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
   async function saveFile(name, text){
     text = String(text||"");
     try {
-      var blob = new Blob([text], { type: name.slice(-5) === ".json" ? "application/json" : "text/plain" });
+      var blob = new Blob([text], { type: name.slice(-5) === ".json" ? "application/json" : (name.slice(-4) === ".ics" ? "text/calendar" : "text/plain") });
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url; a.download = name;
