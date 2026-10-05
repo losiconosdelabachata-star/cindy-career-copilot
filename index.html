@@ -308,10 +308,10 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   .wrap{padding-top:8px;}
 }
 
-/* section switcher: dropdown on phones & tablets, tab row on desktop */
+/* section switcher: a dropdown menu on every screen size */
 .tabmenu{display:none;}
 .badge-dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--danger); margin-left:6px; vertical-align:middle;}
-@media (max-width:1024px){
+@media all{
   .tabs{display:none !important;}
   .tabmenu{display:block; position:relative; margin:0 0 16px; z-index:30;}
   .tabmenu-btn{width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px; min-height:50px;
@@ -329,6 +329,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   .tabmenu-opt[aria-selected="true"]{background:var(--accent-ghost); color:var(--accent-deep);}
   .tabmenu-btn .badge, .tabmenu-opt .badge{font-family:var(--mono); font-size:11px; background:var(--amber-ghost); color:var(--amber); padding:1px 6px; border-radius:4px; letter-spacing:0;}
 }
+@media (min-width:1025px){ .tabmenu{max-width:380px;} }
 .lang-select{width:auto; max-width:150px; padding:6px 8px; font-size:12px; font-family:var(--mono); text-transform:none; background:var(--panel); color:var(--ink); border:1px solid var(--border); border-radius:var(--radius); cursor:pointer;}
 html[dir="rtl"] body{direction:rtl;}
 html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .apply-row, html[dir="rtl"] .copyright{text-align:right;}

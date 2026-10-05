@@ -1,6 +1,6 @@
 // Service worker: lets the app open instantly and show its shell offline (needed for the Android app).
 // It never caches /api/ calls or other sites — those always go to the network.
-const CACHE = "cindy-shell-v4";
+const CACHE = "cindy-shell-v5";
 const SHELL = [
   "./",
   "index.html",
