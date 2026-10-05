@@ -2750,7 +2750,154 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
     { n:"IRS: self-employed individuals tax center", u:"https://www.irs.gov/businesses/small-businesses-self-employed/self-employed-individuals-tax-center" }
   ];
 
+  // Stock Market University: education only. Rules checked October 2026; they change, so every module points back to official sources.
+  var STOCK_MODULES = [
+    { t:"1. What a stock is and how markets work", pts:[
+      "A share is a small piece of ownership in a company. You can earn money if the price rises (capital gains) or if the company pays dividends. You can also lose money, including all of what you put in.",
+      "US stocks trade mainly on the NYSE and Nasdaq. Regular hours are 9:30 a.m. to 4 p.m. Eastern, Monday to Friday, with pre-market and after-hours sessions that have thinner trading and wider price gaps.",
+      "An ETF or index fund holds many stocks in one purchase (for example one that tracks the S&P 500). For most beginners, diversified funds are the lower-risk starting point compared with picking single stocks.",
+      "Prices move on company results, the economy, interest rates, news and plain supply and demand. No one predicts them reliably, including professionals."] },
+    { t:"2. Opening a brokerage account", pts:[
+      "You need a brokerage account with a SIPC-member, FINRA-registered broker. Check any firm for free on FINRA BrokerCheck (brokercheck.finra.org). Most big brokers now charge 0 dollars commission on US stock and ETF trades.",
+      "You must be 18 or older to open your own account (custodial accounts exist for minors). Expect to give your Social Security number or taxpayer ID, employment and income details, and ID.",
+      "Cash account: you trade only with money you've deposited. Margin account: you can borrow from the broker. Margin magnifies losses too and you can owe more than you put in, so beginners should start with a cash account.",
+      "SIPC protects the assets at a failed brokerage (up to 500,000 dollars, including 250,000 dollars of cash). It does NOT protect you from losing money when prices fall.",
+      "Retirement accounts (Roth or traditional IRA) can hold stocks and ETFs with tax advantages. Day trading in them is limited and not usually a good idea.",
+      "Never share your login or send money to someone who contacts you with a hot tip or a platform you never heard of."] },
+    { t:"3. How to buy and sell: order types", pts:[
+      "Market order: buys or sells right now at the best available price. Fast, but in fast or thin markets the price you get can be worse than the one you saw.",
+      "Limit order: you set the highest price you'll pay (buy) or the lowest you'll accept (sell). It only fills at your price or better, so it may not fill at all. Beginners should usually use limit orders, especially on small or volatile stocks.",
+      "Stop order (stop-loss): becomes a market order once the price hits your stop price. Gaps overnight or fast drops can fill you well below the stop. A stop-limit order controls the price but may not fill.",
+      "Day order expires at the close; good-till-canceled (GTC) stays open for a longer period set by your broker.",
+      "Bid is what buyers offer, ask is what sellers want. The difference is the spread, a real cost, especially on low-volume stocks.",
+      "Settlement: US stock trades settle one business day after the trade (T+1, in effect since May 28, 2024). Money from a sale may be available to trade sooner, but depends on your broker and account type. Avoid good-faith or free-riding violations in cash accounts by not using unsettled funds the wrong way; your broker explains its rules."] },
+    { t:"4. Reading a stock: the basics", pts:[
+      "Ticker: the short symbol, for example AAPL. Volume: how many shares traded. Market cap: share price times shares outstanding.",
+      "P/E ratio: price divided by yearly earnings per share. A very high or very low number isn't automatically good or bad; compare against the company's own history and its industry.",
+      "Read the company's filings for free on the SEC's EDGAR site (sec.gov/edgar): the 10-K (annual report), 10-Q (quarterly report) and 8-K (major events). Look at revenue growth, profit, debt and cash.",
+      "Charts show price and volume over time. Technical analysis uses patterns and indicators (moving averages, support and resistance, RSI). It can help with timing and risk limits, but it's not a crystal ball.",
+      "Fundamental analysis asks if the business is healthy and fairly priced. Many investors combine both."] },
+    { t:"5. Investing vs trading, and building a plan", pts:[
+      "Investing means holding for years. Trading means shorter holding periods (days to months). Day trading means opening and closing positions in the same day. Day trading is the hardest and most expensive style to do well.",
+      "Research that studied real day traders (for example a well-known study of Brazilian day traders) found that the large majority lose money over time and very few earn more than a minimum wage. Treat that as the normal outcome, not bad luck.",
+      "Write a plan before you trade: what you trade, what setup makes you enter, where you will exit with a loss, where you take a profit, and how big the position is.",
+      "Diversify. Don't put your rent, emergency fund or borrowed money in the market. Build an emergency fund and pay off high-interest debt first.",
+      "Dollar-cost averaging (buying a fixed amount on a schedule) removes the need to guess the best day to buy."] },
+    { t:"6. Risk management (the part that keeps you in the game)", pts:[
+      "Decide the most you'll risk on one trade before you enter. A common rule of thumb is 1 percent or less of your account per trade, so a losing streak can't wipe you out.",
+      "Position size = (account size x risk percent) / (entry price minus stop price). Use the calculator below.",
+      "A trade where you can make at least 2 dollars for every 1 dollar you risk (a 2:1 reward-to-risk ratio) lets you be wrong more than half the time and still do fine. Be honest about your real win rate.",
+      "Set a daily loss limit. When you hit it, stop for the day. Revenge trading after a loss is one of the top ways accounts blow up.",
+      "Avoid thinly traded penny stocks and over-the-counter stocks, which are easy to manipulate. Be careful with leveraged and inverse ETFs (they reset daily and are meant for short-term use) and with options, which can lose 100 percent of their value fast.",
+      "Keep a trading journal: why you entered, what happened, how you felt. Review it weekly."] },
+    { t:"7. Day trading and the US rules (as of October 2026)", pts:[
+      "Pattern day trader (PDT) rule: for decades, a margin account that made four or more day trades in five business days had to keep 25,000 dollars. The SEC approved FINRA's changes in April 2026, and the 25,000 dollar minimum and the PDT label were eliminated effective June 4, 2026, replaced by intraday margin standards under FINRA Rule 4210.",
+      "Brokers have until October 20, 2027 to switch to the new system, and many set their own limits and margin rules, so your broker may still restrict day trades or require more money. Read your broker's day-trading policy before you start.",
+      "Day trades are still riskier with margin: borrowed money means larger losses, margin calls and forced selling. Cash accounts can't borrow, but you must wait for funds to settle.",
+      "Short selling (betting a stock will fall) needs a margin account and has unlimited loss potential. Regulation SHO governs short sales. Beginners should skip it.",
+      "Illegal practices: insider trading (trading on material, non-public information), market manipulation (spoofing, wash trading, pump-and-dump schemes) and front-running. The SEC and FINRA enforce these with fines and prison.",
+      "Rules change. Always check FINRA (finra.org) and the SEC (sec.gov) for current requirements."] },
+    { t:"8. US taxes on stock trading", pts:[
+      "Selling at a profit creates a capital gain. If you held the stock for one year or less, it's short-term and taxed as ordinary income at your regular rate. If you held it more than one year, it's long-term and taxed at 0, 15 or 20 percent depending on your income.",
+      "For 2026, the 0 percent long-term rate applies to taxable income up to about 49,450 dollars for single filers and 98,900 dollars for married filing jointly; the 20 percent rate starts above about 545,500 dollars single and 613,700 dollars joint. Higher earners may also owe the 3.8 percent net investment income tax. Verify the amounts at irs.gov.",
+      "Losses offset gains. If losses exceed gains, you can deduct up to 3,000 dollars a year against other income (1,500 if married filing separately) and carry the rest forward.",
+      "Wash sale rule: if you sell at a loss and buy the same or a substantially identical security within 30 days before or after the sale (a 61-day window), the loss is disallowed for now and added to the cost basis of the new shares. It applies across your accounts, including IRAs.",
+      "Your broker sends Form 1099-B. You report sales on Form 8949 and Schedule D with your tax return. Dividends are reported on Form 1099-DIV; qualified dividends get lower long-term rates.",
+      "Day traders who trade full time may qualify for trader tax status and the mark-to-market election (Section 475(f)), but it must be elected on time and has strict conditions. Talk to a CPA first. Crypto is also reported as property.",
+      "Trading income isn't a paycheck: nobody withholds tax. If you owe, you may need quarterly estimated payments (Form 1040-ES). Set money aside as you win."] },
+    { t:"9. Tips, tricks and mistakes to avoid", pts:[
+      "Paper trade first. Many brokers offer simulators with fake money. Practice your plan for a few weeks to learn the platform and see if your method works.",
+      "Start small. Use money you can afford to lose. Your first goal is to not lose big, not to get rich.",
+      "Avoid FOMO (fear of missing out). A stock that already jumped 40 percent on social media hype is usually a late entry.",
+      "Be careful with earnings announcements, when prices can jump or fall sharply. Watch the calendar.",
+      "Trade liquid stocks (high volume, tight spreads). The first and last hour of the day are the most active and most volatile.",
+      "Let winners run only according to your plan, and cut losers by your plan. Don't move a stop further away to avoid taking a loss.",
+      "Fees to know: commissions are mostly 0 dollars, but there are regulatory fees on sales, margin interest, wire fees and the bid-ask spread.",
+      "Turn off the noise: influencers, paid alerts and signal groups often profit from selling subscriptions, not from trading. Check whether a promoter is paid.",
+      "Protect your accounts with a unique password and two-factor login, and never give anyone remote access."] },
+    { t:"10. Scams and red flags", pts:[
+      "Guaranteed returns, a promised 'secret' strategy, pressure to deposit today, or an 'expert' who contacted you first on WhatsApp, Telegram or a dating app are classic scams.",
+      "Pump-and-dump groups push a cheap stock so insiders can sell to newcomers. Fake trading apps show fake gains until you try to withdraw.",
+      "Never pay a stranger to trade for you, and never send crypto or gift cards. Verify any adviser at adviserinfo.sec.gov and any broker at BrokerCheck.",
+      "Report fraud to the SEC (sec.gov/tcr), FINRA and the FTC at reportfraud.ftc.gov."] }
+  ];
+  var STOCK_LINKS = [
+    { n:"Investor.gov (SEC): investing basics and glossary", u:"https://www.investor.gov" },
+    { n:"FINRA: investor education and BrokerCheck", u:"https://www.finra.org/investors" },
+    { n:"FINRA: day trading and margin rules", u:"https://www.finra.org/investors/investing/investment-products/stocks/day-trading" },
+    { n:"SEC EDGAR: free company filings", u:"https://www.sec.gov/edgar" },
+    { n:"SIPC: what is and isn't protected", u:"https://www.sipc.org/for-investors/what-sipc-protects" },
+    { n:"IRS: Topic 409, capital gains and losses", u:"https://www.irs.gov/taxtopics/tc409" },
+    { n:"IRS Publication 550: investment income and expenses", u:"https://www.irs.gov/publications/p550" },
+    { n:"IRS Topic 429: traders in securities", u:"https://www.irs.gov/taxtopics/tc429" },
+    { n:"SEC: report a tip or complaint", u:"https://www.sec.gov/tcr" }
+  ];
+  var STOCK_TERMS = [
+    ["Bull / bear market","Bull: prices rising broadly. Bear: a drop of 20 percent or more from a recent high."],
+    ["Dividend","A cash payment some companies make to shareholders."],
+    ["Volatility","How much and how fast a price moves. More volatility means more risk and more opportunity."],
+    ["Liquidity","How easily you can buy or sell without moving the price."],
+    ["Margin call","When your broker demands more money because your borrowed positions lost value; if you can't, they can sell your holdings."],
+    ["Short squeeze","A rapid price spike that forces short sellers to buy back, pushing it up further."],
+    ["IPO","Initial public offering, a company's first sale of stock to the public."],
+    ["Stop-loss","An order that sells if the price falls to a level you choose."],
+    ["Expense ratio","The yearly fee an ETF or mutual fund charges, as a percent of your money."],
+    ["Cost basis","What you paid for a security, including fees, used to figure your gain or loss."]
+  ];
+
   var freelanceSub = "work", flCat = "All", flProposal = "", creatorIdeas = null, flBusy = false;
+
+  function stockData(){
+    state.profile.stocks = state.profile.stocks || { done:{} };
+    return state.profile.stocks;
+  }
+
+  function renderStockU(host){
+    var s = stockData();
+    var total = STOCK_MODULES.length, done = STOCK_MODULES.filter(function(m,i){ return s.done[i]; }).length;
+    host.innerHTML =
+      '<div class="card"><h3>Stock Market University</h3>' +
+        '<div class="lede">A free course on how US stocks work: how to buy, sell and trade, how day trading works, the US rules and taxes, and the common mistakes. '+done+' of '+total+' modules done.</div>' +
+        '<div class="notice" style="font-size:13px; border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin:8px 0;"><b>Education only, not financial advice.</b> Cindy is not a licensed adviser or broker and can’t tell you what to buy or sell. Trading and investing involve risk, including losing all of your money, and most day traders lose money. Rules, rates and thresholds change, so confirm with the SEC, FINRA, the IRS and your broker. Last checked October 2026.</div>' +
+        STOCK_MODULES.map(function(m,i){
+          return '<details style="border-top:1px solid var(--border); padding:10px 0;"><summary style="cursor:pointer; font-weight:600;">'+(s.done[i] ? "✓ " : "")+esc(m.t)+'</summary>' +
+            '<ul class="apply-steps">'+m.pts.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' +
+            '<label class="chk" style="display:inline-flex !important;"><input type="checkbox" class="st-done" data-i="'+i+'"'+(s.done[i]?" checked":"")+'> Mark module complete</label></details>';
+        }).join("") +
+      '</div>' +
+      '<div class="card"><h3>Position size calculator</h3>' +
+        '<div class="lede">See how many shares keep a single loss within your risk limit. This is arithmetic, not a recommendation.</div>' +
+        '<div class="stack"><div class="grid2">' +
+          '<div><label for="st-acct">Account size ($)</label><input id="st-acct" type="number" min="0" step="any" inputmode="decimal" placeholder="5000"></div>' +
+          '<div><label for="st-risk">Risk per trade (%)</label><input id="st-risk" type="number" min="0" step="any" inputmode="decimal" value="1"></div>' +
+          '<div><label for="st-entry">Entry price ($)</label><input id="st-entry" type="number" min="0" step="any" inputmode="decimal" placeholder="50"></div>' +
+          '<div><label for="st-stop">Stop price ($)</label><input id="st-stop" type="number" min="0" step="any" inputmode="decimal" placeholder="48"></div>' +
+          '<div><label for="st-target">Target price ($, optional)</label><input id="st-target" type="number" min="0" step="any" inputmode="decimal" placeholder="54"></div>' +
+        '</div><div id="st-out" class="lede" aria-live="polite">Fill in the boxes to see the result.</div></div>' +
+      '</div>' +
+      '<div class="card"><h3>Words to know</h3>' +
+        STOCK_TERMS.map(function(x){ return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(x[0])+'</b><br>'+esc(x[1])+'</span></div>'; }).join("") + '</div>' +
+      '<div class="card"><h3>Official lessons and rules</h3>' +
+        '<div class="lede">The official sources behind the rules in this course.</div>' +
+        STOCK_LINKS.map(function(l){ return '<div class="apply-row"><span class="v">'+esc(l.n)+'</span>'+linkBtn(l.u)+'</div>'; }).join("") + '</div>';
+    Array.prototype.forEach.call(host.querySelectorAll(".st-done"), function(cb){
+      cb.onchange = async function(){ stockData().done[cb.dataset.i] = cb.checked; await persistMain(); renderStockU(host); };
+    });
+    function calc(){
+      var a = parseFloat($("#st-acct").value), r = parseFloat($("#st-risk").value), e = parseFloat($("#st-entry").value), sp = parseFloat($("#st-stop").value), t = parseFloat($("#st-target").value);
+      var out = $("#st-out");
+      if (!(a > 0 && r > 0 && e > 0 && sp > 0)) { out.textContent = "Fill in the boxes to see the result."; return; }
+      var perShare = Math.abs(e - sp);
+      if (perShare === 0) { out.textContent = "Entry and stop can't be the same price."; return; }
+      var riskUsd = a * r / 100, shares = Math.floor(riskUsd / perShare), cost = shares * e;
+      var msg = "Risk limit: $" + riskUsd.toFixed(2) + ". Loss per share if stopped out: $" + perShare.toFixed(2) + ". Position size: " + shares + " share" + (shares === 1 ? "" : "s") + " (about $" + cost.toFixed(2) + ", " + (cost / a * 100).toFixed(0) + "% of the account).";
+      if (cost > a) msg += " That is more than your account, so it would need margin; a smaller position or a tighter stop fits a cash account.";
+      if (t > 0 && ((e > sp && t > e) || (e < sp && t < e))) msg += " Reward-to-risk: " + (Math.abs(t - e) / perShare).toFixed(1) + " to 1.";
+      if (shares < 1) msg = "At this risk limit even one share risks more than your limit. Use a smaller position, a tighter stop or a lower-priced stock. Risk limit: $" + riskUsd.toFixed(2) + ".";
+      out.textContent = msg + " A stop does not guarantee the exit price; fast moves can fill worse.";
+    }
+    Array.prototype.forEach.call(host.querySelectorAll("#st-acct,#st-risk,#st-entry,#st-stop,#st-target"), function(el){ el.oninput = calc; });
+  }
 
   function creatorData(){
     state.profile.creator = state.profile.creator || { done:{}, niche:"", platform:"", audience:"" };
@@ -2758,7 +2905,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
   }
 
   function renderFreelance(b){
-    var subs = [["work","Find freelance work"],["creator","Creator University"],["tools","Free & open-source tools"]];
+    var subs = [["work","Find freelance work"],["creator","Creator University"],["stocks","Stock Market University"],["tools","Free & open-source tools"]];
     b.innerHTML = '<div class="btn-row" style="margin-bottom:12px;">' +
       subs.map(function(x){ return '<button class="'+(freelanceSub===x[0]?"btn-primary":"btn-ghost")+' fl-pill" data-s="'+x[0]+'">'+esc(x[1])+'</button>'; }).join("") +
       '</div><div id="fl-body"></div>';
@@ -2766,6 +2913,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
     var host = $("#fl-body");
     if (freelanceSub === "work") renderFreelanceWork(host);
     else if (freelanceSub === "creator") renderCreatorU(host);
+    else if (freelanceSub === "stocks") renderStockU(host);
     else renderFreelanceTools(host);
   }
 

@@ -3,6 +3,7 @@ import { APP_CARDS } from "./kb_app.js";
 import { CAREER_CARDS } from "./kb_career.js";
 import { MONEY_CARDS } from "./kb_money.js";
 import { CREATOR_CARDS } from "./kb_creator.js";
+import { STOCK_CARDS } from "./kb_stocks.js";
 
 const STOP = new Set(("a an the and or but if of to in on at for with from by is are was were be been am do does did can could should would will " +
   "i me my we our you your it its this that these those what how why when where which who whom about as into than then so not no yes " +
@@ -21,7 +22,7 @@ function tokens(s) {
     .filter(function(w) { return w && !STOP.has(w); }).map(stem);
 }
 
-const ALL = [].concat(APP_CARDS, CAREER_CARDS, MONEY_CARDS, CREATOR_CARDS);
+const ALL = [].concat(APP_CARDS, CAREER_CARDS, MONEY_CARDS, CREATOR_CARDS, STOCK_CARDS);
 let INDEX = null;
 
 function build() {

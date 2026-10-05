@@ -61,7 +61,7 @@ export async function onRequestPost(context) {
     " KNOWLEDGE BASE: you have NO internet access. Answer from the notes below and your general knowledge. " +
     "For questions about how the app works, rely on these notes; if they don't cover it, say you're not sure and point to the nearest tab instead of guessing. " +
     "Laws, program amounts and platform requirements change, so for numbers and eligibility remind people to confirm with the official source. " +
-    "You may use up to about 220 words when the question needs detail.\n\nNOTES:\n" + kb;
+    "If asked what to buy, sell or trade, explain you can only teach (education, not financial advice) and point to the Stock Market University. You may use up to about 220 words when the question needs detail.\n\nNOTES:\n" + kb;
 
   const messages = [{ role: "system", content: system + kbRules + langLine(body.lang) }];
   history.forEach(function(h) {
