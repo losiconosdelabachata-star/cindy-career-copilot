@@ -1,6 +1,8 @@
 // Cloudflare Pages Function — POST /api/money
 //   {kind:"credit", score, issues[], goal, income}  → a step-by-step credit repair plan (JSON)
 //   {kind:"grants", state, categories[], situation} → application prep guidance (JSON)
+//   {kind:"education", state, industry, budget} → training options within a budget, or
+//     no/low-cost government-aid pathways when budget is 0 (JSON)
 //   {kind:"statement", state, category, situation, name} → a draft statement of need (text)
 // Educational guidance only — not legal or financial advice, and it never names
 // specific grant programs from memory (the page links to official directories).
@@ -75,6 +77,54 @@ export async function onRequestPost({ request, env }) {
       const o = parseObj(await ask(env, system, user, 1200));
       if (!o) return json({ error: "parse", message: "Couldn't build that. Try again." }, 502);
       return json({ prep: arr(o.prep, 10, 200), tips: arr(o.tips, 8, 250), scams: arr(o.scams, 6, 200) });
+    }
+    if (b.kind === "education") {
+      const st = String(b.state || "").slice(0, 40);
+      const industry = String(b.industry || "").slice(0, 120);
+      const budget = Math.max(0, Number(b.budget) || 0);
+      if (budget > 0) {
+        const system =
+          "You are a practical education-funding advisor for US adults. Given a state, a target industry/field, and a dollar budget, " +
+          "suggest realistic ways to get trained or credentialed in that field within that budget. Favor concrete PROGRAM TYPES " +
+          "(community college certificate, technical/trade school, online certificate, bootcamp, paid apprenticeship, professional certification exam) " +
+          "with realistic nationwide US cost ranges and typical duration — never invent a specific school name. Then give tips for stretching the " +
+          "budget further (scholarships, employer tuition assistance, payment plans, free prerequisites). " +
+          "Reply with ONLY JSON: {\"summary\":\"2-3 sentences\",\"options\":[{\"name\":\"program type\",\"cost\":\"$ range\",\"duration\":\"time\",\"note\":\"why it fits, 1-2 sentences\"}],\"stretchTips\":[\"short tips\"]} " +
+          "with 3-5 options and 3-5 stretchTips.";
+        const user = "State: " + st + "\nIndustry/field: " + (industry || "undecided") + "\nBudget: $" + budget;
+        const o = parseObj(await ask(env, system, user, 1200));
+        if (!o || !Array.isArray(o.options)) return json({ error: "parse", message: "Couldn't build that. Try again." }, 502);
+        return json({
+          mode: "budget",
+          summary: String(o.summary || "").slice(0, 600),
+          options: o.options.slice(0, 6).map(function (x) {
+            return { name: String(x.name || "").slice(0, 100), cost: String(x.cost || "").slice(0, 60), duration: String(x.duration || "").slice(0, 60), note: String(x.note || "").slice(0, 300) };
+          }),
+          stretchTips: arr(o.stretchTips, 6, 200)
+        });
+      }
+      const system =
+        "You help US adults train or get credentialed in a field for little or no money up front. You may name ONLY well-known NATIONWIDE " +
+        "federal programs — the FAFSA / federal Pell Grant, Federal Work-Study, WIOA-funded training through local American Job Centers, " +
+        "registered apprenticeships via apprenticeship.gov, Trade Adjustment Assistance for workers who lost a job to trade, the GI Bill for " +
+        "veterans, and AmeriCorps education awards — never invent a state program name, amount, or deadline. Say which of these usually fit best " +
+        "for the stated field and state and why, what to do first, and end with scam warnings (real aid never charges a fee; no one can guarantee " +
+        "enrollment or forgiveness for a fee). " +
+        "Reply with ONLY JSON: {\"summary\":\"2-3 sentences\",\"programs\":[{\"name\":\"well-known program\",\"note\":\"why it fits, 1-2 sentences\"}],\"prep\":[\"short checklist items\"],\"tips\":[\"short tips\"],\"scams\":[\"short warnings\"]} " +
+        "with 3-6 programs, 4-6 prep items, 3-5 tips, 2-4 scams.";
+      const user = "State: " + st + "\nIndustry/field: " + (industry || "undecided");
+      const o = parseObj(await ask(env, system, user, 1200));
+      if (!o || !Array.isArray(o.programs)) return json({ error: "parse", message: "Couldn't build that. Try again." }, 502);
+      return json({
+        mode: "aid",
+        summary: String(o.summary || "").slice(0, 600),
+        programs: o.programs.slice(0, 8).map(function (x) {
+          return { name: String(x.name || "").slice(0, 100), note: String(x.note || "").slice(0, 300) };
+        }),
+        prep: arr(o.prep, 8, 200),
+        tips: arr(o.tips, 6, 200),
+        scams: arr(o.scams, 5, 200)
+      });
     }
     if (b.kind === "statement") {
       const system =

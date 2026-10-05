@@ -146,6 +146,10 @@ input,textarea,select{
 textarea{resize:vertical; min-height:84px; line-height:1.5;}
 input:focus,textarea:focus,select:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
 input::placeholder,textarea::placeholder{color:var(--faint);}
+.pw-wrap{position:relative;}
+.pw-wrap input{padding-right:62px;}
+.pw-eye{position:absolute; top:50%; right:5px; transform:translateY(-50%); height:26px; line-height:24px; padding:0 10px; font-size:11px; background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--muted); cursor:pointer;}
+.pw-eye:hover{border-color:var(--accent); color:var(--accent-deep);}
 
 button{font-family:var(--serif); font-weight:600; font-size:13.5px; text-transform:uppercase; letter-spacing:.05em;
   border:1px solid transparent; border-radius:var(--radius); padding:9px 16px; cursor:pointer;}
@@ -822,6 +826,25 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   }
 
   // ---------- auth ----------
+  function pwFieldHtml(id, labelText, autocomplete){
+    return '<div><label for="'+id+'">'+esc(labelText)+'</label><div class="pw-wrap">' +
+      '<input id="'+id+'" type="password" autocomplete="'+autocomplete+'">' +
+      '<button type="button" class="pw-eye" data-for="'+id+'" aria-label="Show password">Show</button>' +
+      '</div></div>';
+  }
+  function wirePasswordToggles(root){
+    Array.prototype.forEach.call((root||document).querySelectorAll(".pw-eye"), function(btn){
+      btn.onclick = function(){
+        var inp = document.getElementById(btn.dataset.for);
+        if (!inp) return;
+        var show = inp.type === "password";
+        inp.type = show ? "text" : "password";
+        btn.textContent = show ? "Hide" : "Show";
+        btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+      };
+    });
+  }
+
   function renderAuth(){
     var isRegister = authState.mode === "register";
     app.innerHTML =
@@ -842,8 +865,8 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
         (authState.error ? '<div class="note" style="border-color:var(--danger); color:var(--danger); background:var(--danger-ghost);">'+esc(authState.error)+'</div>' : "") +
         '<div class="stack">' +
           '<div><label for="auth-user">'+esc(t("username"))+'</label><input id="auth-user" autocomplete="username" value="'+esc(authState.username||"")+'"></div>' +
-          '<div><label for="auth-pass">'+esc(t("password"))+'</label><input id="auth-pass" type="password" autocomplete="'+(isRegister?"new-password":"current-password")+'"></div>' +
-          (isRegister ? '<div><label for="auth-pass2">'+esc(t("confirmPassword"))+'</label><input id="auth-pass2" type="password" autocomplete="new-password"></div>' : "") +
+          pwFieldHtml("auth-pass", t("password"), isRegister?"new-password":"current-password") +
+          (isRegister ? pwFieldHtml("auth-pass2", t("confirmPassword"), "new-password") : "") +
           '<div class="btn-row"><button class="btn-primary" id="auth-submit">'+ (isRegister ? esc(t("createAccount")) : esc(t("logIn"))) +'</button></div>' +
           '<div style="font-size:13px; color:var(--muted);">' +
             (isRegister ? esc(t("haveAccount")) : esc(t("noAccountYet"))) +
@@ -855,6 +878,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     var submit = function(){ isRegister ? handleRegister() : handleLogin(); };
     $("#auth-submit").onclick = submit;
     $("#lang-btn").onclick = toggleLang;
+    wirePasswordToggles(app);
     Array.prototype.forEach.call(app.querySelectorAll("#auth-user, #auth-pass, #auth-pass2"), function(el){
       el.onkeydown = function(e){ if (e.key === "Enter") submit(); };
     });
@@ -958,12 +982,13 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       '<div class="apply-modal" role="dialog" aria-modal="true" style="max-width:460px; align-self:center;">' +
         '<h2>Delete your account?</h2>' +
         '<div class="age" style="margin:6px 0 12px;">This permanently deletes <b>'+esc(currentUserDisplay || currentUser || "")+'</b> and all its data on our servers. It can’t be undone.</div>' +
-        '<label for="del-pass">Enter your password to confirm</label><input id="del-pass" type="password" autocomplete="current-password">' +
+        '<label for="del-pass">Enter your password to confirm</label><div class="pw-wrap"><input id="del-pass" type="password" autocomplete="current-password"><button type="button" class="pw-eye" data-for="del-pass" aria-label="Show password">Show</button></div>' +
         '<label class="chk" style="margin-top:12px;"><input type="checkbox" id="del-ok"> I understand this is permanent</label>' +
         '<div class="age" id="del-msg" style="margin-top:8px; color:var(--danger);"></div>' +
         '<div class="btn-row" style="margin-top:14px; justify-content:space-between;"><button class="btn-ghost" id="del-cancel">Cancel</button><button class="btn-danger" id="del-go" disabled>Delete forever</button></div>' +
       '</div>';
     document.body.appendChild(bd);
+    wirePasswordToggles(bd);
     function close(){ if (bd.parentNode) bd.parentNode.removeChild(bd); }
     bd.onclick = function(e){ if (e.target === bd) close(); };
     bd.querySelector("#del-cancel").onclick = close;
@@ -2715,7 +2740,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   var moneySub = "credit";
   function moneyHost(){ return $("#money-body") || $("#tab-body"); }
   function renderMoney(b){
-    var subs = [["credit","Fix my credit"],["grants","Find help & grants"],["loans","Get a loan"]];
+    var subs = [["credit","Fix my credit"],["grants","Find help & grants"],["school","Further my education"],["loans","Get a loan"]];
     b.innerHTML = '<div class="btn-row" style="margin-bottom:12px;">' +
       subs.map(function(x){ return '<button class="'+(moneySub===x[0]?"btn-primary":"btn-ghost")+' mn-pill" data-s="'+x[0]+'">'+esc(x[1])+'</button>'; }).join("") +
       '</div><div id="money-body"></div>';
@@ -2723,6 +2748,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     var host = $("#money-body");
     if (moneySub === "credit") renderCredit(host);
     else if (moneySub === "grants") renderGrants(host);
+    else if (moneySub === "school") renderSchool(host);
     else renderLoans(host);
   }
 
@@ -3024,6 +3050,101 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       g.statement = String(d.statement || "").trim();
     } catch(e){ toast((e && e.message) || "That didn’t go through. Try again."); }
     renderGrants(moneyHost());
+  }
+
+  var EDU_LAWS = [
+    { n:"Compare costs before you enroll", d:"Schools that take federal aid must disclose program cost, typical debt, and job placement/earnings outcomes before you sign up.", u:"https://studentaid.gov/data-center/consumer" },
+    { n:"Check accreditation first", d:"Only accredited schools qualify for federal aid, and employers or licensing boards often require it. Look up any school before paying.", u:"https://ope.ed.gov/dapip/#/home" },
+    { n:"Compare real outcomes", d:"College Scorecard shows real graduation rates, typical debt, and earnings by school and program, using federal data.", u:"https://collegescorecard.ed.gov/" },
+    { n:"Veterans' education benefits", d:"The GI Bill and other VA education benefits can't be denied for discriminatory reasons, and VA-approved programs must meet quality standards.", u:"https://www.va.gov/education/" },
+    { n:"Student loan borrower rights", d:"Federal loan servicers must offer income-driven repayment options and can't mislead you about forgiveness programs.", u:"https://www.consumerfinance.gov/consumer-tools/student-loans/" },
+    { n:"FTC rules on school & job-training scams", d:"It's illegal for a school or “career coach” to guarantee a job, charge big upfront fees for placement, or pressure you to enroll today.", u:"https://consumer.ftc.gov/articles/job-scams" },
+    { n:"Where to complain", d:"Report a school or training scam to your state attorney general and the FTC; report federal financial-aid fraud to the ED Office of Inspector General.", u:"https://reportfraud.ftc.gov/" }
+  ];
+
+  function schoolLinks(st, industry){
+    var q = function(t){ return "https://www.google.com/search?q=" + encodeURIComponent(st + " " + t + " site:.gov"); };
+    return [
+      { t:"FAFSA — apply for federal grants, work-study, and student loans", u:"https://studentaid.gov/h/apply-for-aid/fafsa" },
+      { t:"Federal Pell Grant — often covers most or all community college tuition for low-income students", u:"https://studentaid.gov/understand-aid/types/grants/pell" },
+      { t:"CareerOneStop — find your local American Job Center (free WIOA-funded training for in-demand jobs)", u:"https://www.careeronestop.org/LocalHelp/AmericanJobCenters/find-american-job-centers.aspx" },
+      { t:"Apprenticeship.gov — paid, earn-while-you-learn training in " + (industry || "your field"), u:"https://www.apprenticeship.gov/apprenticeship-job-finder" },
+      { t:st + " WIOA-approved training providers for " + (industry || "your field"), u:q("WIOA approved training provider list " + (industry || "")) },
+      { t:st + " community college programs in " + (industry || "your field"), u:q("community college " + (industry || "") + " program") },
+      { t:"Check accreditation before you pay (US Dept. of Education database)", u:"https://ope.ed.gov/dapip/#/home" },
+      { t:"College Scorecard — compare real cost, debt, and earnings by program", u:"https://collegescorecard.ed.gov/" }
+    ];
+  }
+
+  var schoolCache = { state:"", industry:"", budget:"", mode:"", result:null, busy:false };
+
+  function schoolResultHtml(g){
+    var res = g.result;
+    if (!res) return "";
+    if (g.mode === "budget"){
+      return '<div class="card"><h3>Programs that can fit a '+esc(money(parseFloat(g.budget)||0))+' budget</h3><div class="lede">'+esc(res.summary||"")+'</div>' +
+        (res.options||[]).map(function(o){
+          return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(o.name)+'</b> — '+esc(o.cost)+' · '+esc(o.duration)+'<br><span class="age">'+esc(o.note)+'</span></span></div>';
+        }).join("") +
+        ((res.stretchTips||[]).length ? '<div class="out-h">Make the budget go further</div><ul class="apply-steps">'+res.stretchTips.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' : "") +
+      '</div>';
+    }
+    return '<div class="card"><h3>Ways to train for little or nothing out of pocket</h3><div class="lede">'+esc(res.summary||"")+'</div>' +
+      (res.programs||[]).map(function(p){
+        return '<div class="apply-row" style="align-items:flex-start;"><span class="v"><b>'+esc(p.name)+'</b><br>'+esc(p.note)+'</span></div>';
+      }).join("") +
+      ((res.prep||[]).length ? '<div class="out-h">Get ready to apply</div><ul class="apply-steps">'+res.prep.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' : "") +
+      ((res.tips||[]).length ? '<div class="out-h">Tips</div><ul class="apply-steps">'+res.tips.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' : "") +
+      ((res.scams||[]).length ? '<div class="out-h">Avoid scams</div><ul class="apply-steps">'+res.scams.map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("")+'</ul>' : "") +
+    '</div>';
+  }
+
+  function renderSchool(b){
+    var g = schoolCache;
+    if (!g.state) g.state = (state.profile.stateName || "");
+    b.innerHTML =
+      '<div class="card"><h3>Further my education</h3>' +
+        '<div class="lede">Pick your state and the field you want to train for. Add a budget if you have one — if you leave it blank, Cindy looks for ways to train for little or no money out of pocket (grants, free training, paid apprenticeships) instead of loans.</div>' +
+        '<div class="stack">' +
+          '<div class="grid2">' +
+            '<div><label for="sc-state">Your state</label><select id="sc-state"><option value="">Choose…</option>' + STATES.map(function(x){ return '<option'+(g.state===x?" selected":"")+'>'+esc(x)+'</option>'; }).join("") + '</select></div>' +
+            '<div><label for="sc-industry">Industry / field you want to train for</label><input id="sc-industry" value="'+esc(g.industry)+'" placeholder="Nursing, IT, Skilled trades, Business…"></div>' +
+          '</div>' +
+          '<div><label for="sc-budget">Your education budget <span style="text-transform:none; font-weight:400;">(leave blank if you don’t have one — we’ll find low/no-cost options)</span></label><input id="sc-budget" inputmode="numeric" value="'+esc(g.budget)+'" placeholder="$3,000"></div>' +
+          '<div class="btn-row"><button class="btn-primary" id="sc-go"'+(AI_ENABLED?"":" disabled")+'>Find my options</button></div>' +
+        '</div></div>' +
+      schoolResultHtml(g) +
+      '<div class="card"><h3>Where to look &amp; apply'+(g.state?" — "+esc(g.state):"")+'</h3>' +
+        schoolLinks(g.state, g.industry).map(function(l){ return '<div class="apply-row"><span class="v">'+esc(l.t)+'</span><a class="btn-ghost" style="text-decoration:none; font-size:12px; padding:5px 10px; border-radius:6px;" href="'+esc(l.u)+'" target="_blank" rel="noopener noreferrer">Open ↗</a></div>'; }).join("") +
+      '</div>' +
+      lawsCardHtml("Your rights as a student — US laws in plain English", EDU_LAWS);
+    $("#sc-go").onclick = onFindSchool;
+    $("#sc-state").onchange = function(){ g.state = $("#sc-state").value; state.profile.stateName = g.state; persistMain(); };
+  }
+
+  function readSchoolForm(){
+    var g = schoolCache;
+    g.state = $("#sc-state").value;
+    g.industry = $("#sc-industry").value.trim();
+    g.budget = $("#sc-budget").value;
+    if (g.state){ state.profile.stateName = g.state; persistMain(); }
+  }
+
+  async function onFindSchool(){
+    var g = schoolCache; readSchoolForm();
+    if (!g.state){ toast("Choose your state first."); return; }
+    if (!g.industry){ toast("Tell me what field you want to train for."); return; }
+    var budgetNum = parseFloat(String(g.budget||"").replace(/[^0-9.]/g,"")) || 0;
+    g.mode = budgetNum > 0 ? "budget" : "aid";
+    var btn = $("#sc-go"); btn.disabled = true; btn.textContent = "Looking…";
+    try {
+      g.result = await aiRequest("/api/money", { kind:"education", state:g.state, industry:g.industry, budget:budgetNum });
+      await pushActivity("Looked into education options in " + g.industry + ".", null);
+    } catch(e){
+      toast((e && e.message) || "That didn’t go through. Try again.");
+      g.result = null;
+    }
+    renderSchool(moneyHost());
   }
 
   // ---------- Job Matches (real listings via Adzuna proxy) ----------
