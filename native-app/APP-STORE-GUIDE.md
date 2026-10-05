@@ -1,6 +1,6 @@
 # Cindy Career Copilot — iPhone App Store guide
 
-**© 2026 Cindy Santos. All rights reserved.**
+**© 2026 All Rights Reserved: Cindy Santos · Powered by Eclat Universe**
 
 Status: **the iPhone app is built and verified to compile on Capacitor 8** (GitHub Actions → "ios-build-check" → BUILD SUCCEEDED).
 What's left needs an Apple Developer account and a Mac (or a cloud Mac) to sign and upload.

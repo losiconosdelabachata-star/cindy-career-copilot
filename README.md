@@ -1,6 +1,6 @@
 <p align="center"><img src="assets/logo-full.png" alt="Cindy Career Copilot — Your next move starts here." width="320"></p>
 
-> **© 2026 Cindy Santos. All rights reserved.** Cindy Career Copilot — its code, design, name, logo and mascot — is proprietary.
+> **© 2026 All Rights Reserved: Cindy Santos · Powered by Eclat Universe.** Cindy Career Copilot — its code, design, name, logo and mascot — is proprietary.
 > See [LICENSE](LICENSE). No use, copying, modification or distribution without written permission.
 
 # Career Copilot — Job Search Deck
@@ -141,4 +141,4 @@ Only the website files (`site/`) are published; the native app projects, store g
 `native-app/` builds the iPhone and Android apps from this same web app (Capacitor 8). Guides: `play-store/LAUNCH-GUIDE.md` (Google Play) and `native-app/APP-STORE-GUIDE.md` (App Store).
 
 ---
-© 2026 Cindy Santos. All rights reserved.
+© 2026 All Rights Reserved: Cindy Santos · Powered by Eclat Universe

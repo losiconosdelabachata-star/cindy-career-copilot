@@ -1,6 +1,6 @@
 # Cindy Career Copilot — Google Play launch guide
 
-**© 2026 Cindy Santos. All rights reserved.**
+**© 2026 All Rights Reserved: Cindy Santos · Powered by Eclat Universe**
 
 The Play Store app is now the **native build** (Capacitor 8, targets Android 16 / API 36 as Google requires). It's the same app as the
 iPhone version: it ships its own copy of the web app (opens instantly), talks to the same servers, and includes the
@@ -97,7 +97,7 @@ Important: Cindy provides general education and tools. It is not legal, financia
 
 Your data stays yours: no ads, no data selling, and you can delete your account anytime in the app.
 
-© 2026 Cindy Santos. All rights reserved.
+© 2026 All Rights Reserved: Cindy Santos · Powered by Eclat Universe
 ```
 
 **Category:** Business (alternatively Productivity) · **Tags:** job search, résumé, career
