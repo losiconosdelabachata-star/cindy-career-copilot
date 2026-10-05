@@ -2244,6 +2244,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
           '<div class="out-h">Want the bot to apply for you?</div>' +
           '<div class="age" style="margin:4px 0 8px;">Job boards (Adzuna, LinkedIn, Indeed…) don’t allow bots. Open the job above, click Apply there, and copy the web address of the <b>company’s own</b> application page (often Greenhouse, Lever or their careers site). Paste it here:</div>' +
           '<div class="btn-row"><input id="ap-link" style="flex:1; min-width:200px;" placeholder="https://…"><button class="btn-primary" id="ap-savelink">Save link</button></div>' +
+          '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="ap-find">Find the company’s page for me</button></div>' +
           '<div class="age" id="ap-linkmsg" style="margin-top:6px;"></div>'
         )) +
         '<div id="ap-qs" style="margin-top:8px;"></div>' +
@@ -2331,6 +2332,22 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
       close();
       openApplyModal(j);
       toast("Link saved — the Auto-apply buttons are now available.");
+    };
+    var fd = bd.querySelector("#ap-find"); if (fd) fd.onclick = async function(){
+      var msg = bd.querySelector("#ap-linkmsg");
+      fd.disabled = true; fd.textContent = "Searching…"; msg.textContent = "";
+      try {
+        var res = await fetch(AI_BASE + "/api/findapply?company=" + encodeURIComponent(j.company || "") + "&title=" + encodeURIComponent(j.title || ""));
+        var f = await res.json();
+        if (f && f.url && !isBlockedHost(f.url)){
+          j.applyUrl = f.url; j.updatedAt = now(); await persistJob(j);
+          close(); openApplyModal(j);
+          toast("Found the company’s own page — the Auto-apply buttons are now available.");
+          return;
+        }
+        msg.textContent = "Couldn’t find a company-hosted application page for this one (many small employers only use job boards). You can still apply by hand with the materials above.";
+      } catch(e){ msg.textContent = "Couldn’t search right now. Try again in a moment."; }
+      fd.disabled = false; fd.textContent = "Find the company’s page for me";
     };
     var dry = bd.querySelector("#ap-dry"); if (dry) dry.onclick = function(){ runBot("dry"); };
     var au = bd.querySelector("#ap-auto"); if (au) au.onclick = function(){ runBot("submit"); };
