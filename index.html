@@ -220,6 +220,11 @@ a.btn-primary,a.btn-ghost,a.btn-danger{font-family:var(--serif); font-weight:600
 .cindy-wrap{display:flex; flex-direction:column; gap:10px; max-height:440px; overflow-y:auto; padding-right:4px; margin-bottom:14px;}
 .cindy-row{display:flex;}
 .cindy-row.from-user{justify-content:flex-end;}
+.cindy-row.from-cindy{align-items:flex-end; gap:8px;}
+.cindy-avatar{width:38px; height:38px; flex:none; border-radius:50%; object-fit:contain; background:#fff; border:2px solid var(--accent); padding:1px;}
+.cindy-avatar.lg{width:52px; height:52px;}
+.cindy-head{display:flex; align-items:center; gap:12px; margin-bottom:6px;}
+.cindy-head h2{margin:0;}
 .cindy-bubble{max-width:82%; padding:10px 14px; border-radius:12px; font-size:14px; line-height:1.55; white-space:pre-wrap;}
 .cindy-bubble.cindy{background:var(--accent-ghost); color:var(--ink); border:1px solid var(--accent); border-bottom-left-radius:3px;}
 .cindy-bubble.user{background:var(--panel-2); color:var(--ink); border:1px solid var(--border); border-bottom-right-radius:3px;}
@@ -356,7 +361,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
   var I18N = {
     en: {
       brandTag: "your next move starts here", theme: "◐ theme", logout: "⎋ log out",
-      tabToday: "Today", tabCindy: "Cindy", tabPipeline: "Pipeline", tabProfile: "Profile", tabActivity: "Activity",
+      tabToday: "Today", tabCindy: "The Cindy Bot", tabPipeline: "Pipeline", tabProfile: "Profile", tabActivity: "Activity",
       stageSaved: "Saved", stageTailored: "Tailored", stageApplied: "Applied", stageInterview: "Interview", stageDenied: "Denied", stageClosed: "Closed",
       footer: "saved in this browser only — use Back up in the Profile tab",
 
@@ -407,13 +412,13 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
 
       activityLogH: "Activity log", markAllReadBtn: "Mark all read", noActivityYet: "No activity yet. It logs here as you add and move roles.",
 
-      cindyTitle: "Cindy", cindyLede: "Your résumé & career-search guide.",
+      cindyTitle: "The Cindy Bot", cindyLede: "Your résumé & career-search guide.",
       cindyAiNote: " Running on built-in guidance right now — she’ll switch on full AI conversation automatically once the AI backend is connected.",
-      cindyGreeting: "Hi, I’m Cindy 👋 — your résumé and career-search guide. I can help you build a résumé from scratch, or look at your pipeline and tell you what to do next. What do you want to do?",
+      cindyGreeting: "Hi, I’m Cindy 👋 — The Cindy Bot, your résumé and career-search guide. I can help you build a résumé from scratch, or look at your pipeline and tell you what to do next. What do you want to do?",
       chipBuildResume: "Build my résumé", chipUploadResume: "Upload my résumé", chipConnect: "Organize my LinkedIn/Indeed",
       chipNext: "What should I do next?", chipPep: "Give me a pep talk", chipTips: "Tips for today",
       chipAnalyze: "Analyze my résumé/cover letter",
-      cindyAskPlaceholder: "Ask Cindy something…", sendBtn: "Send",
+      cindyAskPlaceholder: "Message Cindy…", sendBtn: "Send",
       connectLede: "Drop in your profile links so I can point tailored materials at them — then I’ll give you a quick checklist for each.",
       linkedinUrlLabel: "LinkedIn URL", indeedUrlLabel: "Indeed URL",
       saveGetTips: "Save & get tips", justTips: "Just give me tips",
@@ -446,7 +451,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
     },
     es: {
       brandTag: "tu próximo paso empieza aquí", theme: "◐ tema", logout: "⎋ cerrar sesión",
-      tabToday: "Hoy", tabCindy: "Cindy", tabPipeline: "Postulaciones", tabProfile: "Perfil", tabActivity: "Actividad",
+      tabToday: "Hoy", tabCindy: "El Bot Cindy", tabPipeline: "Postulaciones", tabProfile: "Perfil", tabActivity: "Actividad",
       stageSaved: "Guardado", stageTailored: "Adaptado", stageApplied: "Enviado", stageInterview: "Entrevista", stageDenied: "Rechazado", stageClosed: "Cerrado",
       footer: "guardado solo en este navegador — usa Respaldar en la pestaña Perfil",
 
@@ -497,13 +502,13 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
 
       activityLogH: "Registro de actividad", markAllReadBtn: "Marcar todo como leído", noActivityYet: "Aún no hay actividad. Se registra aquí cuando agregas o mueves puestos.",
 
-      cindyTitle: "Cindy", cindyLede: "Tu guía de currículum y búsqueda de empleo.",
+      cindyTitle: "El Bot Cindy", cindyLede: "Tu guía de currículum y búsqueda de empleo.",
       cindyAiNote: " Por ahora funciona con guía integrada — cambiará a conversación completa con IA automáticamente cuando se conecte el backend de IA.",
-      cindyGreeting: "Hola, soy Cindy 👋 — tu guía de currículum y búsqueda de empleo. Puedo ayudarte a crear un currículum desde cero, o revisar tus postulaciones y decirte qué hacer después. ¿Qué quieres hacer?",
+      cindyGreeting: "Hola, soy Cindy 👋 — el Bot Cindy, tu guía de currículum y búsqueda de empleo. Puedo ayudarte a crear un currículum desde cero, o revisar tus postulaciones y decirte qué hacer después. ¿Qué quieres hacer?",
       chipBuildResume: "Crear mi currículum", chipUploadResume: "Subir mi currículum", chipConnect: "Organizar mi LinkedIn/Indeed",
       chipNext: "¿Qué debo hacer ahora?", chipPep: "Dame un ánimo", chipTips: "Consejos de hoy",
       chipAnalyze: "Analizar mi currículum/carta",
-      cindyAskPlaceholder: "Pregúntale algo a Cindy…", sendBtn: "Enviar",
+      cindyAskPlaceholder: "Escríbele a Cindy…", sendBtn: "Enviar",
       connectLede: "Agrega tus enlaces de perfil para que pueda usarlos en tus materiales adaptados — luego te doy una lista rápida de mejoras para cada uno.",
       linkedinUrlLabel: "URL de LinkedIn", indeedUrlLabel: "URL de Indeed",
       saveGetTips: "Guardar y ver consejos", justTips: "Solo dame los consejos",
@@ -1397,10 +1402,11 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
     }
     b.innerHTML =
       '<div class="card">' +
-        '<h2>'+esc(t("cindyTitle"))+'</h2>' +
-        '<div class="lede">'+esc(t("cindyLede"))+
-          (!AI_ENABLED ? esc(t("cindyAiNote")) : '') +
-        '</div>' +
+        '<div class="cindy-head"><img class="cindy-avatar lg" src="assets/logo-badge.png" alt="The Cindy Bot">' +
+          '<div><h2>'+esc(t("cindyTitle"))+'</h2>' +
+          '<div class="lede" style="margin:2px 0 0;">'+esc(t("cindyLede"))+
+            (!AI_ENABLED ? esc(t("cindyAiNote")) : '') +
+          '</div></div></div>' +
         '<div class="cindy-wrap" id="cindy-log"></div>' +
         '<div id="cindy-step">' + cindyStepHtml() + '</div>' +
         '<div class="btn-row" style="margin-top:14px;">' +
@@ -1413,9 +1419,10 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
 
     $("#cindy-log").innerHTML = state.cindy.history.map(function(m){
       return '<div class="cindy-row from-'+(m.who==="cindy"?"cindy":"user")+'">' +
+        (m.who==="cindy" ? '<img class="cindy-avatar" src="assets/logo-badge.png" alt="">' : '') +
         '<div class="cindy-bubble '+(m.who==="cindy"?"cindy":"user")+'">'+esc(m.text)+'</div>' +
       '</div>';
-    }).join("") + (cindyBusy ? '<div class="cindy-row from-cindy"><div class="cindy-bubble cindy">'+esc(t("thinking"))+'</div></div>' : "");
+    }).join("") + (cindyBusy ? '<div class="cindy-row from-cindy"><img class="cindy-avatar" src="assets/logo-badge.png" alt=""><div class="cindy-bubble cindy">'+esc(t("thinking"))+'</div></div>' : "");
 
     wireCindyStep();
     $("#cindy-send").onclick = onCindySend;
