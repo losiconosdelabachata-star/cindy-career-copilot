@@ -303,6 +303,27 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   .wrap{padding-top:8px;}
 }
 
+/* section switcher: dropdown on phones & tablets, tab row on desktop */
+.tabmenu{display:none;}
+.badge-dot{display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--danger); margin-left:6px; vertical-align:middle;}
+@media (max-width:1024px){
+  .tabs{display:none !important;}
+  .tabmenu{display:block; position:relative; margin:0 0 16px; z-index:30;}
+  .tabmenu-btn{width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 16px; min-height:50px;
+    background:var(--panel); color:var(--ink); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);
+    font-family:var(--serif); font-weight:700; font-size:15px; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; text-align:left;}
+  .tabmenu-btn:focus-visible, .tabmenu-opt:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .tabmenu-chev{font-size:16px; color:var(--accent); transition:transform .15s;}
+  .tabmenu.open .tabmenu-chev{transform:rotate(180deg);}
+  .tabmenu-list{position:absolute; left:0; right:0; top:calc(100% + 6px); background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 12px 32px rgba(10,18,26,.22); padding:6px; max-height:72vh; overflow-y:auto; -webkit-overflow-scrolling:touch;}
+  .tabmenu-list[hidden]{display:none;}
+  .tabmenu-opt{width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 14px; min-height:48px; background:transparent;
+    color:var(--ink); border:none; border-radius:8px; font-family:var(--serif); font-weight:600; font-size:15px; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; text-align:left;}
+  .tabmenu-opt:hover{background:var(--panel-2);}
+  .tabmenu-opt[aria-selected="true"]{background:var(--accent-ghost); color:var(--accent-deep);}
+  .tabmenu-btn .badge, .tabmenu-opt .badge{font-family:var(--mono); font-size:11px; background:var(--amber-ghost); color:var(--amber); padding:1px 6px; border-radius:4px; letter-spacing:0;}
+}
 .copyright{display:flex; align-items:center; justify-content:center; gap:12px; margin:20px auto 6px; padding:14px 16px; max-width:420px; border-top:1px solid var(--border); font-size:12.5px; color:var(--muted); text-align:left; line-height:1.5;}
 .copyright .copy-logo{width:44px; height:auto; flex:none;}
 .copyright span{font-weight:600; color:var(--ink);}
@@ -331,7 +352,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   // ---------- language ----------
   var I18N = {
     en: {
-      brandTag: "saved on this device", theme: "◐ theme", logout: "⎋ log out",
+      brandTag: "your next move starts here", theme: "◐ theme", logout: "⎋ log out",
       tabToday: "Today", tabCindy: "Cindy", tabPipeline: "Pipeline", tabProfile: "Profile", tabActivity: "Activity",
       stageSaved: "Saved", stageTailored: "Tailored", stageApplied: "Applied", stageInterview: "Interview", stageDenied: "Denied", stageClosed: "Closed",
       footer: "saved in this browser only — use Back up in the Profile tab",
@@ -421,7 +442,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       matchesAlreadyTracked: "Already in your pipeline"
     },
     es: {
-      brandTag: "guardado en este dispositivo", theme: "◐ tema", logout: "⎋ cerrar sesión",
+      brandTag: "tu próximo paso empieza aquí", theme: "◐ tema", logout: "⎋ cerrar sesión",
       tabToday: "Hoy", tabCindy: "Cindy", tabPipeline: "Postulaciones", tabProfile: "Perfil", tabActivity: "Actividad",
       stageSaved: "Guardado", stageTailored: "Adaptado", stageApplied: "Enviado", stageInterview: "Entrevista", stageDenied: "Rechazado", stageClosed: "Cerrado",
       footer: "guardado solo en este navegador — usa Respaldar en la pestaña Perfil",
@@ -1046,16 +1067,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
         '</div>' +
       '</div>' +
       strip(c) +
-      '<div class="tabs" role="tablist">' +
-        tabBtn("today",t("tabToday")) +
-        tabBtn("cindy",t("tabCindy")) +
-        tabBtn("pipeline",t("tabPipeline"), state.jobs.length ? String(state.jobs.length) : "") +
-        tabBtn("matches",t("tabMatches")) +
-        tabBtn("freelance","Freelance") +
-        tabBtn("money","Money help") +
-        tabBtn("profile",t("tabProfile")) +
-        tabBtn("activity",t("tabActivity"), unread ? String(unread) : "") +
-      '</div>' +
+      tabsHtml(unread) +
       '<div id="tab-body" class="fade"></div>' +
       '<div class="foot">' +
         '<a href="privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="terms.html" target="_blank" rel="noopener">Terms</a> · <a href="delete-account.html" target="_blank" rel="noopener">Delete account</a><br>' +
@@ -1068,6 +1080,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     Array.prototype.forEach.call(app.querySelectorAll(".tab"), function(b){
       b.onclick = function(){ activeTab = b.dataset.tab; render(); };
     });
+    wireTabMenu();
     renderBody();
   }
 
@@ -1079,6 +1092,58 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       '</div>';
     }).join("") + '</div>';
   }
+  // The section switcher: a row of tabs on desktop, a dropdown menu on phones and tablets (CSS picks which one shows).
+  function tabDefs(unread){
+    return [
+      { key:"today",     label:t("tabToday") },
+      { key:"cindy",     label:t("tabCindy") },
+      { key:"pipeline",  label:t("tabPipeline"), badge: state.jobs.length ? String(state.jobs.length) : "" },
+      { key:"matches",   label:t("tabMatches") },
+      { key:"freelance", label:"Freelance" },
+      { key:"money",     label:"Money help" },
+      { key:"profile",   label:t("tabProfile") },
+      { key:"activity",  label:t("tabActivity"), badge: unread ? String(unread) : "" }
+    ];
+  }
+  function tabsHtml(unread){
+    var defs = tabDefs(unread);
+    var cur = defs.filter(function(d){ return d.key === activeTab; })[0] || defs[0];
+    var otherUnread = unread && activeTab !== "activity";
+    return '<div class="tabs" role="tablist">' + defs.map(function(d){ return tabBtn(d.key, d.label, d.badge); }).join("") + '</div>' +
+      '<div class="tabmenu" id="tabmenu">' +
+        '<button type="button" class="tabmenu-btn" id="tabmenu-btn" aria-haspopup="listbox" aria-expanded="false">' +
+          '<span class="tabmenu-cur">' + esc(cur.label) + (cur.badge ? ' <span class="badge mono">'+esc(cur.badge)+'</span>' : '') + (otherUnread ? ' <span class="badge-dot" title="New activity"></span>' : '') + '</span>' +
+          '<span class="tabmenu-chev" aria-hidden="true">▾</span>' +
+        '</button>' +
+        '<div class="tabmenu-list" id="tabmenu-list" role="listbox" hidden>' +
+          defs.map(function(d){
+            return '<button type="button" class="tabmenu-opt" role="option" data-tab="'+d.key+'" aria-selected="'+(activeTab===d.key)+'">' +
+              '<span>'+esc(d.label)+'</span>' + (d.badge ? '<span class="badge mono">'+esc(d.badge)+'</span>' : '') + '</button>';
+          }).join("") +
+        '</div>' +
+      '</div>';
+  }
+  var tabMenuListenersAdded = false;
+  function wireTabMenu(){
+    var btn = $("#tabmenu-btn"), list = $("#tabmenu-list");
+    if (!btn || !list) return;
+    function setOpen(open){ list.hidden = !open; btn.setAttribute("aria-expanded", open ? "true" : "false"); $("#tabmenu").classList.toggle("open", open); }
+    btn.onclick = function(e){ e.stopPropagation(); setOpen(list.hidden); };
+    Array.prototype.forEach.call(list.querySelectorAll(".tabmenu-opt"), function(o){
+      o.onclick = function(){ activeTab = o.dataset.tab; render(); window.scrollTo(0, 0); };
+    });
+    if (!tabMenuListenersAdded){
+      tabMenuListenersAdded = true;
+      document.addEventListener("click", function(e){
+        var l = $("#tabmenu-list"), b2 = $("#tabmenu-btn");
+        if (l && !l.hidden && !(l.contains(e.target) || (b2 && b2.contains(e.target)))){ l.hidden = true; if (b2) b2.setAttribute("aria-expanded","false"); }
+      });
+      document.addEventListener("keydown", function(e){
+        if (e.key === "Escape"){ var l = $("#tabmenu-list"); if (l && !l.hidden){ l.hidden = true; var b2 = $("#tabmenu-btn"); if (b2){ b2.setAttribute("aria-expanded","false"); b2.focus(); } } }
+      });
+    }
+  }
+
   function tabBtn(key,label,badge){
     return '<button class="tab" role="tab" data-tab="'+key+'" aria-selected="'+(activeTab===key)+'">' +
       label + (badge ? ' <span class="badge mono">'+esc(badge)+'</span>' : '') + '</button>';
