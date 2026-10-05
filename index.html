@@ -2929,7 +2929,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
     var sent = by.applied + by.interview + by.denied + by.closed;
     var weeks = [], nowMs = Date.now(), wk = 7 * 86400000;
     for (var i = 7; i >= 0; i--) weeks.push({ from: nowMs - (i + 1) * wk, to: nowMs - i * wk, n: 0, label: i === 0 ? "this wk" : i + "w ago" });
-    jobs.forEach(function(j){ if (!j.appliedAt) return; var tms = Date.parse(j.appliedAt); weeks.forEach(function(w){ if (tms > w.from && tms <= w.to) w.n++; }); });
+    jobs.forEach(function(j){ if (!j.appliedAt) return; var tms = typeof j.appliedAt === "number" ? j.appliedAt : Date.parse(j.appliedAt); weeks.forEach(function(w){ if (tms > w.from && tms <= w.to) w.n++; }); });
     var max = Math.max(1, Math.max.apply(null, weeks.map(function(w){ return w.n; })));
     var bar = function(label, n, m, color){ return '<div style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:13px;"><span style="width:84px; color:var(--muted);">'+esc(label)+'</span><div style="flex:1; height:14px; background:var(--border); border-radius:4px; overflow:hidden;"><div style="width:'+(n/m*100)+'%; height:100%; background:'+color+';"></div></div><span class="mono" style="width:28px; text-align:right;">'+n+'</span></div>'; };
     var rate = sent ? Math.round(by.interview / sent * 100) : 0;
@@ -2943,6 +2943,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
 
   // ---------- Freelance & Creator University ----------
   var FREELANCE_PLATFORMS = [
+    { cat:"AI and expert gigs", n:"Mercor", u:"https://work.mercor.com/explore", d:"Remote contract work for skilled people, much of it reviewing and training AI. See the open roles in the Mercor opportunities tab above." },
     { cat:"General marketplaces", n:"Upwork", u:"https://www.upwork.com", d:"Biggest client pool for writing, design, development, marketing, admin and more. Fees vary by contract — check current terms." },
     { cat:"General marketplaces", n:"Fiverr", u:"https://www.fiverr.com", d:"Gig-based: you list a service and clients find you. Good for creative and digital services. Takes about a 20% commission." },
     { cat:"General marketplaces", n:"Freelancer.com", u:"https://www.freelancer.com", d:"Bid-based marketplace with lots of small projects and contests." },
@@ -3261,13 +3262,93 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
     Array.prototype.forEach.call(host.querySelectorAll("#st-acct,#st-risk,#st-entry,#st-stop,#st-target"), function(el){ el.oninput = calc; });
   }
 
+  // ---------- Mercor opportunities (read from Mercor's public Explore page via /api/mercor) ----------
+  var mercor = { listings:null, loading:false, err:"", q:"", minPay:0, sort:"new", remoteOnly:false, shown:25, fetchedAt:"" };
+  function mercorPay(l){
+    if (l.rateMin == null && l.rateMax == null) return "Pay on listing";
+    var a = l.rateMin, b = l.rateMax, per = l.per === "hourly" ? "/hr" : (l.per ? "/" + l.per.replace(/ly$/, "") : "");
+    var fmt = function(n){ return "$" + (n >= 1000 ? Math.round(n).toLocaleString() : n); };
+    return (a != null && b != null && a !== b) ? fmt(a) + "–" + fmt(b) + per : fmt(a != null ? a : b) + per;
+  }
+  async function loadMercor(host){
+    mercor.loading = true; mercor.err = ""; drawMercor(host);
+    try {
+      var res = await fetch(AI_BASE + "/api/mercor");
+      if (!res.ok) throw new Error("x");
+      var d = await res.json();
+      mercor.listings = d.listings || []; mercor.fetchedAt = d.fetchedAt || "";
+    } catch(e){ mercor.err = "Couldn’t load Mercor’s list right now."; }
+    mercor.loading = false; drawMercor(host);
+  }
+  function renderMercor(host){
+    host.innerHTML =
+      '<div class="card"><h3>Mercor opportunities</h3>' +
+        '<div class="lede">Mercor is a marketplace that hires experts and skilled people for remote contract work, much of it helping train and check AI (reviewing answers, rating images, writing and domain-expert tasks). These are the open roles on Mercor’s public page. You apply on Mercor’s own site.</div>' +
+        '<div class="notice" style="font-size:13px; border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin:8px 0;">Cindy isn’t affiliated with Mercor. Listings, pay and availability are Mercor’s and change often, so always check the listing. You’d be an independent contractor (you handle your own taxes). Never pay anyone to get a role, and only sign in on the real mercor.com site.</div>' +
+        '<div id="mc-body"></div></div>' +
+      '<div class="card"><h3>How applying on Mercor usually works</h3><ul class="apply-steps">' +
+        ["Create your profile on Mercor and upload your résumé. Cindy’s Profile tab has your latest one.", "Open a role and apply. Many roles ask for a short written or multiple-choice assessment.", "Many also use an AI interview of about 20 minutes (reported to need the Chrome browser, with a few retakes allowed). The Career tools tab’s Interview practice is good prep.", "Pay, hours and project length differ by role and can change. Some projects end quickly, so don’t count on it as steady income.", "Track each application in your Pipeline, and set money aside for taxes (see the Freelance tab’s IRS links)."].map(function(x){ return '<li>'+esc(x)+'</li>'; }).join("") +
+      '</ul></div>';
+    if (mercor.listings == null && !mercor.loading) loadMercor(host); else drawMercor(host);
+  }
+  function drawMercor(host){
+    var el = host.querySelector("#mc-body"); if (!el) return;
+    if (mercor.loading){ el.innerHTML = '<div class="lede">Loading Mercor’s open roles…</div>'; return; }
+    if (mercor.err){ el.innerHTML = '<div class="lede">'+esc(mercor.err)+'</div><div class="btn-row"><button class="btn-ghost" id="mc-retry">Try again</button>'+linkBtn("https://work.mercor.com/explore","Open Mercor")+'</div>'; el.querySelector("#mc-retry").onclick = function(){ loadMercor(host); }; return; }
+    var all = mercor.listings || [];
+    var q = mercor.q.toLowerCase().split(/\s+/).filter(Boolean);
+    var rows = all.filter(function(l){
+      if (mercor.remoteOnly && l.arrangement && l.arrangement !== "remote") return false;
+      var top = l.rateMax != null ? l.rateMax : (l.rateMin || 0);
+      if (mercor.minPay && top < mercor.minPay) return false;
+      var hay = (l.title + " " + l.description).toLowerCase();
+      return q.every(function(w){ return hay.indexOf(w) >= 0; });
+    });
+    rows.sort(function(a,b){
+      if (mercor.sort === "pay") return ((b.rateMax != null ? b.rateMax : b.rateMin) || 0) - ((a.rateMax != null ? a.rateMax : a.rateMin) || 0);
+      return String(b.createdAt).localeCompare(String(a.createdAt));
+    });
+    var vis = rows.slice(0, mercor.shown);
+    el.innerHTML =
+      '<div class="grid2">' +
+        '<div><label for="mc-q">Search roles</label><input id="mc-q" value="'+esc(mercor.q)+'" placeholder="writing, chemistry, law, Spanish…"></div>' +
+        '<div><label for="mc-min">Minimum pay ($/hr)</label><input id="mc-min" type="number" min="0" inputmode="numeric" value="'+(mercor.minPay||"")+'" placeholder="Any"></div>' +
+        '<div><label for="mc-sort">Sort by</label><select id="mc-sort"><option value="new"'+(mercor.sort==="new"?" selected":"")+'>Newest</option><option value="pay"'+(mercor.sort==="pay"?" selected":"")+'>Highest pay</option></select></div>' +
+        '<div style="display:flex; align-items:flex-end;"><label class="chk" style="display:inline-flex !important;"><input type="checkbox" id="mc-rem"'+(mercor.remoteOnly?" checked":"")+'> Remote only</label></div>' +
+      '</div>' +
+      '<div class="lede" style="margin-top:8px;">'+rows.length+' of '+all.length+' roles'+(mercor.fetchedAt ? ' · updated '+esc(agoLabel(Date.parse(mercor.fetchedAt))) : '')+'. <a href="https://work.mercor.com/explore" target="_blank" rel="noopener noreferrer">See all on Mercor ↗</a></div>' +
+      (vis.length ? vis.map(function(l, i){
+        return '<details style="border-top:1px solid var(--border); padding:10px 0;"><summary style="cursor:pointer;"><b>'+esc(l.title)+'</b> <span class="age">'+esc(mercorPay(l))+(l.commitment ? ' · '+esc(l.commitment) : '')+(l.location ? ' · '+esc(l.location) : '')+(l.createdAt ? ' · posted '+esc(agoLabel(Date.parse(l.createdAt + "Z"))) : '')+'</span></summary>' +
+          '<div class="lede" style="white-space:pre-wrap; margin:8px 0;">'+esc((l.description || "").slice(0, 900))+((l.description || "").length > 900 ? "…" : "")+'</div>' +
+          '<div class="btn-row">'+linkBtn(l.url, "View and apply on Mercor")+'<button class="btn-ghost mc-save" data-i="'+i+'" style="font-size:12px; padding:5px 10px;">Save to Pipeline</button></div></details>';
+      }).join("") : '<div class="lede" style="margin-top:10px;">No roles match. Try fewer words or a lower minimum.</div>') +
+      (rows.length > vis.length ? '<div class="btn-row" style="margin-top:10px;"><button class="btn-ghost" id="mc-more">Show more ('+(rows.length - vis.length)+' left)</button></div>' : '');
+    var qi = el.querySelector("#mc-q");
+    qi.onchange = function(){ mercor.q = qi.value; mercor.shown = 25; drawMercor(host); };
+    qi.onkeydown = function(e){ if (e.key === "Enter"){ mercor.q = qi.value; mercor.shown = 25; drawMercor(host); } };
+    el.querySelector("#mc-min").onchange = function(){ mercor.minPay = parseFloat(this.value) || 0; mercor.shown = 25; drawMercor(host); };
+    el.querySelector("#mc-sort").onchange = function(){ mercor.sort = this.value; drawMercor(host); };
+    el.querySelector("#mc-rem").onchange = function(){ mercor.remoteOnly = this.checked; mercor.shown = 25; drawMercor(host); };
+    var more = el.querySelector("#mc-more"); if (more) more.onclick = function(){ mercor.shown += 25; drawMercor(host); };
+    Array.prototype.forEach.call(el.querySelectorAll(".mc-save"), function(btn){
+      btn.onclick = async function(){
+        var l = vis[+btn.dataset.i]; if (!l) return;
+        if (alreadyTracked(l.url)){ toast("Already in your Pipeline."); return; }
+        var job = { id:uid(), title:l.title, company:"Mercor", url:l.url, description:(l.description || "").slice(0, 1500), approved:false, status:"saved", tailoredResume:"", coverLetter:"", createdAt:now(), updatedAt:now(), appliedAt:null };
+        state.jobs.unshift(job); await persistJob(job);
+        await pushActivity("Saved " + l.title + " (Mercor) to the pipeline.", job.id);
+        toast("Saved to your Pipeline."); btn.disabled = true; btn.textContent = "Saved ✓";
+      };
+    });
+  }
+
   function creatorData(){
     state.profile.creator = state.profile.creator || { done:{}, niche:"", platform:"", audience:"" };
     return state.profile.creator;
   }
 
   function renderFreelance(b){
-    var subs = [["work","Find freelance work"],["creator","Creator University"],["stocks","Stock Market University"],["tools","Free & open-source tools"]];
+    var subs = [["work","Find freelance work"],["creator","Creator University"],["stocks","Stock Market University"],["mercor","Mercor opportunities"],["tools","Free & open-source tools"]];
     b.innerHTML = '<div class="btn-row" style="margin-bottom:12px;">' +
       subs.map(function(x){ return '<button class="'+(freelanceSub===x[0]?"btn-primary":"btn-ghost")+' fl-pill" data-s="'+x[0]+'">'+esc(x[1])+'</button>'; }).join("") +
       '</div><div id="fl-body"></div>';
@@ -3276,6 +3357,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
     if (freelanceSub === "work") renderFreelanceWork(host);
     else if (freelanceSub === "creator") renderCreatorU(host);
     else if (freelanceSub === "stocks") renderStockU(host);
+    else if (freelanceSub === "mercor") renderMercor(host);
     else renderFreelanceTools(host);
   }
 
