@@ -91,7 +91,7 @@ PRIVATE & HELPFUL
 • Lock the app with your fingerprint or face
 • Reminders to follow up, send applications, and renew licenses — created on your phone and kept there
 
-Works on phones and tablets, available in English and Spanish (more Spanish coming).
+Works on phones and tablets. Use it in your own language: English, Spanish, French, Portuguese, Haitian Creole, Arabic, Chinese, Vietnamese and 70+ more.
 
 Important: Cindy provides general education and tools. It is not legal, financial, tax or career advice, doesn't make or broker loans, and can't guarantee jobs, benefits, or credit-score changes. The auto-apply helper only runs when you tap it, never accepts agreements for you, and stops at CAPTCHAs and questions it can't answer.
 

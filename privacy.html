@@ -54,6 +54,7 @@
       <li><b>Job search</b> sends your search words and location to job-listing providers (Adzuna, Remotive, RemoteOK, Jobicy, Himalayas, We Work Remotely). We don't send your name or account details.</li>
       <li><b>Benefits estimate</b> sends household size, ages, income and state (no name) to PolicyEngine's public calculator.</li>
       <li><b>Auto-apply helper</b> (only when you press the button): the job link, your selected documents, contact details and saved answers are held briefly on Cloudflare, then handled by a short-lived GitHub Actions runner that fills the employer's form. The temporary copy is erased when the run finishes and expires within 24 hours at the latest. The employer's site then receives what you chose to apply with.</li>
+      <li><b>Languages:</b> if you choose a language other than English or Spanish, the app's own interface text (button labels, headings and the built-in guides) is sent to Cloudflare's translation service, and the translated phrases are cached to speed things up for everyone. Your résumé, notes, job details, name and other personal content are <b>not</b> translated or sent for translation. Cindy's AI replies follow your chosen language.</li>
       <li>Links to employers, job boards, government sites and other third parties leave Cindy. Their privacy policies apply there.</li>
     </ul>
 

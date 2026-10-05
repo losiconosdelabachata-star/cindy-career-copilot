@@ -324,6 +324,9 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   .tabmenu-opt[aria-selected="true"]{background:var(--accent-ghost); color:var(--accent-deep);}
   .tabmenu-btn .badge, .tabmenu-opt .badge{font-family:var(--mono); font-size:11px; background:var(--amber-ghost); color:var(--amber); padding:1px 6px; border-radius:4px; letter-spacing:0;}
 }
+.lang-select{width:auto; max-width:150px; padding:6px 8px; font-size:12px; font-family:var(--mono); text-transform:none; background:var(--panel); color:var(--ink); border:1px solid var(--border); border-radius:var(--radius); cursor:pointer;}
+html[dir="rtl"] body{direction:rtl;}
+html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .apply-row, html[dir="rtl"] .copyright{text-align:right;}
 .copyright{display:flex; align-items:center; justify-content:center; gap:12px; margin:20px auto 6px; padding:14px 16px; max-width:420px; border-top:1px solid var(--border); font-size:12.5px; color:var(--muted); text-align:left; line-height:1.5;}
 .copyright .copy-logo{width:44px; height:auto; flex:none;}
 .copyright span{font-weight:600; color:var(--ink);}
@@ -535,14 +538,176 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
   var LANG = "en";
   try {
     var savedLang = localStorage.getItem("career-copilot-lang");
-    if (savedLang === "en" || savedLang === "es") LANG = savedLang;
+    if (savedLang && /^[a-z]{2,3}$/.test(savedLang)) LANG = savedLang;
   } catch(e){}
   function t(key){ return (I18N[LANG] && I18N[LANG][key] != null) ? I18N[LANG][key] : (I18N.en[key] != null ? I18N.en[key] : key); }
-  function toggleLang(){
-    LANG = LANG === "en" ? "es" : "en";
-    try { localStorage.setItem("career-copilot-lang", LANG); } catch(e){}
-    if (currentUser) render(); else renderAuth();
+  // ---------- all languages: picker + automatic page translation ----------
+  // English and Spanish are written by hand (I18N above). Every other language is translated on demand by /api/translate
+  // (shared cache on the server + a copy on this device), so the whole app — including the newer sections — works in ~80 languages.
+  var LANG_CODES = "af am ar az be bg bn bs ca ceb cs cy da de el et fa fi fr ga gl gu ha he hi hr ht hu hy id ig is it ja jv ka kk km kn ko lo lt lv mk ml mn mr ms my ne nl no pa pl ps pt ro ru sd si sk sl so sq sr su sv sw ta th tl tr uk ur uz vi xh yi yo zh zu".split(" ");
+  var LANG_STRONG = { fr:1, de:1, it:1, pt:1, hi:1, th:1, zh:1, ja:1, ko:1, ar:1, ru:1, tr:1, vi:1, id:1, nl:1, pl:1, uk:1, he:1, el:1, sv:1, da:1, no:1, fi:1, cs:1, ro:1, hu:1, bn:1, ur:1, fa:1, ms:1, tl:1 };
+  var RTL_LANGS = { ar:1, he:1, fa:1, ur:1, ps:1, sd:1, yi:1 };
+  function validLang(c){ return c === "en" || c === "es" || LANG_CODES.indexOf(c) !== -1; }
+  function langLabel(code){
+    var n = code;
+    try { n = new Intl.DisplayNames([code], { type:"language" }).of(code) || code; } catch(e){}
+    n = n.charAt(0).toUpperCase() + n.slice(1);
+    return (code === "en" || code === "es" || LANG_STRONG[code]) ? n : n + " (beta)";
   }
+  var langOptionsCache = null;
+  function langOptionsHtml(){
+    if (!langOptionsCache){
+      var rest = LANG_CODES.filter(function(c){ return c !== "es"; }).map(function(c){ return { c:c, n:langLabel(c) }; });
+      rest.sort(function(a,b){ return a.n.localeCompare(b.n); });
+      langOptionsCache = [{ c:"en", n:"English" }, { c:"es", n:"Español" }].concat(rest);
+    }
+    return langOptionsCache.map(function(o){ return '<option value="'+o.c+'"'+(o.c===LANG?" selected":"")+'>'+esc(o.n)+'</option>'; }).join("");
+  }
+  function langSelectHtml(){
+    return '<select class="lang-select" id="lang-select" aria-label="Language" title="Language">' + langOptionsHtml() + '</select>';
+  }
+  function wireLangSelect(){
+    var sel = $("#lang-select");
+    if (sel) sel.onchange = function(){ setLang(sel.value); };
+  }
+  function applyLangAttrs(){
+    document.documentElement.lang = LANG;
+    document.documentElement.dir = RTL_LANGS[LANG] ? "rtl" : "ltr";
+  }
+  function setLang(code){
+    if (!validLang(code)) return;
+    LANG = code;
+    try { localStorage.setItem("career-copilot-lang", LANG); } catch(e){}
+    applyLangAttrs();
+    trLoad();
+    startObserver();
+    if (currentUser) render(); else renderAuth();
+    if (LANG !== "en") trRun();
+  }
+
+  // ---- translator for everything that isn't covered by the hand-written dictionaries ----
+  var TR = { lang:null, map:{}, inflight:{}, failed:{}, timer:null, applying:false, last:new WeakMap(), lastAttr:new WeakMap(), active:0, esSet:null };
+  var TR_SKIP = 'script,style,textarea,input,select,option,code,pre,svg,[translate="no"],.notranslate,.out,.desc,.cindy-bubble,.job-co,.job h3,.owner,.lang-select,#toast';
+  function trLoad(){
+    TR.lang = LANG; TR.inflight = {}; TR.failed = {}; TR.last = new WeakMap(); TR.lastAttr = new WeakMap();
+    try { TR.map = JSON.parse(localStorage.getItem("cindy-tr-" + LANG) || "{}"); } catch(e){ TR.map = {}; }
+    if (LANG === "es" && !TR.esSet){
+      TR.esSet = {};
+      Object.keys(I18N.es || {}).forEach(function(k){ var v = I18N.es[k]; if (typeof v === "string") TR.esSet[v.trim()] = 1; });
+    }
+  }
+  function trSave(){
+    try {
+      if (Object.keys(TR.map).length > 6000) TR.map = {};
+      localStorage.setItem("cindy-tr-" + TR.lang, JSON.stringify(TR.map));
+    } catch(e){ TR.map = {}; }
+  }
+  function trWanted(s){
+    if (!s || s.length < 2 || s.length > 600) return false;
+    if (!/\p{L}/u.test(s)) return false;
+    if (/@|https?:\/\//.test(s)) return false;
+    if (LANG === "es" && TR.esSet && TR.esSet[s]) return false;
+    return true;
+  }
+  function trScan(root){
+    var items = [];
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var n;
+    while ((n = w.nextNode())){
+      var p = n.parentNode;
+      if (!p || (p.closest && p.closest(TR_SKIP))) continue;
+      var raw = n.nodeValue, key = raw.trim();
+      if (TR.last.get(n) === raw) continue;                 // already translated
+      if (!trWanted(key)) continue;
+      items.push({ node:n, raw:raw, key:key });
+    }
+    root.querySelectorAll("[placeholder],[title],[aria-label]").forEach(function(el){
+      if (el.closest('[translate="no"],.notranslate,.lang-select,#toast,.owner')) return;   // (inputs themselves are fine: only their hint text is translated)
+      ["placeholder","title","aria-label"].forEach(function(a){
+        var v = el.getAttribute(a); if (!v) return;
+        var key = v.trim();
+        if (TR.lastAttr.get(el) && TR.lastAttr.get(el)[a] === v) return;
+        if (!trWanted(key)) return;
+        items.push({ el:el, attr:a, raw:v, key:key });
+      });
+    });
+    return items;
+  }
+  function trRun(){
+    if (LANG === "en" || TR.applying || !document.body) return;
+    if (TR.lang !== LANG) trLoad();
+    var root = document.body;
+    var items = trScan(root), missing = {};
+    TR.applying = true;
+    if (obs) obs.disconnect();
+    items.forEach(function(it){
+      var tr = TR.map[it.key];
+      if (tr){
+        if (it.node){
+          var lead = it.raw.match(/^\s*/)[0], trail = it.raw.match(/\s*$/)[0];
+          var out = lead + tr + trail;
+          it.node.nodeValue = out; TR.last.set(it.node, out);
+        } else {
+          it.el.setAttribute(it.attr, tr);
+          var rec = TR.lastAttr.get(it.el) || {}; rec[it.attr] = tr; TR.lastAttr.set(it.el, rec);
+        }
+      } else if (!TR.inflight[it.key] && !TR.failed[it.key]) {
+        missing[it.key] = 1;
+      }
+    });
+    TR.applying = false;
+    startObserver();
+    var keys = Object.keys(missing);
+    if (keys.length) trFetch(keys);
+  }
+  async function trFetch(keys){
+    keys.forEach(function(k){ TR.inflight[k] = 1; });
+    var batches = [];
+    for (var i = 0; i < keys.length; i += 20) batches.push(keys.slice(i, i + 20));
+    var lang = LANG;
+    trPill(true);
+    var next = 0;
+    async function worker(){
+      while (next < batches.length){
+        var b = batches[next++];
+        try {
+          var res = await fetch(AI_BASE + "/api/translate", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ lang:lang, strings:b }) });
+          var d = await res.json();
+          if (res.ok && d && Array.isArray(d.translations) && lang === LANG){
+            b.forEach(function(k, j){ TR.map[k] = (d.translations[j] || k); delete TR.inflight[k]; });
+          } else b.forEach(function(k){ TR.failed[k] = 1; delete TR.inflight[k]; });
+        } catch(e){ b.forEach(function(k){ TR.failed[k] = 1; delete TR.inflight[k]; }); }
+        if (lang === LANG){ trSave(); trRun(); }
+      }
+    }
+    await Promise.all([worker(), worker(), worker()]);
+    trPill(false);
+  }
+  function trPill(on){
+    TR.active += on ? 1 : -1;
+    var el = document.getElementById("tr-pill");
+    if (TR.active > 0){
+      if (!el){
+        el = document.createElement("div"); el.id = "tr-pill"; el.setAttribute("translate", "no");
+        el.style.cssText = "position:fixed; left:50%; transform:translateX(-50%); bottom:calc(14px + env(safe-area-inset-bottom)); z-index:60; background:var(--ink); color:var(--ground); font-size:12px; padding:7px 14px; border-radius:20px; opacity:.92; pointer-events:none;";
+        document.body.appendChild(el);
+      }
+      el.textContent = "🌐 …";
+    } else if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+  var obs = null;
+  function startObserver(){
+    if (!obs){
+      obs = new MutationObserver(function(){
+        if (TR.applying || LANG === "en" || TR.queued) return;
+        TR.queued = true;
+        Promise.resolve().then(function(){ TR.queued = false; trRun(); });
+      });
+    }
+    if (document.body) obs.observe(document.body, { childList:true, subtree:true, characterData:true });
+  }
+  applyLangAttrs();
+
 
   var uid = function(){
     try { return crypto.randomUUID(); } catch(e){}
@@ -775,7 +940,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
     var res = await fetch(AI_BASE + path, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(Object.assign({ lang: LANG }, payload)),
       signal: signal
     });
     if (!res.ok){
@@ -876,7 +1041,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
           '<span class="tag">'+esc(t("authTagline"))+'</span></div>' +
         '</div>' +
         '<div class="btn-row">' +
-          '<button class="iconbtn" id="lang-btn" title="Español / English">'+(LANG==="en"?"ES":"EN")+'</button>' +
+          ''+langSelectHtml()+'' +
         '</div>' +
       '</div>' +
       '<div class="auth-hero" style="margin-top:24px;"><img src="assets/logo-full.png" alt="Cindy Career Copilot — Your next move starts here."></div>' +
@@ -898,7 +1063,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
 
     var submit = function(){ isRegister ? handleRegister() : handleLogin(); };
     $("#auth-submit").onclick = submit;
-    $("#lang-btn").onclick = toggleLang;
+    wireLangSelect();
     wirePasswordToggles(app);
     Array.prototype.forEach.call(app.querySelectorAll("#auth-user, #auth-pass, #auth-pass2"), function(el){
       el.onkeydown = function(e){ if (e.key === "Enter") submit(); };
@@ -1061,7 +1226,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
           (state.profile.links && state.profile.links.linkedin
             ? '<a class="iconbtn" href="'+esc(state.profile.links.linkedin)+'" target="_blank" rel="noopener noreferrer" title="Open LinkedIn profile">in LinkedIn</a>'
             : '') +
-          '<button class="iconbtn" id="lang-btn" title="Español / English">'+(LANG==="en"?"ES":"EN")+'</button>' +
+          ''+langSelectHtml()+'' +
           '<button class="iconbtn" id="theme-btn" title="Toggle light / dark">'+esc(t("theme"))+'</button>' +
           '<button class="iconbtn" id="logout-btn" title="Log out">'+esc(t("logout"))+'</button>' +
         '</div>' +
@@ -1075,7 +1240,7 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       '</div>' + copyrightHtml();
 
     $("#theme-btn").onclick = toggleTheme;
-    $("#lang-btn").onclick = toggleLang;
+    wireLangSelect();
     $("#logout-btn").onclick = logout;
     Array.prototype.forEach.call(app.querySelectorAll(".tab"), function(b){
       b.onclick = function(){ activeTab = b.dataset.tab; render(); };
@@ -4072,6 +4237,8 @@ body{overflow-x:hidden; overscroll-behavior-y:none;}
       if (awaySince && Date.now() - awaySince > 20000) showLock();
     });
   }
+
+  if (LANG !== "en"){ trLoad(); startObserver(); setTimeout(trRun, 0); }
 
   // offline-capable shell (also what lets the Android app open instantly)
   if (!NATIVE && "serviceWorker" in navigator && location.protocol === "https:") {

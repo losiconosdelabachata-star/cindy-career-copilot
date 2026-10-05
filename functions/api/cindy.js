@@ -1,3 +1,4 @@
+import { langLine } from "../_lib/lang.js";
 // Cloudflare Pages Function — POST /api/cindy
 // Free-text conversational replies for Cindy, the in-app résumé/career guide.
 
@@ -34,7 +35,7 @@ export async function onRequestPost(context) {
     "no filler like 'I'd be happy to help.' You don't have direct access to the user's " +
     "pipeline or résumé in this message unless they paste it in.";
 
-  const messages = [{ role: "system", content: system }];
+  const messages = [{ role: "system", content: system + langLine(body.lang) }];
   history.forEach(function(h) {
     if (!h || !h.text) return;
     messages.push({ role: h.who === "cindy" ? "assistant" : "user", content: String(h.text).slice(0, 1000) });

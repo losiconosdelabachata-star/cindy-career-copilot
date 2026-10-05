@@ -1,3 +1,4 @@
+import { langLine } from "../_lib/lang.js";
 // Cloudflare Pages Function — POST /api/money
 //   {kind:"credit", score, issues[], goal, income}  → a step-by-step credit repair plan (JSON)
 //   {kind:"grants", state, categories[], situation} → application prep guidance (JSON)
@@ -49,7 +50,7 @@ export async function onRequestPost({ request, env }) {
       const user =
         "Score range: " + String(b.score || "unknown").slice(0, 40) + "\nProblems: " + (arr(b.issues, 12, 60).join(", ") || "none listed") +
         "\nGoal: " + String(b.goal || "improve overall").slice(0, 200) + "\nMonthly money available for debt/credit building: " + String(b.income || "unknown").slice(0, 60);
-      const rawPlan = await ask(env, system, user, 2800);
+      const rawPlan = await ask(env, system + langLine(b.lang, true), user, 2800);
       let o = parseObj(rawPlan);
       if (!o || !Array.isArray(o.steps)) {
         // tolerate a cut-off or slightly malformed reply: harvest each complete step
@@ -74,7 +75,7 @@ export async function onRequestPost({ request, env }) {
         "never invent state program names, amounts, or deadlines. Explain what documents to gather, what eligibility usually depends on, how to find the real state programs, and how to spot scams (real grants never charge fees; ignore anyone who contacts you first). " +
         "Reply with ONLY JSON: {\"prep\":[\"short checklist items\"],\"tips\":[\"short tips\"],\"scams\":[\"short warnings\"]} with 5-8 prep items, 4-6 tips, 3-4 scam warnings.";
       const user = "State: " + String(b.state || "").slice(0, 40) + "\nNeeds: " + arr(b.categories, 8, 40).join(", ") + "\nSituation: " + String(b.situation || "").slice(0, 600);
-      const o = parseObj(await ask(env, system, user, 1200));
+      const o = parseObj(await ask(env, system + langLine(b.lang, true), user, 1200));
       if (!o) return json({ error: "parse", message: "Couldn't build that. Try again." }, 502);
       return json({ prep: arr(o.prep, 10, 200), tips: arr(o.tips, 8, 250), scams: arr(o.scams, 6, 200) });
     }
@@ -161,7 +162,7 @@ export async function onRequestPost({ request, env }) {
         "You are a short-form and long-form content strategist. Give 8 specific, original content ideas for a beginner creator. For each: a scroll-stopping hook line (first 3 seconds) and the format. " +
         "Reply with ONLY JSON: {\"ideas\":[{\"hook\":\"...\",\"format\":\"...\"}]}";
       const user = "Niche: " + String(b.niche || "").slice(0, 120) + "\nPlatform: " + String(b.platform || "").slice(0, 60) + "\nAudience: " + String(b.audience || "").slice(0, 150);
-      const rawIdeas = await ask(env, system, user, 1800);
+      const rawIdeas = await ask(env, system + langLine(b.lang, true), user, 1800);
       let o = parseObj(rawIdeas);
       if (!o) {
         // tolerate a cut-off reply: pull out each complete {"hook":..,"format":..} pair

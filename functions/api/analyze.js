@@ -1,3 +1,4 @@
+import { langLine } from "../_lib/lang.js";
 // Cloudflare Pages Function — POST /api/analyze
 // Cindy reviews an attached/pasted résumé or cover letter and returns direct,
 // actionable feedback. Read-only: never rewrites or submits anything on the
@@ -45,7 +46,7 @@ export async function onRequestPost(context) {
   try {
     const result = await env.AI.run(MODEL, {
       messages: [
-        { role: "system", content: system },
+        { role: "system", content: system + langLine(body.lang) },
         { role: "user", content: text }
       ],
       max_tokens: 600

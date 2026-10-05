@@ -7,7 +7,7 @@
 - [ ] **Add testers to the closed track** — need **12+ Google accounts** (Test and release → Testing → Closed testing → Testers). Send them the closed-test link once the track is Active, or have them use the computer method (play.google.com/store/apps/details?id=com.cindycareercopilot.app → "Install on more devices").
 - [ ] **Keep testers opted in for 14 days in a row**, then click **Apply for production access** on the Dashboard.
 - [ ] **Upload version 2** (adds the "All Rights Reserved: Cindy Santos · Powered by Eclat Universe" footer). A build was started (GitHub → Actions → android-build, version code 2 / 1.0.1). Download the artifact `cindy-android-real-key` → `bundle/release/app-release.aab`. Upload to **Internal testing** first (instant), and to **Closed testing** after the current review finishes.
-- [ ] **Update the Play listing's full description** — the last line should read: `© 2026 All Rights Reserved: Cindy Santos · Powered by Eclat Universe` (Grow users → Store presence → Store listings).
+- [ ] **Update the Play listing's full description** (also change the language line to: "Use it in your own language: English, Spanish, French, Portuguese, Haitian Creole, Arabic, Chinese, Vietnamese and 70+ more.") — the last line should read: `© 2026 All Rights Reserved: Cindy Santos · Powered by Eclat Universe` (Grow users → Store presence → Store listings).
 - [ ] **Android developer verification:** after the app is approved, Play Console → Test and release → App integrity shows Google's **app signing key** fingerprint. Add that SHA-256 under Android developer verification too. Check the "In review" status on the upload key.
 - [ ] Optional: tablet screenshots (ask me to generate 7" and 10" sets), Spanish store listing.
 - [ ] Update the **Data safety** form if the app starts collecting new kinds of data.
@@ -21,7 +21,8 @@
 
 ## Product ideas
 - [ ] Trademark the Cindy Career Copilot name/logo (not registered yet).
-- [ ] Spanish translations for Cindy's longer replies and new tabs.
+- [x] ~~Spanish translations for Cindy's longer replies and new tabs~~ — done: 83 languages via the language picker.
+- [ ] Have native speakers review the most-used languages (Spanish, Haitian Creole, Portuguese, French, Arabic) — translations are machine-made; the "(beta)" ones are weaker.
 - [ ] Optional: make the repo private if you want stricter protection than "all rights reserved".
 
 ## Housekeeping

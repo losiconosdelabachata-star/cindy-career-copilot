@@ -1,3 +1,4 @@
+import { langLine } from "../_lib/lang.js";
 // Cloudflare Pages Function — POST /api/plan
 // Builds a short, specific "what to do today" plan from the user's live pipeline.
 // Uses Cloudflare Workers AI (free tier) — no API key needed, billed to the
@@ -44,7 +45,7 @@ export async function onRequestPost(context) {
   try {
     const result = await env.AI.run(MODEL, {
       messages: [
-        { role: "system", content: system },
+        { role: "system", content: system + langLine(body.lang) },
         { role: "user", content: userMsg }
       ],
       max_tokens: 400
