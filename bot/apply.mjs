@@ -265,8 +265,65 @@ try {
     process.exit(0);
   }
 
-  const submit = root.getByRole("button", { name: /submit|send application|apply/i }).last();
-  await submit.click({ timeout: 10000 });
+  // Find the real Submit button: a visible submit-type button first, then buttons literally named Submit / Send application,
+  // and only then a generic "Apply" (which is often a header or sticky button, not the form's own submit).
+  async function findSubmit() {
+    const tries = [
+      root.locator('button[type="submit"], input[type="submit"]'),
+      root.getByRole("button", { name: /^\s*(submit|send)( my)?( the)?( application)?\s*$/i }),
+      root.getByRole("button", { name: /submit application|send application|complete application|finish application/i }),
+      root.getByRole("button", { name: /^\s*apply( now)?\s*$/i })
+    ];
+    for (const loc of tries) {
+      const n = await loc.count().catch(() => 0);
+      for (let i = n - 1; i >= 0; i--) {
+        const el = loc.nth(i);
+        if (await el.isVisible().catch(() => false)) return el;
+      }
+    }
+    return null;
+  }
+  // Visible form errors, to tell the user what is blocking the submit.
+  async function pageErrors() {
+    const sel = '[role="alert"], [aria-invalid="true"], [class*="error" i], [class*="invalid" i]';
+    const texts = [];
+    for (const fr of [page, gh]) {
+      if (!fr) continue;
+      const els = await fr.locator(sel).elementHandles().catch(() => []);
+      for (const h of els.slice(0, 12)) {
+        const t = (await h.evaluate(n => (n.getAttribute("aria-label") || n.innerText || "").trim()).catch(() => "")).replace(/\s+/g, " ").slice(0, 90);
+        if (t && t.length > 3 && !texts.includes(t)) texts.push(t);
+      }
+    }
+    return texts.slice(0, 5);
+  }
+  const submit = await findSubmit();
+  if (!submit) {
+    await page.screenshot({ path: "bot/out/error.png", fullPage: true }).catch(() => {});
+    await report("needs_you", "I filled the form but couldn't find its Submit button. Nothing was submitted. Open the posting and finish it by hand.", filled, missing);
+    process.exit(0);
+  }
+  await submit.scrollIntoViewIfNeeded().catch(() => {});
+  // wait (up to ~8s) for the button to become clickable: it stays greyed out until the form is valid
+  let ready = false;
+  for (let i = 0; i < 16 && !ready; i++) {
+    ready = await submit.isEnabled().catch(() => false);
+    if (!ready) await page.waitForTimeout(500);
+  }
+  if (!ready) {
+    await page.screenshot({ path: "bot/out/error.png", fullPage: true }).catch(() => {});
+    const errs = await pageErrors();
+    await report("needs_you", "The Submit button is still greyed out, so the form isn't ready (a required field, checkbox or verification is probably missing)." + (errs.length ? " The form says: " + errs.join(" | ") : "") + " Nothing was submitted. Finish it by hand.", filled, missing);
+    process.exit(0);
+  }
+  try {
+    await submit.click({ timeout: 10000 });
+  } catch (e) {
+    await page.screenshot({ path: "bot/out/error.png", fullPage: true }).catch(() => {});
+    const errs = await pageErrors();
+    await report("needs_you", "I couldn't press Submit: something on the page is covering it or the form isn't ready." + (errs.length ? " The form says: " + errs.join(" | ") : "") + " Nothing was submitted. Finish it by hand.", filled, missing);
+    process.exit(0);
+  }
   await page.waitForTimeout(6000);
   await page.screenshot({ path: "bot/out/after.png", fullPage: true });
   const body = (await page.locator("body").innerText().catch(() => "")) + (gh ? await gh.locator("body").innerText().catch(() => "") : "");
