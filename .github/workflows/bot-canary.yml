@@ -1,0 +1,22 @@
+name: bot-canary
+# Daily self-test of the auto-apply bot on LIVE Greenhouse, Lever and Ashby forms (practice mode, made-up candidate,
+# nothing is submitted). If a form changes and the bot stops working, this run fails and GitHub emails the repo owner.
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-save playwright@1.49.0 && npx playwright install --with-deps chromium
+      - run: node bot/canary.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: canary-shots, path: bot/out/*.png, if-no-files-found: ignore, retention-days: 3 }

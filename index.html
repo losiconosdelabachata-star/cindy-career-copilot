@@ -2242,10 +2242,10 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
           '<button class="btn-primary" id="ap-auto">Auto-apply for me</button></div>' +
           '<div class="age" id="ap-status" style="margin-top:8px;"></div>'
         ) : (
-          '<div class="out-h">Want the bot to apply for you?</div>' +
-          '<div class="age" style="margin:4px 0 8px;">Job boards (Adzuna, LinkedIn, Indeed…) don’t allow bots. Open the job above, click Apply there, and copy the web address of the <b>company’s own</b> application page (often Greenhouse, Lever or their careers site). Paste it here:</div>' +
+          '<div class="out-h">Auto-apply isn’t available for this job</div>' +
+          '<div class="age" style="margin:4px 0 8px;">The bot works on <b>Greenhouse, Lever and Ashby</b> application pages. This job is on a job board or another company system (such as Workday or Phenom) that needs an account or a multi-step sign-in, and the bot never creates accounts. Apply by hand with the résumé and cover letter above. To use the bot, press <b>Find the company’s page</b>, or <b>find jobs the bot can apply to</b>. If you already have a Greenhouse, Lever or Ashby link for this job, paste it here:</div>' +
           '<div class="btn-row"><input id="ap-link" style="flex:1; min-width:200px;" placeholder="https://…"><button class="btn-primary" id="ap-savelink">Save link</button></div>' +
-          '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="ap-find">Find the company’s page for me</button></div>' +
+          '<div class="btn-row" style="margin-top:8px;"><button class="btn-ghost" id="ap-find">Find the company’s page for me</button><button class="btn-ghost" id="ap-ready">Find jobs the bot can apply to</button></div>' +
           '<div class="age" id="ap-linkmsg" style="margin-top:6px;"></div>'
         )) +
         '<div id="ap-qs" style="margin-top:8px;"></div>' +
@@ -2327,7 +2327,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
     var sl = bd.querySelector("#ap-savelink"); if (sl) sl.onclick = async function(){
       var u = (bd.querySelector("#ap-link").value || "").trim();
       var msg = bd.querySelector("#ap-linkmsg");
-      if (!/^https:\/\//i.test(u) || isBlockedHost(u)){ msg.textContent = "Use the company’s own https:// application link — not LinkedIn, Indeed, Adzuna or other job boards."; return; }
+      if (!/^https:\/\//i.test(u) || isBlockedHost(u) || !autoApplyOk(u)){ msg.textContent = "The bot only works on Greenhouse, Lever and Ashby application links (greenhouse.io, lever.co, ashbyhq.com). For any other site, apply by hand using the materials above."; return; }
       j.applyUrl = u; j.updatedAt = now();
       await persistJob(j);
       close();
@@ -2340,7 +2340,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
       try {
         var res = await fetch(AI_BASE + "/api/findapply?company=" + encodeURIComponent(j.company || "") + "&title=" + encodeURIComponent(j.title || ""));
         var f = await res.json();
-        if (f && f.url && !isBlockedHost(f.url)){
+        if (f && f.url && !isBlockedHost(f.url) && autoApplyOk(f.url)){
           j.applyUrl = f.url; j.updatedAt = now(); await persistJob(j);
           close(); openApplyModal(j);
           toast("Found the company’s own page — the Auto-apply buttons are now available.");
@@ -2350,6 +2350,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
       } catch(e){ msg.textContent = "Couldn’t search right now. Try again in a moment."; }
       fd.disabled = false; fd.textContent = "Find the company’s page for me";
     };
+    var rd = bd.querySelector("#ap-ready"); if (rd) rd.onclick = function(){ close(); matchesCache.ats = true; activeTab = "matches"; render(); window.scrollTo(0, 0); toast("Search with the ‘Only jobs the bot can apply to’ box ticked."); };
     var dry = bd.querySelector("#ap-dry"); if (dry) dry.onclick = function(){ runBot("dry"); };
     var au = bd.querySelector("#ap-auto"); if (au) au.onclick = function(){ runBot("submit"); };
     bd.querySelector("#ap-done").onclick = async function(){
@@ -2363,12 +2364,16 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
   function isBlockedHost(u){
     try { return /(^|\.)(linkedin|indeed|adzuna|ziprecruiter|glassdoor|monster|simplyhired|remotive|remoteok|jobicy|himalayas|weworkremotely|themuse|arbeitnow|flexjobs)\.(com|co\.uk|io|app)$/i.test(new URL(u).hostname); } catch(e){ return true; }
   }
-  // the page the bot is allowed to apply on: the company's own link, never LinkedIn/Indeed
+  // The bot only works on application systems it has been built and tested for: Greenhouse, Lever and Ashby.
+  // Other company systems (Workday, Phenom, iCIMS, Taleo...) need an account or a multi-step login, which the bot never creates.
+  function autoApplyOk(u){
+    try { return /(^|\.)(greenhouse\.io|lever\.co|ashbyhq\.com)$/i.test(new URL(u).hostname); } catch(e){ return false; }
+  }
   function botUrl(j){
     var cands = [j.applyUrl, j.url];
     for (var i=0; i<cands.length; i++){
       var u = cands[i];
-      if (u && /^https:\/\//i.test(u) && !isBlockedHost(u)) return u;
+      if (u && /^https:\/\//i.test(u) && !isBlockedHost(u) && autoApplyOk(u)) return u;
     }
     return "";
   }
@@ -3992,6 +3997,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
             '<div><label for="m-what">'+esc(t("matchesWhatLabel"))+'</label><input id="m-what" value="'+esc(m.what)+'" placeholder="Customer Success, AI Engineer…"></div>' +
             '<div><label for="m-where">'+esc(t("matchesWhereLabel"))+'</label><input id="m-where" value="'+esc(m.where)+'" placeholder="Miami, FL"></div>' +
           '</div>' +
+          '<label class="chk"><input type="checkbox" id="m-ats"'+(m.ats?" checked":"")+'> <b>Only jobs the auto-apply bot can apply to</b> (company pages on Greenhouse, Lever and Ashby)</label>' +
           '<label class="chk"><input type="checkbox" id="m-remote"'+(m.remote?" checked":"")+'> Remote jobs only (ignores location) — also searches Remotive, RemoteOK, Jobicy, Himalayas and We Work Remotely</label>' +
           '<div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">' +
             '<div><label for="m-type">Job type</label><select id="m-type">' + [["","Any"],["full_time","Full-time"],["part_time","Part-time"],["contract","Contract"]].map(function(x){ return '<option value="'+x[0]+'"'+((m.type||"")===x[0]?" selected":"")+'>'+x[1]+'</option>'; }).join("") + '</select></div>' +
@@ -4018,6 +4024,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
 
     $("#m-search").onclick = onSearchMatches;
     $("#m-remote").onchange = function(){ matchesCache.remote = $("#m-remote").checked; updateQuickLinks(); };
+    $("#m-ats").onchange = function(){ matchesCache.ats = $("#m-ats").checked; };
     $("#m-type").onchange = function(){ matchesCache.type = $("#m-type").value; };
     $("#m-days").onchange = function(){ matchesCache.days = $("#m-days").value; };
     $("#m-sort").onchange = function(){ matchesCache.sort = $("#m-sort").value; };
@@ -4069,7 +4076,7 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
       '<div class="job-head">' +
         '<div>' +
           '<h3>'+esc(r.title)+'</h3>' +
-          '<div class="job-co">'+esc(r.company)+ (r.location ? " · " + esc(r.location) : "") + (r.source ? ' · <span class="age">via '+esc(r.source)+'</span>' : "") +'</div>' +
+          '<div class="job-co">'+esc(r.company)+ (r.location ? " · " + esc(r.location) : "") + (r.source ? ' · <span class="age">via '+esc(r.source)+'</span>' : "") + (autoApplyOk(r.url) ? ' · <span class="age" style="color:var(--ok, #4ade80); font-weight:700;">✓ Auto-apply ready</span>' : "") +'</div>' +
         '</div>' +
       '</div>' +
       '<div class="job-meta">' + salary + (r.created ? '<span class="age">'+esc(t("addedAgo"))+esc(agoLabel(new Date(r.created).getTime()))+'</span>' : "") + '</div>' +
@@ -4108,8 +4115,20 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
         (matchesCache.type ? "&type=" + encodeURIComponent(matchesCache.type) : "") +
         (matchesCache.days ? "&days=" + encodeURIComponent(matchesCache.days) : "") +
         (matchesCache.sort ? "&sort=" + encodeURIComponent(matchesCache.sort) : "");
-      var res = await fetch(url);
-      var data = await res.json().catch(function(){ return null; });
+      var res, data;
+      if (matchesCache.ats){
+        var qs = "what=" + encodeURIComponent(what) + (where && !matchesCache.remote ? "&where=" + encodeURIComponent(where) : "") + (matchesCache.remote ? "&remote=1" : "");
+        var parts = await Promise.all([0,1,2,3,4,5].map(function(b){
+          return fetch(AI_BASE + "/api/atsjobs?" + qs + "&batch=" + b).then(function(r){ return r.json(); }).catch(function(){ return { results: [] }; });
+        }));
+        var seenU = {}, merged = [];
+        parts.forEach(function(p){ (p.results || []).forEach(function(r){ if (!seenU[r.url]){ seenU[r.url] = 1; merged.push(r); } }); });
+        merged.sort(function(a, b2){ return String(b2.created).localeCompare(String(a.created)); });
+        res = { ok: true }; data = { results: merged.slice(0, 60) };
+      } else {
+        res = await fetch(url);
+        data = await res.json().catch(function(){ return null; });
+      }
       if (!res.ok || !data || data.error){
         matchesCache.error = (data && data.error === "not_configured") ? t("matchesErrorNotConfigured") : t("matchesErrorGeneric");
         matchesCache.results = null;
@@ -4164,14 +4183,30 @@ html[dir="rtl"] .tabmenu-btn, html[dir="rtl"] .tabmenu-opt, html[dir="rtl"] .app
       status:"saved", tailoredResume:"", coverLetter:"", createdAt:now(), updatedAt:now(), appliedAt:null };
     state.jobs.unshift(job);
     await persistJob(job);
+    var direct = autoApplyOk(r.url);
+    if (direct){
+      job.applyUrl = r.url;
+      if (!job.description){
+        var gm = String(r.url).match(/greenhouse\.io\/([^\/]+)\/jobs\/(\d+)/);
+        if (gm){
+          try {
+            var gj = await fetch("https://boards-api.greenhouse.io/v1/boards/" + gm[1] + "/jobs/" + gm[2]).then(function(x){ return x.json(); });
+            var tmp = document.createElement("div"); tmp.innerHTML = gj.content || "";
+            var txt = (tmp.textContent || "").replace(/\s+/g, " ").trim();
+            job.description = txt.length > 200 ? txt.slice(0, 1500) : (tmp.innerText || txt).slice(0, 1500);
+          } catch(e){}
+        }
+      }
+    }
     btn.textContent = "Finding apply page…";
-    var linkP = fetch(AI_BASE + "/api/findapply?company=" + encodeURIComponent(r.company) + "&title=" + encodeURIComponent(r.title))
-      .then(function(res){ return res.json(); }).catch(function(){ return null; });
+    var linkP = direct ? Promise.resolve({ url: r.url, source: r.source || "the company" })
+      : fetch(AI_BASE + "/api/findapply?company=" + encodeURIComponent(r.company) + "&title=" + encodeURIComponent(r.title))
+          .then(function(res){ return res.json(); }).catch(function(){ return null; });
     btn.textContent = "Writing your materials…";
     var matsOk = false;
     try { matsOk = await ensureMaterials(job); } catch(e){}
     var found = await linkP;
-    if (found && found.url){ job.applyUrl = found.url; }
+    if (found && found.url && autoApplyOk(found.url)){ job.applyUrl = found.url; } else { found = null; }
     if (matsOk && job.status === "saved") job.status = "tailored";
     job.updatedAt = now();
     await persistJob(job);

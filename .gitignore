@@ -6,3 +6,5 @@ native-app/www/
 native-app/ios/App/Pods/
 native-app/ios/App/build/
 site/
+bot/canary-packet.json
+bot/out/

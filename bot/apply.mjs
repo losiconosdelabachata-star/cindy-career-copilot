@@ -5,28 +5,45 @@
 import { chromium } from "playwright";
 import fs from "node:fs";
 
-const { RUN_ID, BOT_SECRET, API_BASE } = process.env;
-// GitHub Actions identity token (audience-scoped) — verified server-side, no shared secret needed
-const idRes = await fetch(process.env.ACTIONS_ID_TOKEN_REQUEST_URL + "&audience=cindy-career-copilot", {
-  headers: { authorization: "Bearer " + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }
-});
-const { value: idToken } = await idRes.json();
-const H = { authorization: "Bearer " + idToken, "x-bot-secret": BOT_SECRET || "", "content-type": "application/json" };
+const { RUN_ID, BOT_SECRET, API_BASE, LOCAL_PACKET } = process.env;
+// LOCAL_PACKET (a JSON file path) is the self-test mode used by the daily canary workflow: no server, no account, practice run only.
+let H = {}, packet;
+if (LOCAL_PACKET) {
+  packet = JSON.parse(fs.readFileSync(LOCAL_PACKET, "utf8"));
+  packet.mode = "dry";
+} else {
+  // GitHub Actions identity token (audience-scoped) — verified server-side, no shared secret needed
+  const idRes = await fetch(process.env.ACTIONS_ID_TOKEN_REQUEST_URL + "&audience=cindy-career-copilot", {
+    headers: { authorization: "Bearer " + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN }
+  });
+  const { value: idToken } = await idRes.json();
+  H = { authorization: "Bearer " + idToken, "x-bot-secret": BOT_SECRET || "", "content-type": "application/json" };
+}
 
 async function report(status, message, filled = [], missing = []) {
   console.log(status, message, filled, missing);
+  if (LOCAL_PACKET) { fs.mkdirSync("bot/out", { recursive: true }); fs.writeFileSync("bot/out/result.json", JSON.stringify({ status, message, filled, missing })); return; }
   await fetch(API_BASE + "/api/autoapply/bot", { method: "POST", headers: H, body: JSON.stringify({ id: RUN_ID, status, message, filled, missing }) }).catch(() => {});
 }
 
-const res = await fetch(API_BASE + "/api/autoapply/bot?id=" + RUN_ID, { headers: H });
-if (!res.ok) { console.error("no packet", res.status); process.exit(1); }
-const { packet } = await res.json();
+if (!LOCAL_PACKET) {
+  const res = await fetch(API_BASE + "/api/autoapply/bot?id=" + RUN_ID, { headers: H });
+  if (!res.ok) { console.error("no packet", res.status); process.exit(1); }
+  packet = (await res.json()).packet;
+}
 const P = packet.profile;
 const [first, ...rest] = P.name.trim().split(/\s+/);
 const last = rest.join(" ") || first;
 
 if (/(^|\.)(linkedin|indeed|adzuna|ziprecruiter|glassdoor|monster|simplyhired|remotive|remoteok|jobicy|himalayas|weworkremotely|themuse|arbeitnow|flexjobs)\.(com|co\.uk|io|app)$/i.test(new URL(packet.url).hostname)) {
   await report("needs_you", "Job boards like LinkedIn, Indeed and Adzuna don't allow bots. Open the job, click Apply there, and save the company's own apply link on the job instead.");
+  process.exit(0);
+}
+
+// The bot is built and tested for Greenhouse, Lever and Ashby application pages only. Other company systems
+// (Workday, Phenom, iCIMS, Taleo...) need an account or multi-step sign-in, which the bot never creates.
+if (!/(^|.)(greenhouse.io|lever.co|ashbyhq.com)$/i.test(new URL(packet.url).hostname)) {
+  await report("needs_you", "This company uses an application system the bot doesn't support (" + new URL(packet.url).hostname + "). The bot works on Greenhouse, Lever and Ashby pages, and it never creates accounts. Apply by hand with the résumé and cover letter in the Apply window, or search 'Only jobs the bot can apply to' in Job Matches.");
   process.exit(0);
 }
 
@@ -52,6 +69,17 @@ try {
   await report("running", "Opening the application…");
   await page.goto(packet.url, { waitUntil: "domcontentloaded", timeout: 45000 });
   await page.waitForTimeout(2500);
+  // Cookie banners cover the page and its buttons. Choose the privacy-friendly option (reject / necessary only).
+  async function dismissCookies() {
+    const sels = ["#onetrust-reject-all-handler", "button#reject-all", "button[id*=reject i]", "[data-testid*=reject i]"];
+    for (const sel of sels) {
+      const el = page.locator(sel).first();
+      if (await el.isVisible().catch(() => false)) { await el.click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(500); return; }
+    }
+    const btn = page.getByRole("button", { name: /^s*(reject all|reject non-?essential|decline( all)?|only (necessary|essential)|necessary only|deny)s*$/i }).first();
+    if (await btn.isVisible().catch(() => false)) { await btn.click({ timeout: 3000 }).catch(() => {}); await page.waitForTimeout(500); }
+  }
+  await dismissCookies();
 
   // How many visible inputs a frame has — the frame with the most is the application form (some
   // companies embed the form in an iframe). A visible file or first-name field means "on the form".
@@ -71,6 +99,12 @@ try {
     return { frame: best, n: bestN };
   }
   async function onForm() { return (await bestFrame()).n >= 4; }
+  // Many systems (Ashby especially) load the form after the page appears ("Fetching application form…"), so wait for it.
+  async function waitForForm(ms) {
+    const end = Date.now() + ms;
+    while (Date.now() < end) { if (await onForm()) return true; await page.waitForTimeout(1000); }
+    return onForm();
+  }
 
   // jump to the form if the posting page has an Apply button/tab first; follow it if it opens a new tab
   for (let attempt = 0; attempt < 3 && !(await onForm()); attempt++) {
@@ -91,10 +125,23 @@ try {
     if (!href) href = (await cands.first().getAttribute("href").catch(() => "")) || "";
     await page.waitForTimeout(4000);
     if (popup) { page = popup; await page.waitForLoadState("domcontentloaded").catch(() => {}); await page.waitForTimeout(3000); }
+    await waitForForm(15000);
     // click didn't get us there? go straight to the link's address
     if (!(await onForm()) && href && !/^(#|javascript:)/i.test(href)) {
       await page.goto(new URL(href, page.url()).toString(), { waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
       await page.waitForTimeout(4500);
+    }
+  }
+  await waitForForm(12000);
+  await dismissCookies();
+  // Still no application form? Say why: an account/sign-in wall, or just a job description page.
+  if (!(await onForm())) {
+    const pw = await page.locator("input[type=password]").first().isVisible().catch(() => false);
+    const t0 = (await page.locator("body").innerText().catch(() => "")).toLowerCase();
+    if (pw || /sign in to (apply|continue)|log ?in to (apply|continue)|create (an )?account to apply|create (your )?account/.test(t0)) {
+      await page.screenshot({ path: "bot/out/error.png", fullPage: true }).catch(() => {});
+      await report("needs_you", "This company makes you sign in or create an account before applying, and the bot never creates accounts or enters passwords. Apply by hand — your résumé and cover letter are ready in the Apply window.");
+      process.exit(0);
     }
   }
   const bodyText = (await page.locator("body").innerText().catch(() => "")).toLowerCase();
@@ -254,8 +301,9 @@ try {
     await report("needs_you", "The form asks questions I won't guess at. Finish those by hand.", filled, missing);
     process.exit(0);
   }
-  if (!filled.length) {
-    await report("needs_you", "I couldn't find an application form on that page.", filled, missing);
+  if (!filled.length || !(await onForm())) {
+    await page.screenshot({ path: "bot/out/error.png", fullPage: true }).catch(() => {});
+    await report("needs_you", "I couldn't find a real application form on that page (it may be a job description page or need a sign-in). Nothing was submitted. Apply by hand — your materials are ready in the Apply window.", filled, missing);
     process.exit(0);
   }
   if (packet.mode !== "submit") {
