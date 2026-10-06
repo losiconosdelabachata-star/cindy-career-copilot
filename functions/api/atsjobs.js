@@ -20,25 +20,44 @@ const BOARDS = [
   ["lever","gopuff","Gopuff"],["lever","wealthfront","Wealthfront"],["lever","rover","Rover"],["lever","neon","Neon"],
   ["ashby","ramp","Ramp"],["ashby","notion","Notion"],["ashby","linear","Linear"],["ashby","openai","OpenAI"],["ashby","anyscale","Anyscale"],["ashby","benchling","Benchling"],
   ["ashby","replit","Replit"],["ashby","perplexity","Perplexity"],["ashby","vanta","Vanta"],["ashby","cohere","Cohere"],["ashby","harvey","Harvey"],["ashby","modal","Modal"],
-  ["ashby","supabase","Supabase"],["ashby","watershed","Watershed"],["ashby","sierra","Sierra"],["ashby","1password","1Password"]
+  ["ashby","supabase","Supabase"],["ashby","watershed","Watershed"],["ashby","sierra","Sierra"],["ashby","1password","1Password"],
+  // E-commerce / commerce-tech — added because title-only keyword search almost never finds "ecommerce" in a
+  // job TITLE even at e-commerce companies (roles are "Account Executive", not "Ecommerce Account Executive"),
+  // so these exist to give the "Only jobs the bot can apply to" search an actual e-commerce-sector pool to match
+  // against once description text is searched too (see termMatch below). Each slug was checked to return live openings.
+  ["gh","faire","Faire"],["gh","glossier","Glossier"],["gh","stockx","StockX"],["gh","bombas","Bombas"],["gh","harrys","Harry's"],
+  ["gh","thrivemarket","Thrive Market"],["gh","grovecollaborative","Grove Collaborative"],["gh","dollarshaveclub","Dollar Shave Club"],
+  ["gh","quip","Quip"],["gh","vuori","Vuori"],["gh","parachutehome","Parachute Home"],["gh","klaviyo","Klaviyo"],
+  ["gh","attentive","Attentive"],["gh","yotpo","Yotpo"],["gh","triplewhale","Triple Whale"],["gh","postscript","Postscript"],
+  ["ashby","gorgias","Gorgias"],["ashby","recharge","Recharge"]
 ];
 const BATCHES = 6;
 
-function words(t) { return String(t || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(function (w) { return w.length > 1; }); }
+// Strips hyphens before splitting so "e-commerce" and "ecommerce" tokenize identically — otherwise a search for
+// "ecommerce" never matches postings that write it as "e-commerce" (its own word boundary split them apart).
+function words(t) { return String(t || "").toLowerCase().replace(/-/g, "").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(function (w) { return w.length > 1; }); }
 function termMatch(hay, terms) {
   const h = " " + words(hay).join(" ") + " ";
   return terms.some(function (t) { const ws = words(t); return ws.length && ws.every(function (w) { return h.indexOf(" " + w) !== -1; }); });
 }
 function remoteish(s) { return /remote|anywhere|distributed/i.test(String(s || "")); }
+function stripHtml(s) {
+  return String(s || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ").trim();
+}
 const opts = { headers: { accept: "application/json", "user-agent": "CindyCareerCopilot/1.0 (job search tool)" }, cf: { cacheTtl: 1800, cacheEverything: true } };
 
 async function board(b) {
   const sys = b[0], slug = b[1], name = b[2];
   try {
     if (sys === "gh") {
-      const r = await fetch("https://boards-api.greenhouse.io/v1/boards/" + slug + "/jobs", opts); if (!r.ok) return [];
+      // content=true pulls the full job description — needed so an industry term like "ecommerce" can match
+      // inside the posting body, since it almost never appears in the title itself.
+      const r = await fetch("https://boards-api.greenhouse.io/v1/boards/" + slug + "/jobs?content=true", opts); if (!r.ok) return [];
       const d = await r.json();
-      return (d.jobs || []).map(function (j) { return { title: j.title || "", company: j.company_name || name, location: (j.location && j.location.name) || "", url: j.id ? "https://job-boards.greenhouse.io/" + slug + "/jobs/" + j.id : "", created: j.updated_at || "", description: "", dept: "", source: "Greenhouse", ats: "greenhouse" }; });
+      return (d.jobs || []).map(function (j) { return { title: j.title || "", company: j.company_name || name, location: (j.location && j.location.name) || "", url: j.id ? "https://job-boards.greenhouse.io/" + slug + "/jobs/" + j.id : "", created: j.updated_at || "", description: stripHtml(j.content).slice(0, 1500), dept: "", source: "Greenhouse", ats: "greenhouse" }; });
     }
     if (sys === "lever") {
       const r = await fetch("https://api.lever.co/v0/postings/" + slug + "?mode=json", opts); if (!r.ok) return [];
@@ -69,7 +88,7 @@ async function handle(request) {
   lists.forEach(function (l) {
     l.forEach(function (j) {
       if (!j.url || !j.title) return;
-      if (!termMatch(j.title + " " + j.dept, terms)) return;
+      if (!termMatch(j.title + " " + j.dept + " " + j.description, terms)) return;
       if (remote) { if (!remoteish(j.location)) return; }
       else if (where) {
         const loc = j.location.toLowerCase();
