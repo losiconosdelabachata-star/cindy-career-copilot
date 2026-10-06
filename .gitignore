@@ -8,3 +8,4 @@ native-app/ios/App/build/
 site/
 bot/canary-packet.json
 bot/out/
+.wrangler/

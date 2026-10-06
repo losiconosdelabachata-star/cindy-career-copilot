@@ -42,7 +42,8 @@ if (/(^|\.)(linkedin|indeed|adzuna|ziprecruiter|glassdoor|monster|simplyhired|re
 
 // The bot is built and tested for Greenhouse, Lever and Ashby application pages only. Other company systems
 // (Workday, Phenom, iCIMS, Taleo...) need an account or multi-step sign-in, which the bot never creates.
-if (!/(^|.)(greenhouse.io|lever.co|ashbyhq.com)$/i.test(new URL(packet.url).hostname)) {
+// CINDY_TEST_HOST is only ever set by local tests (never in the GitHub workflows).
+if (!/(^|.)(greenhouse.io|lever.co|ashbyhq.com)$/i.test(new URL(packet.url).hostname) && !(process.env.CINDY_TEST_HOST && new URL(packet.url).hostname === process.env.CINDY_TEST_HOST)) {
   await report("needs_you", "This company uses an application system the bot doesn't support (" + new URL(packet.url).hostname + "). The bot works on Greenhouse, Lever and Ashby pages, and it never creates accounts. Apply by hand with the résumé and cover letter in the Apply window, or search 'Only jobs the bot can apply to' in Job Matches.");
   process.exit(0);
 }
