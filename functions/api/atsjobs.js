@@ -38,7 +38,7 @@ async function board(b) {
     if (sys === "gh") {
       const r = await fetch("https://boards-api.greenhouse.io/v1/boards/" + slug + "/jobs", opts); if (!r.ok) return [];
       const d = await r.json();
-      return (d.jobs || []).map(function (j) { return { title: j.title || "", company: j.company_name || name, location: (j.location && j.location.name) || "", url: j.absolute_url || "", created: j.updated_at || "", description: "", dept: "", source: "Greenhouse", ats: "greenhouse" }; });
+      return (d.jobs || []).map(function (j) { return { title: j.title || "", company: j.company_name || name, location: (j.location && j.location.name) || "", url: j.id ? "https://job-boards.greenhouse.io/" + slug + "/jobs/" + j.id : "", created: j.updated_at || "", description: "", dept: "", source: "Greenhouse", ats: "greenhouse" }; });
     }
     if (sys === "lever") {
       const r = await fetch("https://api.lever.co/v0/postings/" + slug + "?mode=json", opts); if (!r.ok) return [];
